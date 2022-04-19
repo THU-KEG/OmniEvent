@@ -1,0 +1,133 @@
+from curses import meta
+import json 
+import yaml 
+import dataclasses
+
+from pathlib import Path 
+from dataclasses import dataclass, field
+from typing import Optional, Tuple
+from argparse import Namespace
+from transformers import TrainingArguments, HfArgumentParser
+
+
+@dataclass
+class DataArguments:
+    """
+    Arguments pertaining to what data we are going to input our model for training and eval.
+    Using `HfArgumentParser` we can turn this class
+    into argparse arguments to be able to specify them on
+    the command line.
+    """
+    config_file: str = field(
+        default=None, 
+        metadata={"help": "Config file path."}
+    )
+    dataset_name: Optional[str] = field(
+        default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
+    )
+    train_file: Optional[str] = field(
+        default=None, metadata={"help": "A csv or a json file containing the training data."}
+    )
+    validation_file: Optional[str] = field(
+        default=None, metadata={"help": "A csv or a json file containing the validation data."}
+    )
+    test_file: Optional[str] = field(
+        default=None, metadata={"help": "A csv or a json file containing the test data."}
+    )
+    test_exists_labels: bool = field(
+        default=False,
+        metadata={"help": "Whether test dataset exists labels"}
+    )
+    max_seq_length: int = field(
+        default=128,
+        metadata={
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+            "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    label2id: str = field(
+        default=None,
+        metadata={"help": "Path to label2id file."}
+    )
+
+
+@dataclass
+class ModelArguments:
+    """
+    Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
+    """
+    model_type: str = field(
+        metadata={"help": "Model type."}
+    )
+    model_name_or_path: str = field(
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    hidden_size: int = field(
+        default=768,
+        metadata={"help": "hidden size"}
+    )
+    aggregation: str = field(
+        default="cls",
+        metadata={"help": "aggregation method"}
+    )
+    paradigm: str = field(
+        default="token_classification",
+        metadata={"help": "paradigm"}
+    )
+    config_name: Optional[str] = field(
+        default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
+    )
+    tokenizer_name: Optional[str] = field(
+        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
+    )
+    cache_dir: Optional[str] = field(
+        default=None,
+        metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
+    )
+    use_fast_tokenizer: bool = field(
+        default=True,
+        metadata={"help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
+    )
+    model_revision: str = field(
+        default="main",
+        metadata={"help": "The specific model version to use (can be a branch name, tag name or commit id)."},
+    )
+    use_auth_token: bool = field(
+        default=False,
+        metadata={
+            "help": "Will use the token generated when running `transformers-cli login` (necessary to use this script "
+            "with private models)."
+        },
+    )
+
+
+@dataclass 
+class TrainingArguments(TrainingArguments):
+    seed: int = field(
+        default=42,
+        metadata={"help": "seed"}
+    )
+    early_stopping_patience: int = field(
+        default=7,
+        metadata={"help": "Patience for early stopping."}
+    )
+    early_stopping_threshold: float = field(
+        default=0.1,
+        metadata={"help": "Threshold for early stopping."}
+    )
+
+
+class ArgumentParser(HfArgumentParser):
+    def parse_yaml_file(self, yaml_file: str):
+        """
+        Alternative helper method that does not use `argparse` at all, instead loading a json file and populating the
+        dataclass types.
+        """
+        data = yaml.safe_load(Path(yaml_file).read_text())
+        outputs = []
+        for dtype in self.dataclass_types:
+            keys = {f.name for f in dataclasses.fields(dtype) if f.init}
+            inputs = {k: v for k, v in data.items() if k in keys}
+            obj = dtype(**inputs)
+            outputs.append(obj)
+        return (*outputs,)
