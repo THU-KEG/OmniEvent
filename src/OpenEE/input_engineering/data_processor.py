@@ -1,13 +1,14 @@
-from lib2to3.pgen2.tokenize import tokenize
 from operator import xor
 import os 
 import pdb 
 import json
+from numpy import sort
 import torch 
 import logging
 
 from tqdm import tqdm 
 from torch.utils.data import Dataset
+from .input_utils import get_start_poses, check_if_start, get_word_position
 
 
 logger = logging.getLogger(__name__)
@@ -36,13 +37,13 @@ class InputExample(object):
 class InputFeatures(object):
     """Input features of an instance."""
     
-    def __init__(self, example_id, input_ids, input_mask, segment_ids, trigger_left, trigger_right, label=None):
+    def __init__(self, example_id, input_ids, input_mask, segment_ids, trigger_left_mask, trigger_right_mask, label=None):
         self.example_id = example_id
         self.input_ids = input_ids
         self.input_mask = input_mask
         self.segment_ids = segment_ids
-        self.trigger_left = trigger_left
-        self.trigger_right = trigger_right
+        self.trigger_left_mask = trigger_left_mask
+        self.trigger_right_mask = trigger_right_mask
         self.label = label
 
 
@@ -79,8 +80,8 @@ class DataProcessor(Dataset):
             input_ids = torch.tensor(features.input_ids, dtype=torch.long),
             input_mask = torch.tensor(features.input_mask, dtype=torch.float32),
             segment_ids = torch.tensor(features.segment_ids, dtype=torch.long),
-            trigger_left = torch.tensor(features.trigger_left, dtype=torch.long),
-            trigger_right = torch.tensor(features.trigger_right, dtype=torch.long),
+            trigger_left_mask = torch.tensor(features.trigger_left_mask, dtype=torch.float32),
+            trigger_right_mask = torch.tensor(features.trigger_right_mask, dtype=torch.float32),
         )
         if features.label is not None:
             data_dict["labels"] = torch.tensor(features.label, dtype=torch.long)
@@ -92,9 +93,9 @@ class DataProcessor(Dataset):
         for key in batch[0].keys():
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
         input_length = int(output_batch["input_mask"].sum(-1).max())
-        for key in ["input_ids", "input_mask", "segment_ids"]:
+        for key in ["input_ids", "input_mask", "segment_ids", "trigger_left_mask", "trigger_right_mask"]:
             output_batch[key] = output_batch[key][:, :input_length]
-        if len(output_batch["labels"].shape) == 2:
+        if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
             output_batch["labels"] = output_batch["labels"][:, :input_length] 
         return output_batch
 
@@ -170,14 +171,17 @@ class TCProcessor(DataProcessor):
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            # trigger position mask 
+            left_mask = [1] * left + [0] * (self.config.max_seq_length-left)
+            right_mask = [1] * right + [0]* (self.config.max_seq_length-right)
                 
             features = InputFeatures(
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
                 input_mask = outputs["attention_mask"],
                 segment_ids = outputs["token_type_ids"],
-                trigger_left = left,
-                trigger_right = right
+                trigger_left_mask = left_mask,
+                trigger_right_mask = right_mask
             )
             # pdb.set_trace()
             if example.label is not None:
@@ -196,7 +200,7 @@ class SLProcessor(DataProcessor):
     
     def read_examples(self, input_file):
         self.examples = []
-        with open(input_file, "r") as f:
+        with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
                 label = ["O"] * len(item["sentence"].split())
@@ -216,38 +220,63 @@ class SLProcessor(DataProcessor):
                     label = label
                 )
                 self.examples.append(example)
-        
+
+
+    def _truncate(self, outputs, max_seq_length):
+        is_truncation = False 
+        if len(outputs["input_ids"]) > max_seq_length:
+            is_truncation = True 
+            for key in ["input_ids", "attention_mask", "token_type_ids", "offset_mapping"]:
+                outputs[key] = outputs[key][:max_seq_length]
+        return outputs, is_truncation
+
 
     def convert_examples_to_features(self):
         self.input_features = []
+        self.is_overflow = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
             outputs = self.tokenizer(example.sentence,
                                     padding="max_length",
-                                    truncation=True,
+                                    truncation=False,
                                     max_length=self.config.max_seq_length,
                                     return_offsets_mapping=True)
-            # pdb.set_trace()
-            final_labels = []
-            for i, offset in enumerate(outputs["offset_mapping"]):
-                if outputs["attention_mask"][i] == 0:
-                    final_labels.append(-100)
-                    continue
-                if offset[0] == 0 and offset[1] == 0:
-                    final_labels.append(0) # the id of "O" is 0
-                    continue
-                pos = len(example.sentence[:offset[1]].split()) - 1
-                final_labels.append(self.config.label2id[example.label[pos]])
-            # pdb.set_trace()
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
+            self.is_overflow.append(is_overflow)
+            # map subtoken to word
+            start_poses = get_start_poses(example.sentence)
+            subtoken2word = []
+            current_word_idx = None
+            for offset in outputs["offset_mapping"]:
+                if offset[0] == offset[1]:
+                    subtoken2word.append(-1)
+                else:
+                    if check_if_start(start_poses, offset):
+                        current_word_idx = get_word_position(start_poses, offset)
+                        subtoken2word.append(current_word_idx)
+                    else:
+                        subtoken2word.append(current_word_idx)
+            # mapping word label to subtoken label
+            final_labels = []
+            last_word_idx = None 
+            for word_idx in subtoken2word:
+                if word_idx == -1:
+                    final_labels.append(-100)
+                else:
+                    if word_idx == last_word_idx: # subtoken
+                        final_labels.append(-100)
+                    else:  # new word
+                        final_labels.append(self.config.label2id[example.label[word_idx]])
+                        last_word_idx = word_idx
             features = InputFeatures(
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
                 input_mask = outputs["attention_mask"],
                 segment_ids = outputs["token_type_ids"],
-                trigger_left = -1,
-                trigger_right = -1,
+                trigger_left_mask = [-1]*len(outputs["input_ids"]),
+                trigger_right_mask = [-1]*len(outputs["input_ids"]),
                 label = final_labels
             )
             self.input_features.append(features)

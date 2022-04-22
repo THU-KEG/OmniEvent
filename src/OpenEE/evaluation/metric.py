@@ -5,16 +5,25 @@ import numpy as np
 from sklearn.metrics import f1_score
 
 
-def compute_span_F1(eval_pred):
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    final_preds, final_labels = [], []
+def select_start_position(preds, labels, merge=True):
+    final_preds = [[] for _ in range(labels.shape[0])]
+    final_labels = [[] for _ in range(labels.shape[0])]
     for i in range(labels.shape[0]):
         for j in range(labels.shape[1]):
             if labels[i][j] == -100:
                 continue
-            final_preds.append(predictions[i][j])
-            final_labels.append(labels[i][j])
+            final_preds[i].append(preds[i][j])
+            final_labels[i].append(labels[i][j])
+    if merge:
+        final_preds = [pred for preds in final_preds for pred in preds]
+        final_labels = [label for labels in final_labels for label in labels]
+    return final_preds, final_labels
+
+
+def compute_span_F1(eval_pred):
+    logits, labels = eval_pred
+    preds = np.argmax(logits, axis=-1)
+    final_preds, final_labels = select_start_position(preds, labels)
     pos_labels = list(set(final_labels))
     pos_labels.remove(0)
     micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0

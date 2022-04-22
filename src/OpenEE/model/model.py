@@ -23,8 +23,8 @@ class ModelForTokenClassification(nn.Module):
         input_ids: torch.Tensor,
         input_mask: torch.Tensor,
         segment_ids: torch.Tensor,
-        trigger_left: torch.Tensor, 
-        trigger_right: torch.Tensor,
+        trigger_left_mask: torch.Tensor, 
+        trigger_right_mask: torch.Tensor,
         labels: torch.Tensor=None) -> Dict[str, torch.Tensor]:
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids, \
@@ -33,7 +33,8 @@ class ModelForTokenClassification(nn.Module):
                                 return_dict=True)   
         hidden_states = outputs.last_hidden_state
         # aggregation 
-        hidden_state = self.aggregation.select_cls(hidden_states)
+        # hidden_state = self.aggregation.select_cls(hidden_states)
+        hidden_state = self.aggregation.dynamic_pooling(hidden_states, trigger_left_mask, input_mask)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 
@@ -57,8 +58,8 @@ class ModelForSequenceLabeling(nn.Module):
         input_ids: torch.Tensor,
         input_mask: torch.Tensor,
         segment_ids: torch.Tensor,
-        trigger_left: torch.Tensor, 
-        trigger_right: torch.Tensor,
+        trigger_left_mask: torch.Tensor, 
+        trigger_right_mask: torch.Tensor,
         labels: torch.Tensor=None) -> Dict[str, torch.Tensor]:
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids, \

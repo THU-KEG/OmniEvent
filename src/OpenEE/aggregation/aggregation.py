@@ -1,3 +1,4 @@
+import pdb 
 import torch 
 import torch.nn as nn 
 
@@ -35,8 +36,23 @@ class SimpleAggregation(object):
         return hidden_states[batch_indice, marker_index, :]
 
 
-    def dynamic_pooling(self, hidden_states: torch.Tensor, left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
-        pass 
+    def dynamic_pooling(self, hidden_states: torch.Tensor, position_mask: torch.Tensor, input_mask: torch.Tensor) -> torch.Tensor:
+        """Dynamic multi-pooling
+
+        Args:
+            hidden_states: [batch_size, max_seq_length, hidden_size]
+            position_mask: [batch_size, max_seq_length]
+        
+        Returns:
+            hidden_state: [batch_size, hidden_size*2]
+        """
+        minimum = -(2**32-1)
+        left_mask = (1 - position_mask) * minimum
+        right_mask = (1-(input_mask-position_mask)) * minimum
+        left_hidden_state, _ = torch.max(hidden_states + left_mask.unsqueeze(-1), dim=1)
+        right_hidden_state, _ = torch.max(hidden_states + right_mask.unsqueeze(-1), dim=1)
+        hidden_state = torch.cat((left_hidden_state, right_hidden_state), dim=-1)
+        return hidden_state
 
 
 # To do 

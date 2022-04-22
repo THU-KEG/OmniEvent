@@ -1,4 +1,5 @@
-import os 
+import os
+from pathlib import Path 
 import pdb 
 import sys 
 import json 
@@ -15,7 +16,7 @@ from OpenEE.input_engineering.data_processor import TCProcessor, SLProcessor
 from OpenEE.backbone.backbone import get_backbone
 from OpenEE.model.model import ModelForTokenClassification, ModelForSequenceLabeling
 from OpenEE.evaluation.metric import compute_accuracy, compute_F1, compute_span_F1
-from OpenEE.evaluation.dump_result import get_maven_submission
+from OpenEE.evaluation.dump_result import get_maven_submission, get_maven_submission_sl
 from OpenEE.input_engineering.input_utils import get_bio_labels
 
 # from torch.utils.tensorboard import SummaryWriter
@@ -31,7 +32,14 @@ elif len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
+# output dir
+model_name_or_path = model_args.model_name_or_path.split("/")[-1]
+output_dir = Path(os.path.join(os.path.join(training_args.output_dir, model_args.paradigm), model_name_or_path))
+output_dir.mkdir(exist_ok=True, parents=True)
+training_args.output_dir = output_dir
+
 # prepare labels
+label2id_path = data_args.label2id
 data_args.label2id = json.load(open(data_args.label2id))
 model_args.num_labels = len(data_args.label2id)
 training_args.label_name = ["labels"]
@@ -95,7 +103,7 @@ trainer.train()
 
 
 if training_args.do_predict:
-    test_dataset = TCProcessor(data_args, tokenizer, data_args.test_file)
+    test_dataset = data_class(data_args, tokenizer, data_args.test_file)
     logits, labels, metrics = trainer.predict(
         test_dataset = test_dataset,
         ignore_keys = ["loss"]
@@ -105,10 +113,13 @@ if training_args.do_predict:
         # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
         print(metrics)
     else:
-        model_name_or_path = model_args.model_name_or_path.split("/")[-1]
+        # save name 
         aggregation = model_args.aggregation
-        save_name = f"{model_name_or_path}-{aggregation}.jsonl"
+        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
         preds = np.argmax(logits, axis=-1)
-        get_maven_submission(preds, test_dataset.get_ids(), os.path.join(training_args.output_dir, save_name))
+        if model_args.paradigm == "token_classification":
+            get_maven_submission(preds, test_dataset.get_ids(), save_path)
+        elif model_args.paradigm == "sequence_labeling":
+            get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
 
 

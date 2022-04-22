@@ -7,7 +7,8 @@ import torch.nn as nn
 class ClassificationHead(nn.Module):
     def __init__(self, config):
         super(ClassificationHead, self).__init__()
-        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        scale = 2 if config.aggregation=="dm" else 1
+        self.classifier = nn.Linear(config.hidden_size*scale, config.num_labels)
 
     def forward(self, hidden_state: torch.Tensor) -> torch.Tensor:
         """Classify hidden_state to label distribution.
@@ -20,7 +21,6 @@ class ClassificationHead(nn.Module):
         """
         logits = self.classifier(hidden_state)
         return logits
-
 
 
 
