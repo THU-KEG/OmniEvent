@@ -274,10 +274,23 @@ class SLProcessor(DataProcessor):
             self.input_features.append(features)
             
 
+class Seq2SeqProcessor(DataProcessor):
+    "Data processor for sequence to sequence."
 
-
-        
-            
+    def __init__(self, config, tokenizer, input_file):
+        super().__init__(config, tokenizer)
+        self.read_examples(input_file)
+        self.convert_examples_to_features()
+    
+    def read_examples(self, input_file):
+        self.examples = []
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+                if "events" in item:
+                    for event in item["events"]:
+                        for mention in event["mentions"]:
+                            pass 
                     
                 
 
