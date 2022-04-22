@@ -4,7 +4,7 @@ import torch.nn as nn
 
 from typing import Tuple, Dict 
 
-from OpenEE.aggregation.aggregation import SimpleAggregation
+from OpenEE.aggregation.aggregation import select_cls, select_marker, DynamicPooling
 from OpenEE.head.classification import ClassificationHead
 
 
@@ -15,7 +15,7 @@ class ModelForTokenClassification(nn.Module):
     def __init__(self, config, backbone):
         super(ModelForTokenClassification, self).__init__()
         self.backbone = backbone 
-        self.aggregation = SimpleAggregation()
+        self.aggregation = DynamicPooling(config)
         self.cls_head = ClassificationHead(config)
 
 
@@ -34,7 +34,7 @@ class ModelForTokenClassification(nn.Module):
         hidden_states = outputs.last_hidden_state
         # aggregation 
         # hidden_state = self.aggregation.select_cls(hidden_states)
-        hidden_state = self.aggregation.dynamic_pooling(hidden_states, trigger_left_mask, input_mask)
+        hidden_state = self.aggregation(hidden_states, trigger_left_mask, input_mask)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 

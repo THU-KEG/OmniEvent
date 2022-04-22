@@ -54,25 +54,20 @@ class DataProcessor(Dataset):
         self.config = config
         self.tokenizer = tokenizer
     
-
     def read_examples(self, input_file):
         raise NotImplementedError
-
 
     def convert_examples_to_features(self):
         raise NotImplementedError
     
-
     def get_ids(self):
         ids = []
         for example in self.examples:
             ids.append(example.example_id)
         return ids 
 
-
     def __len__(self):
         return len(self.input_features)
-
 
     def __getitem__(self, index):
         features = self.input_features[index]
@@ -87,7 +82,6 @@ class DataProcessor(Dataset):
             data_dict["labels"] = torch.tensor(features.label, dtype=torch.long)
         return data_dict
         
-    
     def collate_fn(self, batch):
         output_batch = dict()
         for key in batch[0].keys():
@@ -107,7 +101,6 @@ class TCProcessor(DataProcessor):
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
-    
 
     def read_examples(self, input_file):
         self.examples = []
@@ -151,7 +144,6 @@ class TCProcessor(DataProcessor):
                             example.label = candidate["type"]
                         self.examples.append(example)
 
-        
     def convert_examples_to_features(self): 
         # merge and then tokenize
         self.input_features = []
@@ -163,11 +155,13 @@ class TCProcessor(DataProcessor):
                                     padding="max_length",
                                     truncation=True,
                                     max_length=self.config.max_seq_length)
+            is_overflow = False 
             try:
                 left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
-            except:
-                logger.warning("Markers are not in the input tokens. %s", sentence)
+            except: 
+                logger.warning("Markers are not in the input tokens.")
+                is_overflow = True 
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
@@ -183,9 +177,10 @@ class TCProcessor(DataProcessor):
                 trigger_left_mask = left_mask,
                 trigger_right_mask = right_mask
             )
-            # pdb.set_trace()
             if example.label is not None:
                 features.label = self.config.label2id[example.label]
+                if is_overflow:
+                    features.label = -100
             self.input_features.append(features)
 
 
@@ -197,7 +192,6 @@ class SLProcessor(DataProcessor):
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    
     def read_examples(self, input_file):
         self.examples = []
         with open(input_file, "r", encoding="utf-8") as f:
@@ -221,7 +215,6 @@ class SLProcessor(DataProcessor):
                 )
                 self.examples.append(example)
 
-
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False 
         if len(outputs["input_ids"]) > max_seq_length:
@@ -229,7 +222,6 @@ class SLProcessor(DataProcessor):
             for key in ["input_ids", "attention_mask", "token_type_ids", "offset_mapping"]:
                 outputs[key] = outputs[key][:max_seq_length]
         return outputs, is_truncation
-
 
     def convert_examples_to_features(self):
         self.input_features = []
@@ -281,7 +273,6 @@ class SLProcessor(DataProcessor):
             )
             self.input_features.append(features)
             
-
 
 
 
