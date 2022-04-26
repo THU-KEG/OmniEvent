@@ -5,7 +5,7 @@ import argparse
 import json
 import numpy as np
 from collections import defaultdict
-from .metric import select_start_position
+from .metric import select_start_position, compute_seq_F1
 from ..input_engineering.input_utils import get_start_poses, check_if_start, get_word_position
 
 
@@ -65,6 +65,34 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, label2id, c
                 })
     # dump results 
     with open(result_file, "w") as f:
+        for id, preds_per_doc in results.items():
+            results_per_doc = dict(id=id, predictions=preds_per_doc)
+            f.write(json.dumps(results_per_doc)+"\n")
+
+
+def get_maven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, training_args, data_args):
+    decoded_preds = compute_seq_F1(preds, labels, 
+                                    **{"tokenizer": tokenizer, 
+                                       "training_args": training_args, 
+                                       "return_decoded_preds": True})
+    results = defaultdict(list)
+    with open(data_args.test_file, "r") as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            item = json.loads(line.strip())
+            for candidate in item["candidates"]:
+                pred_type = "NA"
+                # pdb.set_trace()
+                if candidate["trigger_word"] in decoded_preds[i] and \
+                    decoded_preds[i][candidate["trigger_word"]] in label2id:
+                    pred_type = decoded_preds[i][candidate["trigger_word"]]
+                # record results
+                results[item["id"]].append({
+                    "id": candidate["id"].split("-")[-1],
+                    "type_id": int(label2id[pred_type]),
+                })
+    # dump results 
+    with open(save_path, "w") as f:
         for id, preds_per_doc in results.items():
             results_per_doc = dict(id=id, predictions=preds_per_doc)
             f.write(json.dumps(results_per_doc)+"\n")

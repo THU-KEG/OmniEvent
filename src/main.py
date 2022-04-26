@@ -7,17 +7,31 @@ import torch
 
 import numpy as np 
 
-from transformers import Trainer, set_seed
+from transformers import set_seed 
 from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.input_engineering.data_processor import TCProcessor, SLProcessor
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.model.model import ModelForTokenClassification, ModelForSequenceLabeling
-from OpenEE.evaluation.metric import compute_accuracy, compute_F1, compute_span_F1
-from OpenEE.evaluation.dump_result import get_maven_submission, get_maven_submission_sl
+from OpenEE.input_engineering.data_processor import (
+    TCProcessor,
+    SLProcessor,
+    Seq2SeqProcessor
+)
+from OpenEE.model.model import get_model
+from OpenEE.evaluation.metric import (
+    compute_F1, 
+    compute_span_F1, 
+    compute_seq_F1
+)
+from OpenEE.evaluation.dump_result import (
+    get_maven_submission, 
+    get_maven_submission_sl,
+    get_maven_submission_seq2seq
+)
 from OpenEE.input_engineering.input_utils import get_bio_labels
+from OpenEE.trainer import Trainer
+from OpenEE.trainer_seq2seq import Seq2SeqTrainer
 
 # from torch.utils.tensorboard import SummaryWriter
 
@@ -37,6 +51,9 @@ model_name_or_path = model_args.model_name_or_path.split("/")[-1]
 output_dir = Path(os.path.join(os.path.join(training_args.output_dir, model_args.paradigm), model_name_or_path))
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
+
+# local rank
+training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
 # prepare labels
 label2id_path = data_args.label2id
@@ -66,25 +83,24 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
 # model 
 backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
                                         model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
-
-model_class = None 
+model = get_model(model_args, backbone)
+model.cuda()
 data_class = None  
 metric_fn = None 
 
 if model_args.paradigm == "token_classification":
-    model_class = ModelForTokenClassification
     data_class = TCProcessor
     metric_fn = compute_F1
 elif model_args.paradigm == "sequence_labeling":
-    model_class = ModelForSequenceLabeling
     data_class = SLProcessor
     metric_fn = compute_span_F1
+elif model_args.paradigm == "seq2seq":
+    data_class = Seq2SeqProcessor
+    metric_fn = compute_seq_F1
 else:
     raise ValueError("No such paradigm.")
 
-# model and dataset 
-model = model_class(model_args, backbone)
-model.cuda()
+# dataset 
 train_dataset = data_class(data_args, tokenizer, data_args.train_file)
 eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
 
@@ -121,5 +137,8 @@ if training_args.do_predict:
             get_maven_submission(preds, test_dataset.get_ids(), save_path)
         elif model_args.paradigm == "sequence_labeling":
             get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
+        elif model_args.paradigm == "seq2seq":
+            get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(label2id_path)), tokenizer, training_args, data_args)
+
 
 

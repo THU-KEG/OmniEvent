@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class InputExample(object):
     """A single training/test example for event extractioin."""
 
-    def __init__(self, example_id, sentence, trigger_left, trigger_right, label=None):
+    def __init__(self, example_id, sentence, trigger_left=None, trigger_right=None, labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -25,26 +25,26 @@ class InputExample(object):
             sentence: List of str. The untokenized sentence.
             triggerL: Left position of trigger.
             triggerR: Light position of tigger.
-            label: Event type of the trigger
+            labels: Event type of the trigger
         """
         self.example_id = example_id
         self.sentence = sentence
         self.trigger_left = trigger_left 
         self.trigger_right = trigger_right
-        self.label = label
+        self.labels = labels
 
 
 class InputFeatures(object):
     """Input features of an instance."""
     
-    def __init__(self, example_id, input_ids, input_mask, segment_ids, trigger_left_mask, trigger_right_mask, label=None):
+    def __init__(self, example_id, input_ids, attention_mask, token_type_ids=None, trigger_left_mask=None, trigger_right_mask=None, labels=None):
         self.example_id = example_id
         self.input_ids = input_ids
-        self.input_mask = input_mask
-        self.segment_ids = segment_ids
+        self.attention_mask = attention_mask
+        self.token_type_ids = token_type_ids
         self.trigger_left_mask = trigger_left_mask
         self.trigger_right_mask = trigger_right_mask
-        self.label = label
+        self.labels = labels
 
 
 class DataProcessor(Dataset):
@@ -73,24 +73,33 @@ class DataProcessor(Dataset):
         features = self.input_features[index]
         data_dict = dict(
             input_ids = torch.tensor(features.input_ids, dtype=torch.long),
-            input_mask = torch.tensor(features.input_mask, dtype=torch.float32),
-            segment_ids = torch.tensor(features.segment_ids, dtype=torch.long),
-            trigger_left_mask = torch.tensor(features.trigger_left_mask, dtype=torch.float32),
-            trigger_right_mask = torch.tensor(features.trigger_right_mask, dtype=torch.float32),
+            attention_mask = torch.tensor(features.attention_mask, dtype=torch.float32)
         )
-        if features.label is not None:
-            data_dict["labels"] = torch.tensor(features.label, dtype=torch.long)
+        if features.token_type_ids is not None and self.config.return_token_type_ids:
+            data_dict["token_type_ids"] = torch.tensor(features.token_type_ids, dtype=torch.long)
+        if features.trigger_left_mask is not None:
+            data_dict["trigger_left_mask"] = torch.tensor(features.trigger_left_mask, dtype=torch.float32)
+        if features.trigger_right_mask is not None:
+            data_dict["trigger_right_mask"] = torch.tensor(features.trigger_right_mask, dtype=torch.float32)
+        if features.labels is not None:
+            data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
         return data_dict
         
     def collate_fn(self, batch):
         output_batch = dict()
         for key in batch[0].keys():
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
-        input_length = int(output_batch["input_mask"].sum(-1).max())
-        for key in ["input_ids", "input_mask", "segment_ids", "trigger_left_mask", "trigger_right_mask"]:
+        input_length = int(output_batch["attention_mask"].sum(-1).max())
+        for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
+            if key not in output_batch:
+                continue
             output_batch[key] = output_batch[key][:, :input_length]
         if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
-            output_batch["labels"] = output_batch["labels"][:, :input_length] 
+            if self.config.truncate_seq2seq_output:
+                output_length = int((output_batch["labels"]!=-100).sum(-1).max())
+                output_batch["labels"] = output_batch["labels"][:, :output_length]
+            else:
+                output_batch["labels"] = output_batch["labels"][:, :input_length] 
         return output_batch
 
 
@@ -116,7 +125,7 @@ class TCProcessor(DataProcessor):
                                 sentence=item["sentence"],
                                 trigger_left=mention["position"][0],
                                 trigger_right=mention["position"][1],
-                                label=event["type"]
+                                labels=event["type"]
                             )
                             self.examples.append(example)
                 if "negative_triggers" in item:
@@ -126,7 +135,7 @@ class TCProcessor(DataProcessor):
                             sentence=item["sentence"],
                             trigger_left=neg["position"][0],
                             trigger_right=neg["position"][1],
-                            label="NA" 
+                            labels="NA" 
                         )
                         self.examples.append(example)
                 # test set 
@@ -141,7 +150,7 @@ class TCProcessor(DataProcessor):
                         # if test set has labels
                         assert not (self.config.test_exists_labels ^ ("type" in candidate))
                         if "type" in candidate:
-                            example.label = candidate["type"]
+                            example.labels = candidate["type"]
                         self.examples.append(example)
 
     def convert_examples_to_features(self): 
@@ -172,15 +181,15 @@ class TCProcessor(DataProcessor):
             features = InputFeatures(
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
-                input_mask = outputs["attention_mask"],
-                segment_ids = outputs["token_type_ids"],
+                attention_mask = outputs["attention_mask"],
+                token_type_ids = outputs["token_type_ids"],
                 trigger_left_mask = left_mask,
                 trigger_right_mask = right_mask
             )
-            if example.label is not None:
-                features.label = self.config.label2id[example.label]
+            if example.labels is not None:
+                features.labels = self.config.label2id[example.labels]
                 if is_overflow:
-                    features.label = -100
+                    features.labels = -100
             self.input_features.append(features)
 
 
@@ -197,21 +206,19 @@ class SLProcessor(DataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-                label = ["O"] * len(item["sentence"].split())
+                labels = ["O"] * len(item["sentence"].split())
                 if "events" in item:
                     for event in item["events"]:
                         for mention in event["mentions"]:
                             left_pos = len(item["sentence"][:mention["position"][0]].split())
                             right_pos = len(item["sentence"][:mention["position"][1]].split())
-                            label[left_pos] = f"B-{event['type']}"
+                            labels[left_pos] = f"B-{event['type']}"
                             for i in range(left_pos+1, right_pos):
-                                label[i] = f"I-{event['type']}"
+                                labels[i] = f"I-{event['type']}"
                 example = InputExample(
                     example_id = item["id"],
                     sentence = item["sentence"],
-                    trigger_left = -1,
-                    trigger_right= -1,
-                    label = label
+                    labels = labels
                 )
                 self.examples.append(example)
 
@@ -250,7 +257,7 @@ class SLProcessor(DataProcessor):
                         subtoken2word.append(current_word_idx)
                     else:
                         subtoken2word.append(current_word_idx)
-            # mapping word label to subtoken label
+            # mapping word labels to subtoken labels
             final_labels = []
             last_word_idx = None 
             for word_idx in subtoken2word:
@@ -260,16 +267,14 @@ class SLProcessor(DataProcessor):
                     if word_idx == last_word_idx: # subtoken
                         final_labels.append(-100)
                     else:  # new word
-                        final_labels.append(self.config.label2id[example.label[word_idx]])
+                        final_labels.append(self.config.label2id[example.labels[word_idx]])
                         last_word_idx = word_idx
             features = InputFeatures(
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
-                input_mask = outputs["attention_mask"],
-                segment_ids = outputs["token_type_ids"],
-                trigger_left_mask = [-1]*len(outputs["input_ids"]),
-                trigger_right_mask = [-1]*len(outputs["input_ids"]),
-                label = final_labels
+                attention_mask = outputs["attention_mask"],
+                token_type_ids = outputs["token_type_ids"],
+                labels = final_labels
             )
             self.input_features.append(features)
             
@@ -287,10 +292,60 @@ class Seq2SeqProcessor(DataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
+                labels = []
                 if "events" in item:
                     for event in item["events"]:
                         for mention in event["mentions"]:
-                            pass 
-                    
-                
+                            labels.append({
+                                "type": event["type"],
+                                "word": mention["trigger_word"],
+                                "position": mention["position"]
+                            })
+                example = InputExample(
+                    example_id = item["id"],
+                    sentence = item["sentence"],
+                    trigger_left = -1,
+                    trigger_right = -1,
+                    labels = labels
+                )
+                self.examples.append(example)
+        
+    def convert_examples_to_features(self):
+        self.input_features = []
+        for example in tqdm(self.examples, desc="Processing features for SL"):
+            outputs = self.tokenizer(example.sentence,
+                                    padding="max_length",
+                                    truncation=True,
+                                    max_length=self.config.max_seq_length,
+                                    return_offsets_mapping=True)
+            # Roberta tokenizer doesn't return token_type_ids
+            if "token_type_ids" not in outputs:
+                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            labels = ""
+            for mention_label in example.labels:
+                if outputs["offset_mapping"][-1][0] != 0 and \
+                    outputs["offset_mapping"][-1][1] != 0 and \
+                    mention_label["position"][1] > outputs["offset_mapping"][-1][1]:
+                    continue
+                labels += f"{mention_label['type']}:{mention_label['word']};"
+            label_outputs = self.tokenizer(labels,
+                                    padding="max_length",
+                                    truncation=True,
+                                    max_length=self.config.max_out_length)
+            # set -100 to unused token 
+            for i, flag in enumerate(label_outputs["attention_mask"]):
+                if flag == 0:
+                    label_outputs["input_ids"][i] = -100
+            features = InputFeatures(
+                example_id = example.example_id,
+                input_ids = outputs["input_ids"],
+                attention_mask = outputs["attention_mask"],
+                token_type_ids = outputs["token_type_ids"],
+                labels = label_outputs["input_ids"]
+            )
+            self.input_features.append(features)
+
+            
+
+            
 

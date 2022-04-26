@@ -2,7 +2,7 @@ seed: 42
 do_train: True
 do_predict: True
 
-paradigm: token_classification
+paradigm: sequence_labeling
 
 output_dir: output
 label2id: ../data/MAVEN/label2id.json 
@@ -10,19 +10,29 @@ train_file: ../data/MAVEN/train.unified.jsonl
 validation_file: ../data/MAVEN/valid.unified.jsonl
 test_file: ../data/MAVEN/test.unified.jsonl
 
+return_token_type_ids: False 
+truncate_seq2seq_output: False
+
 model_type: roberta
 model_name_or_path: roberta-base
 hidden_size: 768
-aggregation: dm
+aggregation: none
 
 num_train_epochs: 5
-max_seq_length: 120
+max_seq_length: 128
+max_out_length: 128
 dataloader_num_workers: 2
 
-per_device_train_batch_size: 128
-per_device_eval_batch_size: 128
+generation_max_length: 128
+generation_num_beams: 4
+predict_with_generate: True 
+ignore_pad_token_for_loss: True 
+
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 32
 gradient_accumulation_steps: 1
-learning_rate: 3.0e-5
+# eval_accumulation_steps: 4
+learning_rate: 5.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
 max_grad_norm: 1

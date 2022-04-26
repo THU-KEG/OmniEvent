@@ -45,9 +45,27 @@ class DataArguments:
             "than this will be truncated, sequences shorter will be padded."
         },
     )
+    max_out_length: int = field(
+        default=64,
+        metadata={
+            "help": "The maximum total output sequence length after tokenization."
+        }
+    )
     label2id: str = field(
         default=None,
         metadata={"help": "Path to label2id file."}
+    )
+    return_token_type_ids: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether return token type ids"
+        }
+    )
+    truncate_seq2seq_output: bool = field(
+        default=False,
+        metadata={
+            "help": "Used for Seq2Seq. Whether truncate output labels."
+        }
     )
 
 
@@ -114,6 +132,30 @@ class TrainingArguments(TrainingArguments):
     early_stopping_threshold: float = field(
         default=0.1,
         metadata={"help": "Threshold for early stopping."}
+    )
+    generation_max_length: int = field(
+        default=128, 
+        metadata={
+            "help": "The maximum output length for encoder-decoder architecture (BART, T5)."
+        }
+    )
+    generation_num_beams: int = field(
+        default=3, 
+        metadata={
+            "help": "The maximum output length for encoder-decoder architecture (BART, T5)."
+        }
+    )
+    ignore_pad_token_for_loss: bool = field(
+        default=False, 
+        metadata={
+            "help": "The maximum output length for encoder-decoder architecture (BART, T5)."
+        }
+    )
+    predict_with_generate: bool = field(
+        default=False, 
+        metadata={
+            "help": "The maximum output length for encoder-decoder architecture (BART, T5)."
+        }
     )
 
 
