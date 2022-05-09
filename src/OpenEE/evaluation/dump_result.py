@@ -96,3 +96,15 @@ def get_maven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, 
         for id, preds_per_doc in results.items():
             results_per_doc = dict(id=id, predictions=preds_per_doc)
             f.write(json.dumps(results_per_doc)+"\n")
+
+
+def get_leven_submission(preds, instance_ids, result_file):
+    return get_maven_submission(preds, instance_ids, result_file)
+
+
+def get_leven_submission_sl(preds, labels, is_overflow, result_file, label2id, config):
+    return get_maven_submission_sl(preds, labels, is_overflow, result_file, label2id, config)
+
+
+def get_leven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, training_args, data_args):
+    return get_maven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, training_args, data_args)

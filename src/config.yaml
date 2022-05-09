@@ -2,21 +2,23 @@ seed: 42
 do_train: True
 do_predict: True
 
-paradigm: sequence_labeling
+paradigm: token_classification
 
-output_dir: output
-label2id: ../data/MAVEN/label2id.json 
-train_file: ../data/MAVEN/train.unified.jsonl
-validation_file: ../data/MAVEN/valid.unified.jsonl
-test_file: ../data/MAVEN/test.unified.jsonl
+output_dir: output/ACE2005
+label2id: ../data/ace_2005_td_v7/English/label2id.json 
+train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
+validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
+test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
+language: English
+test_exists_labels: True
 
 return_token_type_ids: False 
 truncate_seq2seq_output: False
 
-model_type: roberta
-model_name_or_path: roberta-base
+model_type: bert
+model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: none
+aggregation: None
 
 num_train_epochs: 5
 max_seq_length: 128
@@ -29,8 +31,8 @@ predict_with_generate: True
 ignore_pad_token_for_loss: True 
 
 per_device_train_batch_size: 32
-per_device_eval_batch_size: 32
-gradient_accumulation_steps: 1
+per_device_eval_batch_size: 64
+gradient_accumulation_steps: 4
 # eval_accumulation_steps: 4
 learning_rate: 5.0e-5
 weight_decay: 1.0e-5

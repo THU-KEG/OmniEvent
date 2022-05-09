@@ -1,4 +1,3 @@
-import enum
 import os 
 import pdb 
 import json 
@@ -22,7 +21,7 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
         for sent_id, sen in enumerate(item["content"]):
             instance = dict()
             instance["id"] = item["id"]
-            instance["sentence"] = " ".join(sen["tokens"]) 
+            instance["text"] = " ".join(sen["tokens"]) 
             if "events" not in item: 
                 # if test dataset, we don't have the labels.
                 instance["candidates"] = []
@@ -39,7 +38,7 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
                             "trigger_word": candidate["trigger_word"],
                             "position": [char_start, char_end]
                         })
-                        assert instance["sentence"][char_start:char_end] == candidate["trigger_word"]
+                        assert instance["text"][char_start:char_end] == candidate["trigger_word"]
             else:
                 # if train dataset, we have the labels.
                 instance["events"] = []
@@ -51,9 +50,6 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
                         if mention["sent_id"] == sent_id:
                             events_in_sen[event["type"]].append(mention)
                 for type in events_in_sen:
-                    event = dict()
-                    event["type"] = type 
-                    event["mentions"] = []
                     for mention in events_in_sen[type]:
                         char_start = len(" ".join(sen["tokens"][:mention["offset"][0]]))
                         # white space
@@ -61,13 +57,13 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
                             char_start += 1
                         char_end = char_start + \
                             len(" ".join(sen["tokens"][mention["offset"][0]:mention["offset"][1]]))
-                        event["mentions"].append({
-                            "id": "{}-{}".format(instance["id"], mention["id"]),
-                            "trigger_word": mention["trigger_word"],
-                            "position": [char_start, char_end]
-                        })
-                        assert instance["sentence"][char_start:char_end] == mention["trigger_word"]
-                    instance["events"].append(event)
+                        event = dict()
+                        event["type"] = type 
+                        event["id"] = "{}-{}".format(instance["id"], mention["id"])
+                        event["trigger_word"] = mention["trigger_word"]
+                        event["position"] = [char_start, char_end]
+                        assert instance["text"][char_start:char_end] == event["trigger_word"]
+                        instance["events"].append(event)
                 # negative triggers 
                 for neg in item["negative_triggers"]:
                     if neg["sent_id"] == sent_id:
@@ -82,7 +78,7 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
                             "trigger_word": neg["trigger_word"],
                             "position": [char_start, char_end]
                         })
-                        assert instance["sentence"][char_start:char_end] == neg["trigger_word"]
+                        assert instance["text"][char_start:char_end] == neg["trigger_word"]
             formatted_data.append(instance)
     print("We get {} instances.".format(len(formatted_data)))
     if "train" in data_path:

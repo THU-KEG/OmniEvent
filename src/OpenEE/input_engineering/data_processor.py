@@ -17,18 +17,18 @@ logger = logging.getLogger(__name__)
 class InputExample(object):
     """A single training/test example for event extractioin."""
 
-    def __init__(self, example_id, sentence, trigger_left=None, trigger_right=None, labels=None):
+    def __init__(self, example_id, text, trigger_left=None, trigger_right=None, labels=None):
         """Constructs a InputExample.
 
         Args:
             example_id: Unique id for the example.
-            sentence: List of str. The untokenized sentence.
+            text: List of str. The untokenized text.
             triggerL: Left position of trigger.
             triggerR: Light position of tigger.
             labels: Event type of the trigger
         """
         self.example_id = example_id
-        self.sentence = sentence
+        self.text = text
         self.trigger_left = trigger_left 
         self.trigger_right = trigger_right
         self.labels = labels
@@ -59,6 +59,16 @@ class DataProcessor(Dataset):
 
     def convert_examples_to_features(self):
         raise NotImplementedError
+
+    def _truncate(self, outputs, max_seq_length):
+        is_truncation = False 
+        if len(outputs["input_ids"]) > max_seq_length:
+            is_truncation = True 
+            for key in ["input_ids", "attention_mask", "token_type_ids", "offset_mapping"]:
+                if key not in outputs:
+                    continue
+                outputs[key] = outputs[key][:max_seq_length]
+        return outputs, is_truncation
     
     def get_ids(self):
         ids = []
@@ -119,20 +129,19 @@ class TCProcessor(DataProcessor):
                 # training and valid set
                 if "events" in item:
                     for event in item["events"]:
-                        for mention in event["mentions"]:
-                            example = InputExample(
-                                example_id=mention["id"],
-                                sentence=item["sentence"],
-                                trigger_left=mention["position"][0],
-                                trigger_right=mention["position"][1],
-                                labels=event["type"]
-                            )
-                            self.examples.append(example)
+                        example = InputExample(
+                            example_id=event["id"],
+                            text=item["text"],
+                            trigger_left=event["position"][0],
+                            trigger_right=event["position"][1],
+                            labels=event["type"]
+                        )
+                        self.examples.append(example)
                 if "negative_triggers" in item:
                     for neg in item["negative_triggers"]:
                         example = InputExample(
                             example_id=neg["id"],
-                            sentence=item["sentence"],
+                            text=item["text"],
                             trigger_left=neg["position"][0],
                             trigger_right=neg["position"][1],
                             labels="NA" 
@@ -143,24 +152,24 @@ class TCProcessor(DataProcessor):
                     for candidate in item["candidates"]:
                         example = InputExample(
                             example_id=candidate["id"],
-                            sentence=item["sentence"],
+                            text=item["text"],
                             trigger_left=candidate["position"][0],
                             trigger_right=candidate["position"][1]
                         )
-                        # if test set has labels
-                        assert not (self.config.test_exists_labels ^ ("type" in candidate))
-                        if "type" in candidate:
-                            example.labels = candidate["type"]
+                        # # if test set has labels
+                        # assert not (self.config.test_exists_labels ^ ("type" in candidate))
+                        # if "type" in candidate:
+                        #     example.labels = candidate["type"]
                         self.examples.append(example)
 
     def convert_examples_to_features(self): 
         # merge and then tokenize
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for TC"):
-            sentence = example.sentence[:example.trigger_left] + self.config.markers[0] + " " \
-                        + example.sentence[example.trigger_left:example.trigger_right] \
-                        + " " + self.config.markers[1] + example.sentence[example.trigger_right:]
-            outputs = self.tokenizer(sentence, 
+            text = example.text[:example.trigger_left] + self.config.markers[0] + " " \
+                        + example.text[example.trigger_left:example.trigger_right] \
+                        + " " + self.config.markers[1] + example.text[example.trigger_right:]
+            outputs = self.tokenizer(text, 
                                     padding="max_length",
                                     truncation=True,
                                     max_length=self.config.max_seq_length)
@@ -170,7 +179,7 @@ class TCProcessor(DataProcessor):
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
             except: 
                 logger.warning("Markers are not in the input tokens.")
-                is_overflow = True 
+                is_overflow = True
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
@@ -206,35 +215,35 @@ class SLProcessor(DataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-                labels = ["O"] * len(item["sentence"].split())
+                if self.config.language == "English":
+                    labels = ["O"] * len(item["text"].split())
+                else:
+                    labels = ["O"] * len(item["text"])
                 if "events" in item:
                     for event in item["events"]:
                         for mention in event["mentions"]:
-                            left_pos = len(item["sentence"][:mention["position"][0]].split())
-                            right_pos = len(item["sentence"][:mention["position"][1]].split())
+                            if self.config.language == "English": 
+                                left_pos = len(item["text"][:mention["position"][0]].split())
+                                right_pos = len(item["text"][:mention["position"][1]].split())
+                            else:
+                                assert self.config.language == "Chinese"
+                                left_pos = mention["position"][0]
+                                right_pos = mention["position"][1]
                             labels[left_pos] = f"B-{event['type']}"
                             for i in range(left_pos+1, right_pos):
                                 labels[i] = f"I-{event['type']}"
                 example = InputExample(
                     example_id = item["id"],
-                    sentence = item["sentence"],
+                    text = item["text"],
                     labels = labels
                 )
                 self.examples.append(example)
-
-    def _truncate(self, outputs, max_seq_length):
-        is_truncation = False 
-        if len(outputs["input_ids"]) > max_seq_length:
-            is_truncation = True 
-            for key in ["input_ids", "attention_mask", "token_type_ids", "offset_mapping"]:
-                outputs[key] = outputs[key][:max_seq_length]
-        return outputs, is_truncation
 
     def convert_examples_to_features(self):
         self.input_features = []
         self.is_overflow = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
-            outputs = self.tokenizer(example.sentence,
+            outputs = self.tokenizer(example.text,
                                     padding="max_length",
                                     truncation=False,
                                     max_length=self.config.max_seq_length,
@@ -245,7 +254,7 @@ class SLProcessor(DataProcessor):
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
             # map subtoken to word
-            start_poses = get_start_poses(example.sentence)
+            start_poses = get_start_poses(example.text)
             subtoken2word = []
             current_word_idx = None
             for offset in outputs["offset_mapping"]:
@@ -303,7 +312,7 @@ class Seq2SeqProcessor(DataProcessor):
                             })
                 example = InputExample(
                     example_id = item["id"],
-                    sentence = item["sentence"],
+                    text = item["text"],
                     trigger_left = -1,
                     trigger_right = -1,
                     labels = labels
@@ -313,7 +322,7 @@ class Seq2SeqProcessor(DataProcessor):
     def convert_examples_to_features(self):
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
-            outputs = self.tokenizer(example.sentence,
+            outputs = self.tokenizer(example.text,
                                     padding="max_length",
                                     truncation=True,
                                     max_length=self.config.max_seq_length,

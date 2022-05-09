@@ -67,6 +67,10 @@ class DataArguments:
             "help": "Used for Seq2Seq. Whether truncate output labels."
         }
     )
+    language: str = field(
+        default="English",
+        metadata={"help": "data language."}
+    )
 
 
 @dataclass

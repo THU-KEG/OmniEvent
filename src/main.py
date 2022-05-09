@@ -25,6 +25,9 @@ from OpenEE.evaluation.metric import (
     compute_seq_F1
 )
 from OpenEE.evaluation.dump_result import (
+    get_leven_submission,
+    get_leven_submission_sl,
+    get_leven_submission_seq2seq,
     get_maven_submission, 
     get_maven_submission_sl,
     get_maven_submission_seq2seq
@@ -53,7 +56,7 @@ output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
 # local rank
-training_args.local_rank = int(os.environ["LOCAL_RANK"])
+# training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
 # prepare labels
 label2id_path = data_args.label2id
@@ -134,11 +137,20 @@ if training_args.do_predict:
         save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
         preds = np.argmax(logits, axis=-1)
         if model_args.paradigm == "token_classification":
-            get_maven_submission(preds, test_dataset.get_ids(), save_path)
+            if data_args.dataset_name == "MAVEN":
+                get_maven_submission(preds, test_dataset.get_ids(), save_path)
+            elif data_args.dataset_name == "LEVEN":
+                get_leven_submission(preds, test_dataset.get_ids(), save_path)
         elif model_args.paradigm == "sequence_labeling":
-            get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
+            if data_args.dataset_name == "MAVEN":
+                get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
+            elif data_args.dataset_name == "LEVEN":
+                get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
         elif model_args.paradigm == "seq2seq":
-            get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(label2id_path)), tokenizer, training_args, data_args)
+            if data_args.dataset_name == "MAVEN":
+                get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(label2id_path)), tokenizer, training_args, data_args)
+            elif data_args.dataset_name == "LEVEN":
+                get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(label2id_path)), tokenizer, training_args, data_args)
 
 
 

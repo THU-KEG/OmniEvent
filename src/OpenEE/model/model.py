@@ -27,7 +27,8 @@ class ModelForTokenClassification(nn.Module):
     def __init__(self, config, backbone):
         super(ModelForTokenClassification, self).__init__()
         self.backbone = backbone 
-        self.aggregation = DynamicPooling(config)
+        # self.aggregation = DynamicPooling(config)
+        self.aggregation = select_cls
         self.cls_head = ClassificationHead(config)
 
     def forward(
@@ -47,7 +48,7 @@ class ModelForTokenClassification(nn.Module):
         hidden_states = outputs.last_hidden_state
         # aggregation 
         # hidden_state = self.aggregation.select_cls(hidden_states)
-        hidden_state = self.aggregation(hidden_states, trigger_left_mask, attention_mask)
+        hidden_state = self.aggregation(hidden_states)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 
@@ -64,7 +65,7 @@ class ModelForSequenceLabeling(nn.Module):
     def __init__(self, config, backbone):
         super(ModelForSequenceLabeling, self).__init__()
         self.backbone = backbone 
-        self.crf = CRF(config.num_labels, batch_first=True)
+        # self.crf = CRF(config.num_labels, batch_first=True)
         self.cls_head = ClassificationHead(config)
 
     def forward(
@@ -87,15 +88,16 @@ class ModelForSequenceLabeling(nn.Module):
         mask = labels != 100
         loss = None 
         if labels is not None:
-            # loss_fn = nn.CrossEntropyLoss()
-            # loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
+            loss_fn = nn.CrossEntropyLoss()
+            loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
             # CRF
-            loss = -self.crf(emissions=logits, 
-                            tags=labels,
-                            mask=mask,
-                            reduction = "token_mean")
+            # loss = -self.crf(emissions=logits, 
+            #                 tags=labels,
+            #                 mask=mask,
+            #                 reduction = "token_mean")
         else:
-            preds = self.crf.decode(emissions=logits, mask=mask)
-            logits = torch.LongTensor(preds)
+            # preds = self.crf.decode(emissions=logits, mask=mask)
+            # logits = torch.LongTensor(preds)
+            pass 
 
         return dict(loss=loss, logits=logits)
