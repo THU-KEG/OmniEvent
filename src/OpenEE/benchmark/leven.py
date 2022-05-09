@@ -7,6 +7,10 @@ from collections import defaultdict
 
 
 def convert_leven_to_unified(data_path: str, dump=True) -> list:
+    """
+    Convert LEVEN dataset to the unified format.
+    Dataset link: https://github.com/thunlp/LEVEN
+    """
     leven_data = list(jsonlines.open(data_path))
 
     label2id = dict(NA=0)
@@ -71,14 +75,14 @@ def convert_leven_to_unified(data_path: str, dump=True) -> list:
                         assert instance["text"][char_start:char_end] == neg["trigger_word"]
             formatted_data.append(instance)
 
-    print("We get {} instances.".format(len(formatted_data)))
+    print("We get {} instances for [{}].".format(len(formatted_data), data_path))
     if "train" in data_path:
         io_dir = "/".join(data_path.split("/")[:-1])
         label2id = dict(sorted(list(label2id.items()), key=lambda x: x[1]))
         json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w"), indent=4, ensure_ascii=False)
 
     if dump:
-        with jsonlines.open(data_path.replace(".jsonl", ".unified.jsonl"), 'w') as f:
+        with jsonlines.open(data_path.replace(".jsonl", ".unified.jsonl"), "w") as f:
             for item in formatted_data:
                 jsonlines.Writer.write(f, item)
 
