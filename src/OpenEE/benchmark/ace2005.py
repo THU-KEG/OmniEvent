@@ -156,7 +156,7 @@ class Extractor():
                 collection = DOMtree.documentElement
                 events = collection.getElementsByTagName("event")
                 Entities = [e for e in self.Entities if e['dir']==dir and e['file']==file]
-                for event in events:
+                for event_id, event in enumerate(events):
                     event_type =  str(event.getAttribute("SUBTYPE"))
                     event_mentions = event.getElementsByTagName("event_mention")
                     for event_mention in event_mentions:
@@ -218,29 +218,27 @@ class Extractor():
                             _entities.append(entity_info)
                         event_summary = {"tokens": tokens,
                                          'offsets':tokens_offsets,
-                                         "event_type": [event_type],
+                                         "event_type": event_type,
                                          "start": start,
                                          "end": end,
-                                         "trigger_tokens": [trigger_tokens],
-                                         "trigger_start": [trigger_s],
-                                         "trigger_end": [trigger_e],
-                                         'trigger_offsets':[trigger_offsets],
-                                         "entities": [_entities],
+                                         "trigger_tokens": trigger_tokens,
+                                         "trigger_start": trigger_s,
+                                         "trigger_end": trigger_e,
+                                         'trigger_offsets': trigger_offsets,
+                                         "entities": _entities,
                                          'file': file[:-8],
                                          'dir': dir}
                         offsets_join = str(event_summary['start'])+'_'+str(event_summary['end'])+"_"+event_summary['file']+"_"+event_summary['dir']
 
                         if offsets_join in offsets2idx:
                             event_idx = offsets2idx[offsets_join]
-                            self.Events[event_idx]['event_type'].extend(event_summary['event_type'])
-                            self.Events[event_idx]['trigger_tokens'].extend(event_summary['trigger_tokens'])
-                            self.Events[event_idx]['trigger_start'].extend(event_summary['trigger_start'])
-                            self.Events[event_idx]['trigger_end'].extend(event_summary['trigger_end'])
-                            self.Events[event_idx]['trigger_offsets'].extend(event_summary['trigger_offsets'])
-                            self.Events[event_idx]['entities'].extend(event_summary['entities'])
+                            if f"{event_type}-{event_id}" in self.Events[event_idx]:
+                                self.Events[event_idx][f"{event_type}-{event_id}"].append(event_summary)
+                            else:
+                                self.Events[event_idx][f"{event_type}-{event_id}"] = [event_summary]
                         else:
                             offsets2idx[offsets_join] = len(self.Events)
-                            self.Events.append(event_summary)
+                            self.Events.append({f"{event_type}-{event_id}": [event_summary]})
         nlp.close()
 
     def None_event_Extract(self):
@@ -249,7 +247,14 @@ class Extractor():
             path = self.args.ACE_FILES+'/'+dir+'/timex2norm'
             files =self.source_files[dir]
             for file in files:
-                event_in_this_file = [(e['start'],e['end']) for e in self.Events if e['file']==file[:-4] and e['dir']==dir]
+                event_in_this_file = []
+                for sen_events in self.Events:
+                    for _, triggers in sen_events.items():
+                        for trigger in triggers:
+                            if trigger["file"] == file[:-4] and trigger["dir"] == dir:
+                                event_in_this_file.append((trigger["start"], trigger["end"]))
+                # pdb.set_trace()
+                # event_in_this_file = [(e['start'],e['end']) for e in self.Events if e['file']==file[:-4] and e['dir']==dir]
                 Entities = [(e['start'],e['end']) for e in self.Entities if e['dir']==dir and e['file'][:-7]==file[:-3]]
                 with open(path+'/'+file,'r') as f:
                     text = f.read()
@@ -321,68 +326,66 @@ class Extractor():
 
     def process(self):
         Events = []
-        for event in self.Events:
-            for i in range(len(event['trigger_start'])):
-                _event = {
-                        'tokens':event['tokens'],
-                        'start':event['start'],
-                        'end':event['end'],
-                        'offsets':event['offsets'],
-                        'event_type': event['event_type'][i],
-                        'trigger_tokens':event['trigger_tokens'][i],
-                        'trigger_start':event['trigger_start'][i],
-                        'trigger_end':event['trigger_end'][i],
-                        'trigger_offsets':event['trigger_offsets'][i],
-                        'entities':event['entities'][i],
-                        'file':event['file'],
-                        'dir':event['dir']
-                }
-                Events.append(_event)
-            
-            _entities = []
-            for entity in event['entities'][0]:
-                add_entity = copy.deepcopy(entity)
-                add_entity['role']='None'
-                _entities.append(add_entity)
-            for i in range(len(event['tokens'])):
-                if i in event['trigger_start']:
+        for sen_events in self.Events: # sentence level
+            trigger_starts = []
+            tokens = list(sen_events.values())[0][0]["tokens"]
+            refined_sen_events = dict(id=len(Events))
+            refined_sen_events["text"] = " ".join(tokens)
+            refined_sen_events["events"] = []
+            refined_sen_events["file"] = None
+            for _, triggers in sen_events.items(): # event level
+                refined_sen_events["file"] = triggers[0]["file"]
+                refined_event = dict(type=triggers[0]["event_type"])
+                refined_event["triggers"] = []
+                refined_event["arguments"] = []
+                arguments = defaultdict(list)
+                for trigger in triggers: # trigger level
+                    refined_trigger = dict(id=len(refined_event["triggers"]))
+                    refined_trigger["trigger_word"] = " ".join(trigger["trigger_tokens"])
+                    refined_trigger["position"] = token_pos_to_char_pos(trigger["tokens"], [trigger["trigger_start"], trigger["trigger_end"]+1])
+                    refined_event["triggers"].append(refined_trigger)
+                    trigger_starts.append(trigger["trigger_start"])
+                    for entity in trigger["entities"]:
+                        if entity["role"] == "None":
+                            continue
+                        argu = dict()
+                        argu["mention"] = " ".join(entity["tokens"])
+                        argu["position"] = token_pos_to_char_pos(tokens, [entity["idx_start"], entity["idx_end"]+1])
+                        arguments[entity["role"]].append(argu)
+                for role, mentions in arguments.items():
+                    refined_role = dict(role=role)
+                    refined_role["mentions"] = mentions 
+                    refined_event["arguments"].append(refined_role)
+                refined_sen_events["events"].append(refined_event)
+            # negative triggers
+            refined_sen_events["negative_triggers"] = []
+            for i in range(len(tokens)):
+                if i in trigger_starts:
                     continue
                 _event = {
-                        'tokens':event['tokens'],
-                        'start':event['start'],
-                        'end':event['end'],
-                        'offsets':event['offsets'],
-                        'event_type': 'None',
-                        'trigger_tokens':[event['tokens'][i]],
-                        'trigger_start':i,
-                        'trigger_end':i,
-                        'trigger_offsets':[event['offsets'][i]],
-                        'entities':_entities,
-                        'file':event['file'],
-                        'dir':event['dir']
+                        "id": len(refined_sen_events["negative_triggers"]),
+                        "trigger_word": tokens[i],
+                        "position": token_pos_to_char_pos(tokens, [i, i+1])
                 }
-                Events.append(_event)
-        self.Events = Events
-
-        None_events = []
+                refined_sen_events["negative_triggers"].append(_event)
+            Events.append(refined_sen_events)
+        # process none events
         for none_event in self.None_events:
+            refined_sen_events = dict(id=len(Events))
+            refined_sen_events["text"] = " ".join(none_event['tokens'])
+            refined_sen_events["events"] = []
+            refined_sen_events["negative_triggers"] = []
+            refined_sen_events["file"] = none_event["file"]
             for i in range(len(none_event['tokens'])):
                 _none_event = {
-                    'tokens':none_event['tokens'],
-                    'start':none_event['start'],
-                    'end':none_event['end'],
-                    'offsets':none_event['offsets'],
-                    'event_type':'None',
-                    'trigger_tokens':[none_event['tokens'][i]],
-                    'trigger_start':i,
-                    'trigger_end':i,
-                    'trigger_offsets':[none_event['offsets'][i]],
-                    'entities':none_event['entities'],
-                    'file':none_event['file'],
-                    'dir':none_event['dir']
+                    "id": len(refined_sen_events["negative_triggers"]),
+                    'trigger_word': none_event['tokens'][i],
+                    'position': token_pos_to_char_pos(none_event["tokens"], [i, i+1])
                 }
-                None_events.append(_none_event)
-        self.None_events = None_events
+                refined_sen_events["negative_triggers"].append(_none_event)
+            Events.append(refined_sen_events)
+        # record
+        self.Events = Events
 
 
     def Extract(self):
@@ -431,16 +434,16 @@ class Extractor():
         test_files = splits['test']
         dev_files = splits['dev']
         train_files = splits['train']
-        test_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in test_files]+[instance for instance in self.None_events if instance['file'].replace('.','_').replace('-','_') in test_files]
-        dev_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in dev_files]+[instance for instance in self.None_events if instance['file'].replace('.','_').replace('-','_') in dev_files]
-        train_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in train_files]+[instance for instance in self.None_events if instance['file'].replace('.','_').replace('-','_') in train_files]
+        test_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in test_files]
+        dev_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in dev_files]
+        train_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in train_files]
             
         with open(os.path.join(self.args.ACE_DUMP, 'train.json'),'w') as f:
-            json.dump(train_set,f)
+            json.dump(train_set, f, indent=4)
         with open(os.path.join(self.args.ACE_DUMP, 'valid.json'),'w') as f:
-            json.dump(dev_set,f)
+            json.dump(dev_set, f, indent=4)
         with open(os.path.join(self.args.ACE_DUMP, 'test.json'),'w') as f:
-            json.dump(test_set,f)
+            json.dump(test_set, f, indent=4)
         
 
 def token_pos_to_char_pos(tokens, token_pos):
@@ -461,49 +464,14 @@ def token_pos_to_char_pos(tokens, token_pos):
 
 def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> dict:
     data = json.load(open(os.path.join(output_dir, file_name)))
-    sen2item = defaultdict(list)
-    for item in data:
-        sen = " ".join(item["tokens"])
-        sen2item[sen].append(item)
-    
-    label2id = dict(NA=0)
-    refined_data = []
-    for sen, items in tqdm(sen2item.items()):
-        refined_instance = dict(id=len(refined_data))
-        tokens = sen.split()
-        refined_instance["text"] = sen 
-        refined_instance["events"] = []
-        refined_instance["negative_triggers"] = []
-        for item in items:
-            if item["event_type"] != "None": 
-                if item["event_type"] not in label2id:
-                    label2id[item["event_type"]] = len(label2id)
-                event = dict()
-                event["type"] = item["event_type"]
-                event["id"] = len(refined_instance["events"])
-                event["trigger_word"] = " ".join(item["trigger_tokens"])
-                event["position"] = token_pos_to_char_pos(tokens, [item["trigger_start"], item["trigger_end"]+1])
-                event["arguments"] = []
-                for entity in item["entities"]:
-                    if entity["role"] == "None":
-                        continue
-                    argument = dict()
-                    argument["role"] = entity["role"]
-                    argument["mention"] = " ".join(entity["tokens"])
-                    argument["position"] = token_pos_to_char_pos(tokens, [entity["idx_start"], entity["idx_end"]+1])
-                    event["arguments"].append(argument)
-                refined_instance["events"].append(event)
-            else:
-                neg_trigger = dict()
-                neg_trigger["id"] = len(refined_instance["negative_triggers"])
-                neg_trigger["trigger_word"] = " ".join(item["trigger_tokens"])
-                neg_trigger["position"] = token_pos_to_char_pos(tokens, [item["trigger_start"], item["trigger_end"]+1])
-                refined_instance["negative_triggers"].append(neg_trigger)
-        refined_data.append(refined_instance)
-    
-    print("We got %d instances" % len(refined_data))
+    label2id = dict(NA=0)    
+    print("We got %d instances" % len(data))
     with open(os.path.join(output_dir, file_name.replace(".json", ".unified.jsonl")), "w") as f:
-        for instance in refined_data:
+        for instance in data:
+            for event in instance["events"]:
+                if event["type"] not in label2id:
+                    label2id[event["type"]] = len(label2id)
+            del instance["file"]
             f.write(json.dumps(instance)+"\n")
     if "train" in file_name:
         json.dump(label2id, open(os.path.join(output_dir, "label2id.json"), "w"))

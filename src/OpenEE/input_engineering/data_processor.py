@@ -129,14 +129,15 @@ class TCProcessor(DataProcessor):
                 # training and valid set
                 if "events" in item:
                     for event in item["events"]:
-                        example = InputExample(
-                            example_id=event["id"],
-                            text=item["text"],
-                            trigger_left=event["position"][0],
-                            trigger_right=event["position"][1],
-                            labels=event["type"]
-                        )
-                        self.examples.append(example)
+                        for trigger in event["triggers"]:
+                            example = InputExample(
+                                example_id=trigger["id"],
+                                text=item["text"],
+                                trigger_left=trigger["position"][0],
+                                trigger_right=trigger["position"][1],
+                                labels=event["type"]
+                            )
+                            self.examples.append(example)
                 if "negative_triggers" in item:
                     for neg in item["negative_triggers"]:
                         example = InputExample(
@@ -221,7 +222,7 @@ class SLProcessor(DataProcessor):
                     labels = ["O"] * len(item["text"])
                 if "events" in item:
                     for event in item["events"]:
-                        for mention in event["mentions"]:
+                        for mention in event["triggers"]:
                             if self.config.language == "English": 
                                 left_pos = len(item["text"][:mention["position"][0]].split())
                                 right_pos = len(item["text"][:mention["position"][1]].split())
