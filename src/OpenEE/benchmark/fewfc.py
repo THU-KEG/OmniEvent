@@ -1,14 +1,14 @@
-import os
 import re
 import json
 import uuid
 import jieba
+import random
 import jsonlines
 
 from tqdm import tqdm
 from typing import List
-from collections import defaultdict
 
+random.seed(42)
 
 label2id = {
     "NA": 0,
@@ -107,7 +107,7 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
         instance = dict()
 
         instance["id"] = sent["id"]
-        instance["sentence"] = sent["content"]
+        instance["text"] = sent["content"]
 
         tokens = chinese_tokenizer(sent["content"], tokenizer)
 
@@ -121,22 +121,22 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
                 start = char_end
 
                 instance["candidates"].append({
-                    "id": "{}-{}".format(instance["id"], str(uuid.uuid4()).replace("-", "")),
+                    "id": "{}-{}".format(instance["id"], str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")),
                     "trigger_word": candidate,
                     "position": [char_start, char_end]
                 })
-                assert instance["sentence"][char_start:char_end] == candidate
+                assert instance["text"][char_start:char_end] == candidate
         else:
             # if train dataset, we have the labels.
             instance["events"] = []
             instance["negative_triggers"] = []
-            events_in_sen = defaultdict(list)
+            events_in_sen = list()
             trigger_list = []
 
             # reformat and rank the events by length
             events = []
             for event in sent["events"]:
-                tmp = dict(type=event["type"], trigger=str(), offset=list(), argument=defaultdict(list))
+                tmp = dict(type=event["type"], trigger=str(), offset=list(), argument=list())
                 keep = True
                 for d in event["mentions"]:
                     if d["role"] == "trigger":
@@ -148,7 +148,8 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
                         tmp["trigger"] = d["word"]
                         tmp["offset"] = d["span"]
                     else:
-                        tmp["argument"][d["role"]].append({"mention": d["word"], "position": d["span"]})
+                        tmp["argument"].append({"role": d["role"], "mentions": [{"mention": d["word"],
+                                                                                 "position": d["span"]}]})
                 if keep:
                     events.append(tmp)
             events = sorted(events, key=lambda x: len(x["trigger"]))
@@ -156,32 +157,33 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
             # re-tokenize the sentence according to the triggers
             for event in events:
                 trigger_list.append(event["trigger"])
-                events_in_sen[event["type"]].append(event)
+                events_in_sen.append(event)
                 if event["trigger"] not in tokens:
                     tokens = re_tokenize(tokens, event)
 
-            for type in events_in_sen:
+            for e in events_in_sen:
                 event = dict()
-                event["type"] = type
-                event["mentions"] = []
-                for mention in events_in_sen[type]:
-                    mention["id"] = str(uuid.uuid4()).replace("-", "")
+                event["type"] = e["type"]
+                event["triggers"] = []
 
-                    event["mentions"].append({
-                        "id": "{}-{}".format(instance["id"], mention["id"]),
-                        "trigger_word": mention["trigger"],
-                        "position": mention["offset"],
-                        "argument": mention["argument"],
-                    })
+                e["id"] = str(uuid.uuid4()).replace("-", "")
 
-                    assert instance["sentence"][mention["offset"][0]: mention["offset"][1]] == mention["trigger"]
-                    for arg in mention["argument"].values():
-                        for a in arg:
-                            assert instance["sentence"][a["position"][0]: a["position"][1]] == a["mention"]
+                event["triggers"].append({
+                    "id": "{}-{}".format(instance["id"], e["id"]),
+                    "trigger_word": e["trigger"],
+                    "position": e["offset"],
+                })
 
-                    # the following triggers are not in the token list due to re-tokenizing.
-                    if mention["trigger"] not in ["新增", "买入", "收购"]:
-                        assert mention["trigger"] in tokens
+                event["arguments"] = e["argument"]
+                assert instance["text"][e["offset"][0]: e["offset"][1]] == e["trigger"]
+
+                for arg in e["argument"]:
+                    for a in arg["mentions"]:
+                        assert instance["text"][a["position"][0]: a["position"][1]] == a["mention"]
+
+                # the following triggers are not in the token list due to re-tokenizing.
+                if e["trigger"] not in ["新增", "买入", "收购"]:
+                    assert e["trigger"] in tokens
 
                 instance["events"].append(event)
 
@@ -195,11 +197,12 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
                 if token not in trigger_list:
                     negative = token
                     instance["negative_triggers"].append({
-                        "id": "{}-{}".format(instance["id"], str(uuid.uuid4()).replace("-", "")),
+                        "id": "{}-{}".format(instance["id"],
+                                             str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")),
                         "trigger_word": negative,
                         "position": [char_start, char_end]
                     })
-                    assert instance["sentence"][char_start:char_end] == negative
+                    assert instance["text"][char_start:char_end] == negative
         formatted_data.append(instance)
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(fewfc_data), data_path))

@@ -3,11 +3,13 @@ import re
 import json
 import uuid
 import jieba
+import random
 import jsonlines
 
 from tqdm import tqdm
 from typing import List
-from collections import defaultdict
+
+random.seed(42)
 
 
 def generate_label2id(data_path: str):
@@ -78,7 +80,7 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
         instance = dict()
 
         instance["id"] = sent["id"]
-        instance["sentence"] = sent["text"]
+        instance["text"] = sent["text"]
 
         tokens = chinese_tokenizer(sent["text"], tokenizer)
 
@@ -92,55 +94,56 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                 start = char_end
 
                 instance["candidates"].append({
-                    "id": "{}-{}".format(instance["id"], str(uuid.uuid4()).replace("-", "")),
+                    "id": "{}-{}".format(instance["id"], str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")),
                     "trigger_word": candidate,
                     "position": [char_start, char_end]
                 })
-                assert instance["sentence"][char_start:char_end] == candidate
+                assert instance["text"][char_start:char_end] == candidate
         else:
             if "event_list" not in sent:
                 error_annotations.append(sent)
                 continue
 
             # if train dataset, we have the labels.
-            instance["events"] = []
-            instance["negative_triggers"] = []
-            events_in_sen = defaultdict(list)
+            instance["events"] = list()
+            instance["negative_triggers"] = list()
+            events_in_sen = list()
 
             trigger_list = []
             for event in sent["event_list"]:
-                event["argument"] = defaultdict(list)
+                event["argument"] = list()
                 for arg in event["arguments"]:
                     role = arg["role"]
                     arg_start = arg["argument_start_index"]
                     arg_end = arg_start + len(arg["argument"])
-                    event["argument"][role].append({"mention": arg["argument"], "position": [arg_start, arg_end]})
-
-                events_in_sen[event["event_type"]].append(event)
+                    event["argument"].append({"role": role, "mentions": [{"mention": arg["argument"],
+                                                                          "position": [arg_start, arg_end]}]})
+                events_in_sen.append(event)
                 trigger_list.append(event["trigger"])
                 if event["trigger"] not in tokens:
                     tokens = re_tokenize(tokens, event)
 
-            for type in events_in_sen:
+            for e in events_in_sen:
                 event = dict()
-                event["type"] = type
-                event["mentions"] = []
-                for mention in events_in_sen[type]:
-                    char_start = mention["trigger_start_index"]
-                    char_end = char_start + len(mention["trigger"])
-                    mention["id"] = str(uuid.uuid4()).replace("-", "")
+                event["type"] = e["event_type"]
+                event["triggers"] = []
 
-                    event["mentions"].append({
-                        "id": "{}-{}".format(instance["id"], mention["id"]),
-                        "trigger_word": mention["trigger"],
-                        "position": [char_start, char_end],
-                        "argument": mention["argument"]
-                    })
-                    assert instance["sentence"][char_start:char_end] == mention["trigger"]
-                    assert mention["trigger"] in tokens
-                    for arg in mention["argument"].values():
-                        for a in arg:
-                            assert instance["sentence"][a["position"][0]: a["position"][1]] == a["mention"]
+                char_start = e["trigger_start_index"]
+                char_end = char_start + len(e["trigger"])
+                e["id"] = str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")
+
+                event["triggers"].append({
+                    "id": "{}-{}".format(instance["id"], e["id"]),
+                    "trigger_word": e["trigger"],
+                    "position": [char_start, char_end],
+                })
+
+                event["arguments"] = e['argument']
+                assert instance["text"][char_start:char_end] == e["trigger"]
+                assert e["trigger"] in tokens
+                for arg in e["argument"]:
+                    for a in arg["mentions"]:
+                        assert instance["text"][a["position"][0]: a["position"][1]] == a["mention"]
 
                 instance["events"].append(event)
 
@@ -158,7 +161,7 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                         "trigger_word": negative,
                         "position": [char_start, char_end]
                     })
-                    assert instance["sentence"][char_start:char_end] == negative
+                    assert instance["text"][char_start:char_end] == negative
         formatted_data.append(instance)
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(duee_data), data_path))
