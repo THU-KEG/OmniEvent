@@ -158,7 +158,6 @@ class TCProcessor(DataProcessor):
                                     labels=argument["role"]
                                 )
                                 if self.is_overlap(trigger["position"], mention["position"]):
-                                    # raise ValueError("Overlap")
                                     print("Overlap")
                                 argu_for_trigger.add(f"{mention['mention']}-{mention['position'][0]}-{mention['position'][1]}")
                                 self.examples.append(example)
@@ -236,6 +235,128 @@ class TCProcessor(DataProcessor):
                 if is_overflow:
                     features.labels = -100
             self.input_features.append(features)
+
+
+class SLProcessor(DataProcessor):
+    """Data processor for sequence labeling."""
+
+    def __init__(self, config, tokenizer, input_file):
+        super().__init__(config, tokenizer)
+        self.read_examples(input_file)
+        self.convert_examples_to_features()
+
+    def read_examples(self, input_file):
+        self.examples = []
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+                if self.config.language == "English":
+                    labels = ["O"] * len(item["text"].split())
+                else:
+                    labels = ["O"] * len(item["text"])
+                if "events" in item:
+                    for event in item["events"]:
+                        for trigger in event["triggers"]:
+                            if self.config.language == "English": 
+                                left_pos = len(item["text"][:trigger["position"][0]].split())
+                                right_pos = len(item["text"][:trigger["position"][1]].split())
+                            else:
+                                assert self.config.language == "Chinese"
+                                left_pos = trigger["position"][0]
+                                right_pos = trigger["position"][1]
+                            labels[left_pos] = f"B-{event['type']}"
+                            for i in range(left_pos+1, right_pos):
+                                labels[i] = f"I-{event['type']}"
+                example = InputExample(
+                    example_id = item["id"],
+                    text = item["text"],
+                    labels = labels
+                )
+                self.examples.append(example)
+        
+    def get_final_labels(self, example, outputs):
+         # map subtoken to word
+        start_poses = get_start_poses(example.text)
+        subtoken2word = []
+        current_word_idx = None
+        for offset in outputs["offset_mapping"]:
+            if offset[0] == offset[1]:
+                subtoken2word.append(-1)
+            else:
+                if check_if_start(start_poses, offset):
+                    current_word_idx = get_word_position(start_poses, offset)
+                    subtoken2word.append(current_word_idx)
+                else:
+                    subtoken2word.append(current_word_idx)
+        # mapping word labels to subtoken labels
+        final_labels = []
+        last_word_idx = None 
+        for word_idx in subtoken2word:
+            if word_idx == -1:
+                final_labels.append(-100)
+            else:
+                if word_idx == last_word_idx: # subtoken
+                    final_labels.append(-100)
+                else:  # new word
+                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    last_word_idx = word_idx
+        final_labels[0] = self.config.label2id["O"]
+        return final_labels
+    
+    def get_final_labels_zh(self, example, outputs):
+         # map subtoken to word
+        start_poses = list(range(len(example.text)))
+        subtoken2word = []
+        current_word_idx = None
+        for offset in outputs["offset_mapping"]:
+            if offset[0] == offset[1]:
+                subtoken2word.append(-1)
+            else:
+                current_word_idx = get_word_position(start_poses, offset)
+                subtoken2word.append(current_word_idx)
+        # mapping word labels to subtoken labels
+        final_labels = []
+        last_word_idx = None 
+        for word_idx in subtoken2word:
+            if word_idx == -1:
+                final_labels.append(-100)
+            else:
+                if word_idx == last_word_idx: # subtoken
+                    final_labels.append(-100)
+                else:  # new word
+                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    last_word_idx = word_idx
+        final_labels[0] = self.config.label2id["O"]
+        return final_labels
+
+
+    def convert_examples_to_features(self):
+        self.input_features = []
+        self.is_overflow = []
+        for example in tqdm(self.examples, desc="Processing features for SL"):
+            outputs = self.tokenizer(example.text,
+                                    padding="max_length",
+                                    truncation=False,
+                                    max_length=self.config.max_seq_length,
+                                    return_offsets_mapping=True)
+            # Roberta tokenizer doesn't return token_type_ids
+            if "token_type_ids" not in outputs:
+                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
+            self.is_overflow.append(is_overflow)
+            if self.config.language == "English":
+                final_labels = self.get_final_labels(example, outputs)
+            else:
+                final_labels = self.get_final_labels_zh(example, outputs)
+            features = InputFeatures(
+                example_id = example.example_id,
+                input_ids = outputs["input_ids"],
+                attention_mask = outputs["attention_mask"],
+                token_type_ids = outputs["token_type_ids"],
+                labels = final_labels
+            )
+            self.input_features.append(features)
+            
 
 
             
