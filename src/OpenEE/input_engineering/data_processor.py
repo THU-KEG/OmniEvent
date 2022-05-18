@@ -63,6 +63,7 @@ class DataProcessor(Dataset):
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False 
         if len(outputs["input_ids"]) > max_seq_length:
+            print("An instance exceeds the maximum length.")
             is_truncation = True 
             for key in ["input_ids", "attention_mask", "token_type_ids", "offset_mapping"]:
                 if key not in outputs:
@@ -222,14 +223,14 @@ class SLProcessor(DataProcessor):
                     labels = ["O"] * len(item["text"])
                 if "events" in item:
                     for event in item["events"]:
-                        for mention in event["triggers"]:
+                        for trigger in event["triggers"]:
                             if self.config.language == "English": 
-                                left_pos = len(item["text"][:mention["position"][0]].split())
-                                right_pos = len(item["text"][:mention["position"][1]].split())
+                                left_pos = len(item["text"][:trigger["position"][0]].split())
+                                right_pos = len(item["text"][:trigger["position"][1]].split())
                             else:
                                 assert self.config.language == "Chinese"
-                                left_pos = mention["position"][0]
-                                right_pos = mention["position"][1]
+                                left_pos = trigger["position"][0]
+                                right_pos = trigger["position"][1]
                             labels[left_pos] = f"B-{event['type']}"
                             for i in range(left_pos+1, right_pos):
                                 labels[i] = f"I-{event['type']}"
@@ -239,6 +240,62 @@ class SLProcessor(DataProcessor):
                     labels = labels
                 )
                 self.examples.append(example)
+        
+    def get_final_labels(self, example, outputs):
+         # map subtoken to word
+        start_poses = get_start_poses(example.text)
+        subtoken2word = []
+        current_word_idx = None
+        for offset in outputs["offset_mapping"]:
+            if offset[0] == offset[1]:
+                subtoken2word.append(-1)
+            else:
+                if check_if_start(start_poses, offset):
+                    current_word_idx = get_word_position(start_poses, offset)
+                    subtoken2word.append(current_word_idx)
+                else:
+                    subtoken2word.append(current_word_idx)
+        # mapping word labels to subtoken labels
+        final_labels = []
+        last_word_idx = None 
+        for word_idx in subtoken2word:
+            if word_idx == -1:
+                final_labels.append(-100)
+            else:
+                if word_idx == last_word_idx: # subtoken
+                    final_labels.append(-100)
+                else:  # new word
+                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    last_word_idx = word_idx
+        final_labels[0] = self.config.label2id["O"]
+        return final_labels
+    
+    def get_final_labels_zh(self, example, outputs):
+         # map subtoken to word
+        start_poses = list(range(len(example.text)))
+        subtoken2word = []
+        current_word_idx = None
+        for offset in outputs["offset_mapping"]:
+            if offset[0] == offset[1]:
+                subtoken2word.append(-1)
+            else:
+                current_word_idx = get_word_position(start_poses, offset)
+                subtoken2word.append(current_word_idx)
+        # mapping word labels to subtoken labels
+        final_labels = []
+        last_word_idx = None 
+        for word_idx in subtoken2word:
+            if word_idx == -1:
+                final_labels.append(-100)
+            else:
+                if word_idx == last_word_idx: # subtoken
+                    final_labels.append(-100)
+                else:  # new word
+                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    last_word_idx = word_idx
+        final_labels[0] = self.config.label2id["O"]
+        return final_labels
+
 
     def convert_examples_to_features(self):
         self.input_features = []
@@ -254,31 +311,10 @@ class SLProcessor(DataProcessor):
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
-            # map subtoken to word
-            start_poses = get_start_poses(example.text)
-            subtoken2word = []
-            current_word_idx = None
-            for offset in outputs["offset_mapping"]:
-                if offset[0] == offset[1]:
-                    subtoken2word.append(-1)
-                else:
-                    if check_if_start(start_poses, offset):
-                        current_word_idx = get_word_position(start_poses, offset)
-                        subtoken2word.append(current_word_idx)
-                    else:
-                        subtoken2word.append(current_word_idx)
-            # mapping word labels to subtoken labels
-            final_labels = []
-            last_word_idx = None 
-            for word_idx in subtoken2word:
-                if word_idx == -1:
-                    final_labels.append(-100)
-                else:
-                    if word_idx == last_word_idx: # subtoken
-                        final_labels.append(-100)
-                    else:  # new word
-                        final_labels.append(self.config.label2id[example.labels[word_idx]])
-                        last_word_idx = word_idx
+            if self.config.language == "English":
+                final_labels = self.get_final_labels(example, outputs)
+            else:
+                final_labels = self.get_final_labels_zh(example, outputs)
             features = InputFeatures(
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
@@ -305,11 +341,11 @@ class Seq2SeqProcessor(DataProcessor):
                 labels = []
                 if "events" in item:
                     for event in item["events"]:
-                        for mention in event["mentions"]:
+                        for trigger in event["triggers"]:
                             labels.append({
                                 "type": event["type"],
-                                "word": mention["trigger_word"],
-                                "position": mention["position"]
+                                "word": trigger["trigger_word"],
+                                "position": trigger["position"]
                             })
                 example = InputExample(
                     example_id = item["id"],

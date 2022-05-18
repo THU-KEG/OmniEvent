@@ -65,7 +65,7 @@ class ModelForSequenceLabeling(nn.Module):
     def __init__(self, config, backbone):
         super(ModelForSequenceLabeling, self).__init__()
         self.backbone = backbone 
-        # self.crf = CRF(config.num_labels, batch_first=True)
+        self.crf = CRF(config.num_labels, batch_first=True)
         self.cls_head = ClassificationHead(config)
 
     def forward(
@@ -80,24 +80,24 @@ class ModelForSequenceLabeling(nn.Module):
                                 attention_mask=attention_mask, \
                                 token_type_ids=token_type_ids,
                                 return_dict=True)   
-        # pdb.set_trace()
         hidden_states = outputs.last_hidden_state
         # classification
         logits = self.cls_head(hidden_states) # [batch_size, seq_length, num_labels]
         # compute loss 
-        mask = labels != 100
         loss = None 
         if labels is not None:
-            loss_fn = nn.CrossEntropyLoss()
-            loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
+            # loss_fn = nn.CrossEntropyLoss()
+            # loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
             # CRF
-            # loss = -self.crf(emissions=logits, 
-            #                 tags=labels,
-            #                 mask=mask,
-            #                 reduction = "token_mean")
+            mask = labels != -100
+            labels = labels * mask.to(torch.long)
+            loss = -self.crf(emissions=logits, 
+                            tags=labels,
+                            mask=mask,
+                            reduction = "token_mean")
         else:
-            # preds = self.crf.decode(emissions=logits, mask=mask)
-            # logits = torch.LongTensor(preds)
-            pass 
+            preds = self.crf.decode(emissions=logits, mask=mask)
+            logits = torch.LongTensor(preds)
+            # pass 
 
         return dict(loss=loss, logits=logits)

@@ -4,21 +4,21 @@ do_predict: True
 
 paradigm: token_classification
 
-output_dir: output/ACE2005
-label2id: ../data/ace_2005_td_v7/English/label2id.json 
+output_dir: output/ACE2005-EN
+label2id: ../data/ace_2005_td_v7/English/role2id.json 
 train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
-validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
+validation_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
 test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
 language: English
 test_exists_labels: True
 
-return_token_type_ids: False 
+return_token_type_ids: True 
 truncate_seq2seq_output: False
 
 model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: None
+aggregation: None 
 
 num_train_epochs: 5
 max_seq_length: 128
@@ -34,7 +34,7 @@ per_device_train_batch_size: 32
 per_device_eval_batch_size: 64
 gradient_accumulation_steps: 4
 # eval_accumulation_steps: 4
-learning_rate: 5.0e-5
+learning_rate: 3.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
 max_grad_norm: 1

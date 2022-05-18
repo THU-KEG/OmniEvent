@@ -44,26 +44,29 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
                 instance["events"] = []
                 instance["negative_triggers"] = []
                 events_in_sen = defaultdict(list)
-                for event in item["events"]:
+                for event_id, event in enumerate(item["events"]):
                     label2id[event["type"]] = event["type_id"]
                     for mention in event["mention"]:
                         if mention["sent_id"] == sent_id:
-                            events_in_sen[event["type"]].append(mention)
-                for type in events_in_sen:
-                    for mention in events_in_sen[type]:
+                            events_in_sen[f"{event['type']}-{event_id}"].append(mention)
+                for event_key in events_in_sen:
+                    event = dict()
+                    event["type"] = event_key.split("-")[0]
+                    event["triggers"] = []
+                    for mention in events_in_sen[event_key]:
                         char_start = len(" ".join(sen["tokens"][:mention["offset"][0]]))
                         # white space
                         if mention["offset"][0] != 0:
                             char_start += 1
                         char_end = char_start + \
                             len(" ".join(sen["tokens"][mention["offset"][0]:mention["offset"][1]]))
-                        event = dict()
-                        event["type"] = type 
-                        event["id"] = "{}-{}".format(instance["id"], mention["id"])
-                        event["trigger_word"] = mention["trigger_word"]
-                        event["position"] = [char_start, char_end]
-                        assert instance["text"][char_start:char_end] == event["trigger_word"]
-                        instance["events"].append(event)
+                        trigger = dict()
+                        trigger["id"] = "{}-{}".format(instance["id"], mention["id"])
+                        trigger["trigger_word"] = mention["trigger_word"]
+                        trigger["position"] = [char_start, char_end]
+                        assert instance["text"][char_start:char_end] == trigger["trigger_word"]
+                        event["triggers"].append(trigger)
+                    instance["events"].append(event)
                 # negative triggers 
                 for neg in item["negative_triggers"]:
                     if neg["sent_id"] == sent_id:
