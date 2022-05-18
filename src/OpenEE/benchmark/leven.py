@@ -1,9 +1,7 @@
 import os
 import json
 import jsonlines
-
 from tqdm import tqdm
-from collections import defaultdict
 
 
 def convert_leven_to_unified(data_path: str, dump=True) -> list:
@@ -39,27 +37,33 @@ def convert_leven_to_unified(data_path: str, dump=True) -> list:
                         assert instance["text"][char_start:char_end] == candidate["trigger_word"]
             else:
                 # if train dataset, we have the labels.
-                instance["events"] = []
-                instance["negative_triggers"] = []
-                events_in_sen = defaultdict(list)
+                instance["events"] = list()
+                instance["negative_triggers"] = list()
+                events_in_sen = list()
 
                 for event in item["events"]:
                     label2id[event["type"]] = event["type_id"]
                     for mention in event["mention"]:
                         if mention["sent_id"] == sent_id:
-                            events_in_sen[event["type"]].append(mention)
+                            events_in_sen.append(dict(type=event["type"], mention=mention))
 
-                for type in events_in_sen:
-                    for mention in events_in_sen[type]:
-                        char_start = len("".join(sent["tokens"][:mention["offset"][0]]))
-                        char_end = char_start + len("".join(sent["tokens"][mention["offset"][0]:mention["offset"][1]]))
-                        event = dict()
-                        event["type"] = type
-                        event["id"] = "{}-{}".format(instance["id"], mention["id"])
-                        event["trigger_word"] = mention["trigger_word"]
-                        event["position"] = [char_start, char_end]
-                        assert instance["text"][char_start:char_end] == mention["trigger_word"]
-                        instance["events"].append(event)
+                for e in events_in_sen:
+                    mention = e["mention"]
+                    char_start = len("".join(sent["tokens"][:mention["offset"][0]]))
+                    char_end = char_start + len("".join(sent["tokens"][mention["offset"][0]:mention["offset"][1]]))
+
+                    event = dict()
+                    event["type"] = e['type']
+
+                    trigger = dict()
+                    trigger['id'] = "{}-{}".format(instance["id"], mention["id"])
+                    trigger["trigger_word"] = mention["trigger_word"]
+                    trigger["position"] = [char_start, char_end]
+
+                    event['triggers'] = [trigger]
+                    assert instance["text"][char_start:char_end] == trigger["trigger_word"]
+
+                    instance["events"].append(event)
 
                 # negative triggers
                 for neg in item["negative_triggers"]:
@@ -79,7 +83,8 @@ def convert_leven_to_unified(data_path: str, dump=True) -> list:
     if "train" in data_path:
         io_dir = "/".join(data_path.split("/")[:-1])
         label2id = dict(sorted(list(label2id.items()), key=lambda x: x[1]))
-        json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w"), indent=4, ensure_ascii=False)
+        json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w", encoding='utf-8'),
+                  indent=4, ensure_ascii=False)
 
     if dump:
         with jsonlines.open(data_path.replace(".jsonl", ".unified.jsonl"), "w") as f:
