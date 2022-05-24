@@ -193,7 +193,7 @@ class Trainer(Trainer):
 
         # Metrics!
         if self.compute_metrics is not None and all_preds is not None and all_labels is not None:
-            metrics = self.compute_metrics(logits=all_preds, labels=all_labels, **{"tokenizer": self.tokenizer, "training_args": self.args})
+            metrics = self.compute_metrics(logits=all_preds, labels=all_labels, **{"tokenizer": self.tokenizer, "training_args": self.args, "id2label": args.id2label})
         else:
             metrics = {}
 

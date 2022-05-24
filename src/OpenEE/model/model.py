@@ -86,18 +86,18 @@ class ModelForSequenceLabeling(nn.Module):
         # compute loss 
         loss = None 
         if labels is not None:
-            # loss_fn = nn.CrossEntropyLoss()
-            # loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
+            loss_fn = nn.CrossEntropyLoss()
+            loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
             # CRF
-            mask = labels != -100
-            labels = labels * mask.to(torch.long)
-            loss = -self.crf(emissions=logits, 
-                            tags=labels,
-                            mask=mask,
-                            reduction = "token_mean")
+            # mask = labels != -100
+            # labels = labels * mask.to(torch.long)
+            # loss = -self.crf(emissions=logits, 
+            #                 tags=labels,
+            #                 mask=mask,
+            #                 reduction = "token_mean")
         else:
-            preds = self.crf.decode(emissions=logits, mask=mask)
-            logits = torch.LongTensor(preds)
-            # pass 
+            # preds = self.crf.decode(emissions=logits, mask=mask)
+            # logits = torch.LongTensor(preds)
+            pass 
 
         return dict(loss=loss, logits=logits)

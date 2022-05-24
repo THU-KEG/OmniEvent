@@ -3,6 +3,7 @@ from typing import Tuple
 import torch 
 import numpy as np
 from sklearn.metrics import f1_score
+from seqeval.metrics import f1_score as span_f1_score
 
 
 def postprocess_text(labels):
@@ -68,15 +69,22 @@ def select_start_position(preds, labels, merge=True):
     return final_preds, final_labels
 
 
+def convert_to_names(instances, id2label):
+    name_instances = []
+    for instance in instances:
+        name_instances.append([id2label[item] for item in instance])
+    return name_instances
+
+
 def compute_span_F1(logits, labels, **kwargs):
     if len(logits.shape) == 3:
         preds = np.argmax(logits, axis=-1)
     else:
         preds = logits
-    final_preds, final_labels = select_start_position(preds, labels)
-    pos_labels = list(set(final_labels))
-    pos_labels.remove(0)
-    micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0
+    final_preds, final_labels = select_start_position(preds, labels, False)
+    final_preds = convert_to_names(final_preds, kwargs["id2label"])
+    final_labels = convert_to_names(final_labels, kwargs["id2label"])
+    micro_f1 = span_f1_score(final_labels, final_preds) * 100.0
     return {"micro_f1": micro_f1}
     
 

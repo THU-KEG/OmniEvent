@@ -14,7 +14,8 @@ from transformers import EarlyStoppingCallback
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
 from OpenEE.input_engineering.EAE_data_processor import (
-    TCProcessor
+    TCProcessor,
+    SLProcessor
 )
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
@@ -65,6 +66,7 @@ training_args.label_name = ["labels"]
 if model_args.paradigm == "sequence_labeling":
     data_args.label2id = get_bio_labels(data_args.label2id)
     model_args.num_labels = len(data_args.label2id)
+training_args.id2label = {id:label for label,id in data_args.label2id.items()}
 
 # markers 
 # data_args.markers =  ["[unused0]", "[unused1]"]

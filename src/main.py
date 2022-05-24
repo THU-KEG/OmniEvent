@@ -67,6 +67,7 @@ training_args.label_name = ["labels"]
 if model_args.paradigm == "sequence_labeling":
     data_args.label2id = get_bio_labels(data_args.label2id)
     model_args.num_labels = len(data_args.label2id)
+training_args.id2label = {id:label for label,id in data_args.label2id.items()}
 
 # markers 
 # data_args.markers =  ["[unused0]", "[unused1]"]

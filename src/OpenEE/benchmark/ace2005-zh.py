@@ -187,13 +187,14 @@ class Extractor():
                         ent_id = element.getAttribute("ID")
                         ent_type = element.getAttribute("SUBTYPE")
                         for sample in mention:
+                            mention_id = sample.getAttribute("ID")
                             start = int(sample.getElementsByTagName("extent")[0].getElementsByTagName("charseq")[0].getAttribute("START"))
                             end = int(sample.getElementsByTagName("extent")[0].getElementsByTagName("charseq")[0].getAttribute("END"))
                             name = str(sample.getElementsByTagName("extent")[0].getElementsByTagName("charseq")[0].childNodes[0].data)
-                            entity_info = (name,start,end,file,dir,ent_id,ent_type)
+                            entity_info = (name,start,end,file,dir,ent_id,mention_id,ent_type)
                             self.Entities.append(entity_info)
         self.Entities = list(set(self.Entities))
-        self.Entities = [{'id':e[5], "type":e[6], 'name':e[0],'start':e[1],'end':e[2],'file':e[3],'dir':e[4],'role':'None'} for e in self.Entities]
+        self.Entities = [{'entity_id':e[5], "mention_id":e[6], "type":e[7], 'name':e[0],'start':e[1],'end':e[2],'file':e[3],'dir':e[4],'role':'None'} for e in self.Entities]
         print("Total %d mentions, %d entities." % (len(self.Entities), all_ents))
 
     def Event_Extract(self):
@@ -207,10 +208,12 @@ class Extractor():
                 collection = DOMtree.documentElement
                 events = collection.getElementsByTagName("event")
                 Entities = [e for e in self.Entities if e['dir']==dir and e['file']==file]
-                for event_id, event in enumerate(events):
+                for event in events:
+                    event_id = event.getAttribute("ID")
                     event_type =  str(event.getAttribute("SUBTYPE"))
                     event_mentions = event.getElementsByTagName("event_mention")
                     for event_mention in event_mentions:
+                        mention_id = event_mention.getAttribute("ID")
                         event_info = event_mention.getElementsByTagName("ldc_scope")[0].getElementsByTagName("charseq")[0]
                         sent = str(event_info.childNodes[0].data)
                         start = int(event_info.getAttribute("START"))
@@ -271,33 +274,30 @@ class Extractor():
                                            'idx_start':idx_start,
                                            'idx_end':idx_end,
                                            'role':e['role'],
-                                           "id":e["id"],
+                                           "entity_id":e["entity_id"],
+                                           "mention_id":e["mention_id"],
                                            "type":e["type"]
                                            }
                             _entities.append(entity_info)
-                        event_summary = {"tokens": tokens,
-                                         'offsets':tokens_offsets,
-                                         "event_type": event_type,
-                                         "start": start,
-                                         "end": end,
-                                         "trigger_tokens": trigger_tokens,
-                                         "trigger_start": trigger_s,
-                                         "trigger_end": trigger_e,
-                                         'trigger_offsets': trigger_offsets,
-                                         "entities": _entities,
-                                         'file': file[:-8],
-                                         'dir': dir}
+                        event_summary = {
+                                        "event_id": event_id,
+                                        "trigger_id": mention_id,
+                                        "tokens": tokens,
+                                        'offsets':tokens_offsets,
+                                        "event_type": event_type,
+                                        "start": start,
+                                        "end": end,
+                                        "trigger_tokens": trigger_tokens,
+                                        "trigger_start": trigger_s,
+                                        "trigger_end": trigger_e,
+                                        'trigger_offsets': trigger_offsets,
+                                        "entities": _entities,
+                                        'file': file[:-8],
+                                        'dir': dir
+                                    }
                         offsets_join = str(event_summary['start'])+'_'+str(event_summary['end'])+"_"+event_summary['file']+"_"+event_summary['dir']
-
-                        if offsets_join in offsets2idx:
-                            event_idx = offsets2idx[offsets_join]
-                            if f"{event_type}-{event_id}" in self.Events[event_idx]:
-                                self.Events[event_idx][f"{event_type}-{event_id}"].append(event_summary)
-                            else:
-                                self.Events[event_idx][f"{event_type}-{event_id}"] = [event_summary]
-                        else:
-                            offsets2idx[offsets_join] = len(self.Events)
-                            self.Events.append({f"{event_type}-{event_id}": [event_summary]})
+                        event_summary["offset_join"] = offsets_join
+                        self.Events.append(event_summary)
         # nlp.close()
 
     def None_event_Extract(self):
@@ -305,14 +305,7 @@ class Extractor():
             path = self.args.ACE_FILES+'/'+dir+'/adj'
             files =self.source_files[dir]
             for file in files:
-                event_in_this_file = []
-                for sen_events in self.Events:
-                    for _, triggers in sen_events.items():
-                        for trigger in triggers:
-                            if trigger["file"] == file[:-4] and trigger["dir"] == dir:
-                                event_in_this_file.append((trigger["start"], trigger["end"]))
-                # pdb.set_trace()
-                # event_in_this_file = [(e['start'],e['end']) for e in self.Events if e['file']==file[:-4] and e['dir']==dir]
+                event_in_this_file = [(e['start'],e['end']) for e in self.Events if e['file']==file[:-4] and e['dir']==dir]
                 Entities = [(e['start'],e['end']) for e in self.Entities if e['dir']==dir and e['file'][:-7]==file[:-3]]
                 with open(path+'/'+file,'r') as f:
                     text = f.read()
@@ -384,42 +377,54 @@ class Extractor():
 
     def process(self):
         Events = []
-        for sen_events in self.Events: # sentence level
-            trigger_starts = []
-            tokens = list(sen_events.values())[0][0]["tokens"]
-            refined_sen_events = dict(id=len(Events))
+        # convert to sentence level
+        events_in_sens = defaultdict(list)
+        for event in self.Events:
+            events_in_sens[event["offset_join"]].append(event)
+        # loop for recording events in sentence
+        for sen_id, events in events_in_sens.items():
+            event_to_triggers = defaultdict(list)
+            for event in events:
+                event_to_triggers[event["event_id"]].append(event)
+            tokens = events[0]["tokens"]
+            trigger_position = {i:False for i in range(len(tokens))}
+            refined_sen_events = {}
+            refined_sen_events["id"] = sen_id
             refined_sen_events["text"] = "".join(tokens)
+            refined_sen_events["file"] = events[0]["file"]
             refined_sen_events["events"] = []
-            refined_sen_events["file"] = None
-            for _, triggers in sen_events.items(): # event level
-                refined_sen_events["file"] = triggers[0]["file"]
-                refined_event = dict(type=triggers[0]["event_type"])
+            for event_id, triggers in event_to_triggers.items():
+                refined_event = {}
+                refined_event["type"] = triggers[0]["event_type"]
                 refined_event["triggers"] = []
-                refined_event["arguments"] = []
-                arguments = defaultdict(list)
                 for trigger in triggers: # trigger level
-                    refined_trigger = dict(id=len(refined_event["triggers"]))
+                    for pos in range(trigger["trigger_start"], trigger["trigger_end"]+1):
+                        trigger_position[pos] = True 
+                    refined_trigger = {}
+                    refined_trigger["id"] = trigger["trigger_id"]
                     refined_trigger["trigger_word"] = "".join(trigger["trigger_tokens"])
                     refined_trigger["position"] = token_pos_to_char_pos(trigger["tokens"], [trigger["trigger_start"], trigger["trigger_end"]+1])
-                    refined_event["triggers"].append(refined_trigger)
-                    trigger_starts.append(trigger["trigger_start"])
+                    refined_trigger["arguments"] = []
+                    arguments = defaultdict(list)
                     for entity in trigger["entities"]:
                         if entity["role"] == "None":
                             continue
                         argu = dict()
+                        argu["mention_id"] = entity["mention_id"]
                         argu["mention"] = "".join(entity["tokens"])
                         argu["position"] = token_pos_to_char_pos(tokens, [entity["idx_start"], entity["idx_end"]+1])
-                        arguments["{}[SEP]{}".format(entity["id"], entity["role"])].append(argu)
-                for key, mentions in arguments.items():
-                    ent_id, role = key.split("[SEP]")
-                    refined_role = dict(id=ent_id, role=role)
-                    refined_role["mentions"] = mentions 
-                    refined_event["arguments"].append(refined_role)
+                        arguments["{}[SEP]{}".format(entity["entity_id"], entity["role"])].append(argu)
+                    for key, mentions in arguments.items():
+                        ent_id, role = key.split("[SEP]")
+                        refined_role = dict(id=ent_id, role=role)
+                        refined_role["mentions"] = mentions 
+                        refined_trigger["arguments"].append(refined_role)
+                    refined_event["triggers"].append(refined_trigger)
                 refined_sen_events["events"].append(refined_event)
             # negative triggers
             refined_sen_events["negative_triggers"] = []
             for i in range(len(tokens)):
-                if i in trigger_starts:
+                if trigger_position[i]:
                     continue
                 _event = {
                         "id": len(refined_sen_events["negative_triggers"]),
@@ -430,12 +435,13 @@ class Extractor():
             # process negative arguments 
             refined_sen_events["entities"] = []
             id2mentions = defaultdict(list)
-            for entity in list(sen_events.values())[0][0]["entities"]:
-                id2mentions[entity["id"]].append(entity)
+            for entity in events[0]["entities"]:
+                id2mentions[entity["entity_id"]].append(entity)
             for id, mentions in id2mentions.items():
                 argu = dict(id=id, type=mentions[0]["type"], mentions=[])
                 for mention in mentions:
                     argu["mentions"].append({
+                        "mention_id": mention["mention_id"],
                         "mention": "".join(mention["tokens"]),
                         "position": token_pos_to_char_pos(tokens, [mention["idx_start"], mention["idx_end"]+1])
                     })
@@ -461,7 +467,7 @@ class Extractor():
         # filter 
         for instance in Events:
             filter_special_token(instance)
-    
+
         # record
         self.Events = Events
 
@@ -571,19 +577,19 @@ def filter_special_token(item, special_token="\n"):
             trigger["position"][1] = trigger["position"][1] - flag[trigger["position"][1]-1]
             trigger["trigger_word"] = trigger["trigger_word"].replace(special_token, "")
             assert text[trigger["position"][0]:trigger["position"][1]] == trigger["trigger_word"]
-        for argument in event["arguments"]:
-            for mention in argument["mentions"]:
-                plus = 0
-                start = True 
-                for token in mention["mention"]:
-                    if start and token == special_token:
-                        plus += 1
-                    else:
-                        break 
-                mention["position"][0] = mention["position"][0] - flag[mention["position"][0]] + plus
-                mention["position"][1] = mention["position"][1] - flag[mention["position"][1]-1]
-                mention["mention"] = mention["mention"].replace(special_token, "")
-                assert text[mention["position"][0]:mention["position"][1]] == mention["mention"]
+            for argument in trigger["arguments"]:
+                for mention in argument["mentions"]:
+                    plus = 0
+                    start = True 
+                    for token in mention["mention"]:
+                        if start and token == special_token:
+                            plus += 1
+                        else:
+                            break 
+                    mention["position"][0] = mention["position"][0] - flag[mention["position"][0]] + plus
+                    mention["position"][1] = mention["position"][1] - flag[mention["position"][1]-1]
+                    mention["mention"] = mention["mention"].replace(special_token, "")
+                    assert text[mention["position"][0]:mention["position"][1]] == mention["mention"]
     for trigger in item["negative_triggers"]:
         plus = 0
         start = True 
@@ -623,9 +629,10 @@ def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> di
             for event in instance["events"]:
                 if event["type"] not in label2id:
                     label2id[event["type"]] = len(label2id)
-                for argument in event["arguments"]:
-                    if argument["role"] not in role2id:
-                        role2id[argument["role"]] = len(role2id)
+                for trigger in event["triggers"]:
+                    for argument in trigger["arguments"]:
+                        if argument["role"] not in role2id:
+                            role2id[argument["role"]] = len(role2id)
             del instance["file"]
             f.write(json.dumps(instance)+"\n")
     if "train" in file_name:

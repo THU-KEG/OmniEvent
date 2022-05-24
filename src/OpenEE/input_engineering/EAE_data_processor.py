@@ -1,7 +1,9 @@
+from cProfile import label
 from operator import xor
 import os 
 import pdb 
 import json
+from string import whitespace
 from numpy import sort
 import torch 
 import logging
@@ -60,6 +62,7 @@ class DataProcessor(Dataset):
     def __init__(self, config, tokenizer):
         self.config = config
         self.tokenizer = tokenizer
+        self.config.label2id["X"] = -100
     
     def read_examples(self, input_file):
         raise NotImplementedError
@@ -146,7 +149,7 @@ class TCProcessor(DataProcessor):
                 for event in item["events"]:
                     for trigger in event["triggers"]:
                         argu_for_trigger = set()
-                        for argument in event["arguments"]:
+                        for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
                                 example = InputExample(
                                     example_id=trigger["id"],
@@ -157,13 +160,11 @@ class TCProcessor(DataProcessor):
                                     argu_right=mention["position"][1],
                                     labels=argument["role"]
                                 )
-                                if self.is_overlap(trigger["position"], mention["position"]):
-                                    print("Overlap")
-                                argu_for_trigger.add(f"{mention['mention']}-{mention['position'][0]}-{mention['position'][1]}")
+                                argu_for_trigger.add(mention['mention_id'])
                                 self.examples.append(example)
                         for entity in item["entities"]:
                             for mention in entity["mentions"]:
-                                key = f"{mention['mention']}-{mention['position'][0]}-{mention['position'][1]}"
+                                key = mention['mention_id']
                                 if key in argu_for_trigger:
                                     continue
                                 example = InputExample(
@@ -175,40 +176,38 @@ class TCProcessor(DataProcessor):
                                     argu_right=mention["position"][1],
                                     labels="NA"
                                 )
-                                if self.is_overlap(trigger["position"], mention["position"]):
-                                    continue 
                                 self.examples.append(example)
                             
     
     def insert_marker(self, text, trigger_position, argument_position, markers, whitespace=True):
-        space = " " if whitespace else ""
-        # xx <event> trigger </event> xx xx <argument> argument </argument> xx .
-        if trigger_position[1] <= argument_position[0]: 
-            l_text = text[:trigger_position[0]]
-            trigger = markers[0] + space + text[trigger_position[0]:trigger_position[1]] + space + markers[1]
-            b_text = text[trigger_position[1]:argument_position[0]]
-            argument = markers[2] + space + text[argument_position[0]:argument_position[1]] + space + markers[3]
-            r_text = text[argument_position[1]:]
-            text = l_text + trigger + b_text + argument + r_text
-        else: # xx <argument> trigger </argument> xx xx <trigger> argument </trigger> xx .
-            l_text = text[:argument_position[0]]
-            argument = markers[2] + space + text[argument_position[0]:argument_position[1]] + space + markers[3]
-            b_text = text[argument_position[1]:trigger_position[0]]
-            trigger = markers[0] + space + text[trigger_position[0]:trigger_position[1]] + space + markers[1]
-            r_text = text[trigger_position[1]:]
-            text = l_text + argument + b_text + trigger + r_text
-        return text 
+        markered_text = ""
+        for i, char in enumerate(text):
+            if i == trigger_position[0]:
+                markered_text += markers[0]
+                markered_text += " " if whitespace else ""
+            if i == argument_position[0]:
+                markered_text += markers[2]
+                markered_text += " " if whitespace else ""
+            markered_text += char 
+            if i == trigger_position[1]-1:
+                markered_text += " " if whitespace else ""
+                markered_text += markers[1]
+            if i ==argument_position[1]-1:
+                markered_text += " " if whitespace else ""
+                markered_text += markers[3]
+        return markered_text
 
-    
+
     def convert_examples_to_features(self): 
         # merge and then tokenize
         self.input_features = []
+        whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for TC"):
             text = self.insert_marker(example.text, 
                                         [example.trigger_left, example.trigger_right], 
                                         [example.argu_left, example.argu_right], 
                                         self.config.markers, 
-                                        True)
+                                        whitespace)
             outputs = self.tokenizer(text, 
                                     padding="max_length",
                                     truncation=True,
@@ -250,33 +249,36 @@ class SLProcessor(DataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-                if self.config.language == "English":
-                    labels = ["O"] * len(item["text"].split())
-                else:
-                    labels = ["O"] * len(item["text"])
-                if "events" in item:
-                    for event in item["events"]:
-                        for trigger in event["triggers"]:
-                            if self.config.language == "English": 
-                                left_pos = len(item["text"][:trigger["position"][0]].split())
-                                right_pos = len(item["text"][:trigger["position"][1]].split())
-                            else:
-                                assert self.config.language == "Chinese"
-                                left_pos = trigger["position"][0]
-                                right_pos = trigger["position"][1]
-                            labels[left_pos] = f"B-{event['type']}"
-                            for i in range(left_pos+1, right_pos):
-                                labels[i] = f"I-{event['type']}"
-                example = InputExample(
-                    example_id = item["id"],
-                    text = item["text"],
-                    labels = labels
-                )
-                self.examples.append(example)
+                for event in item["events"]:
+                    for trigger in event["triggers"]:
+                        if self.config.language == "English":
+                            labels = ["O"] * len(item["text"].split())
+                        else:
+                            labels = ["O"] * len(item["text"])
+                        for argument in trigger["arguments"]:
+                            for mention in argument["mentions"]:
+                                if self.config.language == "English": 
+                                    left_pos = len(item["text"][:mention["position"][0]].split())
+                                    right_pos = len(item["text"][:mention["position"][1]].split())
+                                else:
+                                    assert self.config.language == "Chinese"
+                                    left_pos = mention["position"][0]
+                                    right_pos = mention["position"][1]
+                                labels[left_pos] = f"B-{argument['role']}"
+                                for i in range(left_pos+1, right_pos):
+                                    labels[i] = f"I-{argument['role']}"
+                        example = InputExample(
+                            example_id = item["id"],
+                            text = item["text"],
+                            trigger_left=trigger["position"][0],
+                            trigger_right=trigger["position"][1],
+                            labels = labels
+                        )
+                        self.examples.append(example)
         
-    def get_final_labels(self, example, outputs):
+    def get_final_labels(self, text, labels, outputs):
          # map subtoken to word
-        start_poses = get_start_poses(example.text)
+        start_poses = get_start_poses(text)
         subtoken2word = []
         current_word_idx = None
         for offset in outputs["offset_mapping"]:
@@ -298,14 +300,14 @@ class SLProcessor(DataProcessor):
                 if word_idx == last_word_idx: # subtoken
                     final_labels.append(-100)
                 else:  # new word
-                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    final_labels.append(self.config.label2id[labels[word_idx]])
                     last_word_idx = word_idx
         final_labels[0] = self.config.label2id["O"]
         return final_labels
     
-    def get_final_labels_zh(self, example, outputs):
+    def get_final_labels_zh(self, text, labels, outputs):
          # map subtoken to word
-        start_poses = list(range(len(example.text)))
+        start_poses = list(range(len(text)))
         subtoken2word = []
         current_word_idx = None
         for offset in outputs["offset_mapping"]:
@@ -324,17 +326,46 @@ class SLProcessor(DataProcessor):
                 if word_idx == last_word_idx: # subtoken
                     final_labels.append(-100)
                 else:  # new word
-                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    final_labels.append(self.config.label2id[labels[word_idx]])
                     last_word_idx = word_idx
         final_labels[0] = self.config.label2id["O"]
         return final_labels
+    
+
+    def insert_marker(self, text, labels, trigger_pos, markers, whitespace=True):
+        space = " " if whitespace else ""
+        markered_text = ""
+        markered_labels = []
+        tokens = text.split()
+        assert len(tokens) == len(labels)
+        char_pos = 0
+        for i, token in enumerate(tokens):
+            if char_pos == trigger_pos[0]:
+                markered_text += markers[0] + space
+                markered_labels.append("X")
+            char_pos += len(token) + len(space)
+            markered_text += token + space
+            markered_labels.append(labels[i])
+            if char_pos == trigger_pos[1] + len(space):
+                markered_text += markers[1] + space
+                markered_labels.append("X")
+        markered_text = markered_text.strip()
+        # pdb.set_trace()
+        assert len(markered_text.split(space)) == len(markered_labels)
+        return markered_text, markered_labels
 
 
     def convert_examples_to_features(self):
         self.input_features = []
         self.is_overflow = []
+        whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
-            outputs = self.tokenizer(example.text,
+            text, labels = self.insert_marker(example.text, 
+                                              example.labels,
+                                              [example.trigger_left, example.trigger_right],
+                                              self.config.markers,
+                                              whitespace)
+            outputs = self.tokenizer(text,
                                     padding="max_length",
                                     truncation=False,
                                     max_length=self.config.max_seq_length,
@@ -345,15 +376,82 @@ class SLProcessor(DataProcessor):
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
             if self.config.language == "English":
-                final_labels = self.get_final_labels(example, outputs)
+                final_labels = self.get_final_labels(text, labels, outputs)
             else:
-                final_labels = self.get_final_labels_zh(example, outputs)
+                final_labels = self.get_final_labels_zh(text, labels, outputs)
             features = InputFeatures(
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
                 attention_mask = outputs["attention_mask"],
                 token_type_ids = outputs["token_type_ids"],
                 labels = final_labels
+            )
+            self.input_features.append(features)
+
+
+class Seq2SeqProcessor(DataProcessor):
+    "Data processor for sequence to sequence."
+
+    def __init__(self, config, tokenizer, input_file):
+        super().__init__(config, tokenizer)
+        self.read_examples(input_file)
+        self.convert_examples_to_features()
+    
+    def read_examples(self, input_file):
+        self.examples = []
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+                labels = []
+                if "events" in item:
+                    for event in item["events"]:
+                        for trigger in event["triggers"]:
+                            labels.append({
+                                "type": event["type"],
+                                "word": trigger["trigger_word"],
+                                "position": trigger["position"]
+                            })
+                example = InputExample(
+                    example_id = item["id"],
+                    text = item["text"],
+                    trigger_left = -1,
+                    trigger_right = -1,
+                    labels = labels
+                )
+                self.examples.append(example)
+        
+    def convert_examples_to_features(self):
+        self.input_features = []
+        for example in tqdm(self.examples, desc="Processing features for SL"):
+            outputs = self.tokenizer(example.text,
+                                    padding="max_length",
+                                    truncation=True,
+                                    max_length=self.config.max_seq_length,
+                                    return_offsets_mapping=True)
+            # Roberta tokenizer doesn't return token_type_ids
+            if "token_type_ids" not in outputs:
+                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            labels = ""
+            for mention_label in example.labels:
+                if outputs["offset_mapping"][-1][0] != 0 and \
+                    outputs["offset_mapping"][-1][1] != 0 and \
+                    mention_label["position"][1] > outputs["offset_mapping"][-1][1]:
+                    continue
+                labels += f"{mention_label['type']}:{mention_label['word']};"
+            label_outputs = self.tokenizer(labels,
+                                    padding="max_length",
+                                    truncation=True,
+                                    max_length=self.config.max_out_length)
+            # set -100 to unused token 
+            for i, flag in enumerate(label_outputs["attention_mask"]):
+                if flag == 0:
+                    label_outputs["input_ids"][i] = -100
+            features = InputFeatures(
+                example_id = example.example_id,
+                input_ids = outputs["input_ids"],
+                attention_mask = outputs["attention_mask"],
+                token_type_ids = outputs["token_type_ids"],
+                labels = label_outputs["input_ids"]
             )
             self.input_features.append(features)
             
