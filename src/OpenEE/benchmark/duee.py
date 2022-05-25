@@ -136,9 +136,9 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                     "id": "{}-{}".format(instance["id"], e["id"]),
                     "trigger_word": e["trigger"],
                     "position": [char_start, char_end],
+                    "arguments": e["argument"]
                 })
 
-                event["arguments"] = e['argument']
                 assert instance["text"][char_start:char_end] == e["trigger"]
                 assert e["trigger"] in tokens
                 for arg in e["argument"]:
