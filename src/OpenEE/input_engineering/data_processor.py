@@ -198,7 +198,7 @@ class TCProcessor(DataProcessor):
                 trigger_right_mask = right_mask
             )
             if example.labels is not None:
-                features.labels = self.config.label2id[example.labels]
+                features.labels = self.config.type2id[example.labels]
                 if is_overflow:
                     features.labels = -100
             self.input_features.append(features)
@@ -265,9 +265,9 @@ class SLProcessor(DataProcessor):
                 if word_idx == last_word_idx: # subtoken
                     final_labels.append(-100)
                 else:  # new word
-                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    final_labels.append(self.config.type2id[example.labels[word_idx]])
                     last_word_idx = word_idx
-        final_labels[0] = self.config.label2id["O"]
+        # final_labels[0] = self.config.type2id["O"]
         return final_labels
     
     def get_final_labels_zh(self, example, outputs):
@@ -291,9 +291,9 @@ class SLProcessor(DataProcessor):
                 if word_idx == last_word_idx: # subtoken
                     final_labels.append(-100)
                 else:  # new word
-                    final_labels.append(self.config.label2id[example.labels[word_idx]])
+                    final_labels.append(self.config.type2id[example.labels[word_idx]])
                     last_word_idx = word_idx
-        final_labels[0] = self.config.label2id["O"]
+        # final_labels[0] = self.config.type2id["O"]
         return final_labels
 
 

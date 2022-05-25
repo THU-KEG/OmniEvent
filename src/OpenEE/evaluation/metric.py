@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from sklearn.metrics import f1_score
 from seqeval.metrics import f1_score as span_f1_score
+from seqeval.scheme import IOB2
 
 
 def postprocess_text(labels):
@@ -81,19 +82,57 @@ def compute_span_F1(logits, labels, **kwargs):
         preds = np.argmax(logits, axis=-1)
     else:
         preds = logits
+    # convert id to name
+    training_args = kwargs["training_args"]
+    id2label = None 
+    if training_args.task_name == "EAE":
+        id2label = training_args.id2role 
+    elif training_args.task_name == "ED":
+        id2label = training_args.id2type 
+    else:
+        raise ValueError("No such task!")
     final_preds, final_labels = select_start_position(preds, labels, False)
-    final_preds = convert_to_names(final_preds, kwargs["id2label"])
-    final_labels = convert_to_names(final_labels, kwargs["id2label"])
-    micro_f1 = span_f1_score(final_labels, final_preds) * 100.0
+    final_preds = convert_to_names(final_preds, id2label)
+    final_labels = convert_to_names(final_labels, id2label)
+    # if the type is wrongly predicted, set arguments NA
+    if training_args.task_name == "EAE":
+        pred_types = training_args.pred_types
+        true_types = training_args.true_types 
+        assert len(pred_types) == len(true_types)
+        assert len(pred_types) == len(final_labels)
+        for i, (pred, true) in enumerate(zip(pred_types, true_types)):
+            if pred != true:
+                final_preds[i] = [id2label[0]] * len(final_preds[i]) # set to NA
+
+    micro_f1 = span_f1_score(final_labels, final_preds, mode='strict', scheme=IOB2) * 100.0
     return {"micro_f1": micro_f1}
     
 
 def compute_F1(logits, labels, **kwargs):
     predictions = np.argmax(logits, axis=-1)
     pos_labels = list(set(labels.tolist()))
-    # pdb.set_trace()
-    # remove negative label
     pos_labels.remove(0)
+    # convert id to name
+    training_args = kwargs["training_args"]
+    id2label = None 
+    if training_args.task_name == "EAE":
+        id2label = training_args.id2role
+    elif training_args.task_name == "ED":
+        id2label = training_args.id2type
+    else:
+        raise ValueError("No such task!")
+    predictions = [id2label[p] for p in predictions]
+    labels = [id2label[l] for l in labels]
+    pos_labels = [id2label[pl] for pl in pos_labels]
+    # if the type is wrongly predicted, set arguments NA
+    if training_args.task_name == "EAE":
+        pred_types = training_args.pred_types
+        true_types = training_args.true_types 
+        assert len(pred_types) == len(true_types)
+        assert len(pred_types) == len(predictions)
+        for i, (pred, true) in enumerate(zip(pred_types, true_types)):
+            if pred != true:
+                predictions[i] = id2label[0] # set to NA
     micro_f1 = f1_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
     return {"micro_f1": micro_f1}
 

@@ -1,12 +1,14 @@
 seed: 42
 do_train: True
-do_predict: True
+do_predict: False 
+do_ED_infer: True 
 
 paradigm: sequence_labeling
 
+task_name: ED
 dataset_name: ACE2005
 output_dir: output/ACE2005-EN
-label2id: ../data/ace_2005_td_v7/English/label2id.json 
+type2id_path: ../data/ace_2005_td_v7/English/label2id.json 
 train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
 test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl

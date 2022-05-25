@@ -34,6 +34,19 @@ class DataArguments:
     test_file: Optional[str] = field(
         default=None, metadata={"help": "A csv or a json file containing the test data."}
     )
+    train_pred_file: Optional[str] = field(
+        default=None, metadata={"help": "A csv or a json file containing the training data."}
+    )
+    validation_pred_file: Optional[str] = field(
+        default=None, metadata={"help": "A csv or a json file containing the validation data."}
+    )
+    test_pred_file: Optional[str] = field(
+        default=None, metadata={"help": "A csv or a json file containing the test data."}
+    )
+    golden_trigger: bool = field(
+        default=False,
+        metadata={"help":" Whether or not golden trigger"}
+    )
     test_exists_labels: bool = field(
         default=False,
         metadata={"help": "Whether test dataset exists labels"}
@@ -51,9 +64,13 @@ class DataArguments:
             "help": "The maximum total output sequence length after tokenization."
         }
     )
-    label2id: str = field(
+    type2id_path: str = field(
         default=None,
-        metadata={"help": "Path to label2id file."}
+        metadata={"help": "Path to type2id file."}
+    )
+    role2id_path: str = field(
+        default=None,
+        metadata={"help": "Path to role2id file."}
     )
     return_token_type_ids: bool = field(
         default=False,
@@ -128,6 +145,14 @@ class TrainingArguments(TrainingArguments):
     seed: int = field(
         default=42,
         metadata={"help": "seed"}
+    )
+    task_name: str = field(
+        default="ED",
+        metadata={"help": "Task type."}
+    )
+    do_ED_infer: bool = field(
+        default=False, 
+        metadata={"help": "Whether infer on all splits."}
     )
     early_stopping_patience: int = field(
         default=7,

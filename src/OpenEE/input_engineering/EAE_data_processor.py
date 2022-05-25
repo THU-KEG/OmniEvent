@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class InputExample(object):
     """A single training/test example for event extractioin."""
 
-    def __init__(self, example_id, text, trigger_left=None, trigger_right=None, argu_left=None, argu_right=None, labels=None):
+    def __init__(self, example_id, text, pred_type, true_type, trigger_left=None, trigger_right=None, argu_left=None, argu_right=None, labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -32,6 +32,8 @@ class InputExample(object):
         """
         self.example_id = example_id
         self.text = text
+        self.pred_type = pred_type
+        self.true_type = true_type
         self.trigger_left = trigger_left 
         self.trigger_right = trigger_right
         self.argu_left = argu_left
@@ -62,13 +64,25 @@ class DataProcessor(Dataset):
     def __init__(self, config, tokenizer):
         self.config = config
         self.tokenizer = tokenizer
-        self.config.label2id["X"] = -100
+        self.config.role2id["X"] = -100
     
     def read_examples(self, input_file):
         raise NotImplementedError
 
     def convert_examples_to_features(self):
         raise NotImplementedError
+
+    def get_pred_types(self):
+        pred_types = []
+        for example in self.examples:
+            pred_types.append(example.pred_type)
+        return pred_types 
+
+    def get_true_types(self):
+        true_types = []
+        for example in self.examples:
+            true_types.append(example.true_type)
+        return true_types
 
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False 
@@ -123,9 +137,9 @@ class DataProcessor(Dataset):
 class TCProcessor(DataProcessor):
     """Data processor for token classification."""
 
-    def __init__(self, config, tokenizer, input_file):
+    def __init__(self, config, tokenizer, input_file, pred_file):
         super().__init__(config, tokenizer)
-        self.read_examples(input_file)
+        self.read_examples(input_file, pred_file)
         self.convert_examples_to_features()
 
 
@@ -140,10 +154,13 @@ class TCProcessor(DataProcessor):
         return False 
 
 
-    def read_examples(self, input_file):
+    def read_examples(self, input_file, pred_file):
         self.examples = []
+        trigger_idx = 0
+        preds = json.load(open(pred_file))
         with open(input_file, "r") as f:
-            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+            all_lines = f.readlines()
+            for line in tqdm(all_lines, desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
                 # training and valid set
                 for event in item["events"]:
@@ -154,12 +171,16 @@ class TCProcessor(DataProcessor):
                                 example = InputExample(
                                     example_id=trigger["id"],
                                     text=item["text"],
+                                    pred_type=preds[trigger_idx],
+                                    true_type=event["type"],
                                     trigger_left=trigger["position"][0],
                                     trigger_right=trigger["position"][1],
                                     argu_left=mention["position"][0],
                                     argu_right=mention["position"][1],
                                     labels=argument["role"]
                                 )
+                                if "train" in input_file or self.config.golden_trigger:
+                                    example.pred_type = event["type"]
                                 argu_for_trigger.add(mention['mention_id'])
                                 self.examples.append(example)
                         for entity in item["entities"]:
@@ -170,33 +191,39 @@ class TCProcessor(DataProcessor):
                                 example = InputExample(
                                     example_id=trigger["id"],
                                     text=item["text"],
+                                    pred_type=preds[trigger_idx],
+                                    true_type=event["type"],
                                     trigger_left=trigger["position"][0],
                                     trigger_right=trigger["position"][1],
                                     argu_left=mention["position"][0],
                                     argu_right=mention["position"][1],
                                     labels="NA"
                                 )
+                                if "train" in input_file or self.config.golden_trigger:
+                                    example.pred_type = event["type"]
                                 self.examples.append(example)
-                            
+                        trigger_idx += 1
+                # negative triggers 
+                for neg in item["negative_triggers"]:
+                    trigger_idx += 1         
     
-    def insert_marker(self, text, trigger_position, argument_position, markers, whitespace=True):
+    def insert_marker(self, text, type, trigger_position, argument_position, markers, whitespace=True):
         markered_text = ""
         for i, char in enumerate(text):
             if i == trigger_position[0]:
-                markered_text += markers[0]
+                markered_text += markers[type][0]
                 markered_text += " " if whitespace else ""
             if i == argument_position[0]:
-                markered_text += markers[2]
+                markered_text += markers["argument"][0]
                 markered_text += " " if whitespace else ""
             markered_text += char 
             if i == trigger_position[1]-1:
                 markered_text += " " if whitespace else ""
-                markered_text += markers[1]
+                markered_text += markers[type][1]
             if i ==argument_position[1]-1:
                 markered_text += " " if whitespace else ""
-                markered_text += markers[3]
+                markered_text += markers["argument"][1]
         return markered_text
-
 
     def convert_examples_to_features(self): 
         # merge and then tokenize
@@ -204,6 +231,7 @@ class TCProcessor(DataProcessor):
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for TC"):
             text = self.insert_marker(example.text, 
+                                        example.pred_type,
                                         [example.trigger_left, example.trigger_right], 
                                         [example.argu_left, example.argu_right], 
                                         self.config.markers, 
@@ -214,8 +242,8 @@ class TCProcessor(DataProcessor):
                                     max_length=self.config.max_seq_length)
             is_overflow = False 
             try:
-                left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
-                right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
+                left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
+                right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
             except: 
                 logger.warning("Markers are not in the input tokens.")
                 is_overflow = True
@@ -230,7 +258,7 @@ class TCProcessor(DataProcessor):
                 token_type_ids = outputs["token_type_ids"]
             )
             if example.labels is not None:
-                features.labels = self.config.label2id[example.labels]
+                features.labels = self.config.role2id[example.labels]
                 if is_overflow:
                     features.labels = -100
             self.input_features.append(features)
@@ -239,13 +267,15 @@ class TCProcessor(DataProcessor):
 class SLProcessor(DataProcessor):
     """Data processor for sequence labeling."""
 
-    def __init__(self, config, tokenizer, input_file):
+    def __init__(self, config, tokenizer, input_file, pred_file):
         super().__init__(config, tokenizer)
-        self.read_examples(input_file)
+        self.read_examples(input_file, pred_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self, input_file, pred_file):
         self.examples = []
+        trigger_idx = 0
+        preds = json.load(open(pred_file))
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
@@ -270,11 +300,19 @@ class SLProcessor(DataProcessor):
                         example = InputExample(
                             example_id = item["id"],
                             text = item["text"],
+                            pred_type=preds[trigger_idx],
+                            true_type=event["type"],
                             trigger_left=trigger["position"][0],
                             trigger_right=trigger["position"][1],
                             labels = labels
                         )
+                        if "train" in input_file or self.config.golden_trigger:
+                            example.pred_type = event["type"]
+                        trigger_idx += 1
                         self.examples.append(example)
+                # negative triggers 
+                for neg in item["negative_triggers"]:
+                    trigger_idx += 1   
         
     def get_final_labels(self, text, labels, outputs):
          # map subtoken to word
@@ -300,9 +338,8 @@ class SLProcessor(DataProcessor):
                 if word_idx == last_word_idx: # subtoken
                     final_labels.append(-100)
                 else:  # new word
-                    final_labels.append(self.config.label2id[labels[word_idx]])
+                    final_labels.append(self.config.role2id[labels[word_idx]])
                     last_word_idx = word_idx
-        final_labels[0] = self.config.label2id["O"]
         return final_labels
     
     def get_final_labels_zh(self, text, labels, outputs):
@@ -326,13 +363,12 @@ class SLProcessor(DataProcessor):
                 if word_idx == last_word_idx: # subtoken
                     final_labels.append(-100)
                 else:  # new word
-                    final_labels.append(self.config.label2id[labels[word_idx]])
+                    final_labels.append(self.config.role2id[labels[word_idx]])
                     last_word_idx = word_idx
-        final_labels[0] = self.config.label2id["O"]
         return final_labels
     
 
-    def insert_marker(self, text, labels, trigger_pos, markers, whitespace=True):
+    def insert_marker(self, text, type, labels, trigger_pos, markers, whitespace=True):
         space = " " if whitespace else ""
         markered_text = ""
         markered_labels = []
@@ -341,13 +377,13 @@ class SLProcessor(DataProcessor):
         char_pos = 0
         for i, token in enumerate(tokens):
             if char_pos == trigger_pos[0]:
-                markered_text += markers[0] + space
+                markered_text += markers[type][0] + space
                 markered_labels.append("X")
             char_pos += len(token) + len(space)
             markered_text += token + space
             markered_labels.append(labels[i])
             if char_pos == trigger_pos[1] + len(space):
-                markered_text += markers[1] + space
+                markered_text += markers[type][1] + space
                 markered_labels.append("X")
         markered_text = markered_text.strip()
         # pdb.set_trace()
@@ -361,6 +397,7 @@ class SLProcessor(DataProcessor):
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
             text, labels = self.insert_marker(example.text, 
+                                              example.pred_type, 
                                               example.labels,
                                               [example.trigger_left, example.trigger_right],
                                               self.config.markers,

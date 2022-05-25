@@ -26,21 +26,21 @@ def get_maven_submission(preds, instance_ids, result_file):
 
 
 def get_pred_per_mention(pos_start, pos_end, preds, config):
-    id2label = {item[1]: item[0] for item in config.label2id.items()}
-    if pos_start >= len(preds) or \
-        id2label[int(preds[pos_start])] == "O" or \
-        id2label[int(preds[pos_start])].split("-")[0] != "B":
+    id2type = {item[1]: item[0] for item in config.type2id.items()}
+    if pos_end > len(preds) or \
+        id2type[int(preds[pos_start])] == "O" or \
+        id2type[int(preds[pos_start])].split("-")[0] != "B":
         return "NA"
     predictions = set()
     for pos in range(pos_start, pos_end):
-        _pred = id2label[int(preds[pos])].split("-")[-1]
+        _pred = id2type[int(preds[pos])][2:]
         predictions.add(_pred)
     if len(predictions) > 1:
         return "NA"
     return list(predictions)[0]
 
 
-def get_maven_submission_sl(preds, labels, is_overflow, result_file, label2id, config):
+def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config):
     # get per-word predictions
     preds, _ = select_start_position(preds, labels, False)
     results = defaultdict(list)
@@ -61,7 +61,7 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, label2id, c
                 # record results
                 results[item["id"]].append({
                     "id": candidate["id"].split("-")[-1],
-                    "type_id": int(label2id[pred]),
+                    "type_id": int(type2id[pred]),
                 })
     # dump results 
     with open(result_file, "w") as f:
@@ -70,7 +70,7 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, label2id, c
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, training_args, data_args):
+def get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
     decoded_preds = compute_seq_F1(preds, labels, 
                                     **{"tokenizer": tokenizer, 
                                        "training_args": training_args, 
@@ -84,12 +84,12 @@ def get_maven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, 
                 pred_type = "NA"
                 # pdb.set_trace()
                 if candidate["trigger_word"] in decoded_preds[i] and \
-                    decoded_preds[i][candidate["trigger_word"]] in label2id:
+                    decoded_preds[i][candidate["trigger_word"]] in type2id:
                     pred_type = decoded_preds[i][candidate["trigger_word"]]
                 # record results
                 results[item["id"]].append({
                     "id": candidate["id"].split("-")[-1],
-                    "type_id": int(label2id[pred_type]),
+                    "type_id": int(type2id[pred_type]),
                 })
     # dump results 
     with open(save_path, "w") as f:
@@ -102,9 +102,9 @@ def get_leven_submission(preds, instance_ids, result_file):
     return get_maven_submission(preds, instance_ids, result_file)
 
 
-def get_leven_submission_sl(preds, labels, is_overflow, result_file, label2id, config):
-    return get_maven_submission_sl(preds, labels, is_overflow, result_file, label2id, config)
+def get_leven_submission_sl(preds, labels, is_overflow, result_file, type2id, config):
+    return get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config)
 
 
-def get_leven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, training_args, data_args):
-    return get_maven_submission_seq2seq(preds, labels, save_path, label2id, tokenizer, training_args, data_args)
+def get_leven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
+    return get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args)

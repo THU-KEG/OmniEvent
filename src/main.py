@@ -32,6 +32,9 @@ from OpenEE.evaluation.dump_result import (
     get_maven_submission_sl,
     get_maven_submission_seq2seq
 )
+from OpenEE.evaluation.convert_format import (
+    get_ace2005_trigger_detection_sl
+)
 from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
 from OpenEE.trainer_seq2seq import Seq2SeqTrainer
@@ -51,7 +54,7 @@ else:
 
 # output dir
 model_name_or_path = model_args.model_name_or_path.split("/")[-1]
-output_dir = Path(os.path.join(os.path.join(training_args.output_dir, model_args.paradigm), model_name_or_path))
+output_dir = Path(os.path.join(os.path.join(os.path.join(training_args.output_dir, training_args.task_name), model_args.paradigm), model_name_or_path))
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
@@ -59,15 +62,16 @@ training_args.output_dir = output_dir
 # training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
 # prepare labels
-label2id_path = data_args.label2id
-data_args.label2id = json.load(open(data_args.label2id))
-model_args.num_labels = len(data_args.label2id)
+type2id_path = data_args.type2id_path
+data_args.type2id = json.load(open(type2id_path))
+model_args.num_labels = len(data_args.type2id)
 training_args.label_name = ["labels"]
 
 if model_args.paradigm == "sequence_labeling":
-    data_args.label2id = get_bio_labels(data_args.label2id)
-    model_args.num_labels = len(data_args.label2id)
-training_args.id2label = {id:label for label,id in data_args.label2id.items()}
+    data_args.type2id = get_bio_labels(data_args.type2id)
+    model_args.num_labels = len(data_args.type2id)
+data_args.id2type = {id:label for label,id in data_args.type2id.items()}
+training_args.id2type = data_args.id2type 
 
 # markers 
 # data_args.markers =  ["[unused0]", "[unused1]"]
@@ -144,14 +148,40 @@ if training_args.do_predict:
                 get_leven_submission(preds, test_dataset.get_ids(), save_path)
         elif model_args.paradigm == "sequence_labeling":
             if data_args.dataset_name == "MAVEN":
-                get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
+                get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(type2id_path)), data_args)
             elif data_args.dataset_name == "LEVEN":
-                get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(label2id_path)), data_args)
+                get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path, json.load(open(type2id_path)), data_args)
         elif model_args.paradigm == "seq2seq":
             if data_args.dataset_name == "MAVEN":
-                get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(label2id_path)), tokenizer, training_args, data_args)
+                get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer, training_args, data_args)
             elif data_args.dataset_name == "LEVEN":
-                get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(label2id_path)), tokenizer, training_args, data_args)
+                get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer, training_args, data_args)
+
+
+if training_args.do_ED_infer:
+    def dump_preds(data_file, save_path, paradigm):
+        dataset = data_class(data_args, tokenizer, data_file)
+        logits, labels, metrics = trainer.predict(
+            test_dataset = dataset,
+            ignore_keys = ["loss"]
+        )
+        print("-"*50)
+        print(metrics)
+        preds = np.argmax(logits, axis=-1)
+        if paradigm == "token_classification":
+            pred_labels = []
+            for pred in preds:
+                pred_labels.append(training_args.id2type[pred])
+        elif paradigm == "sequence_labeling":
+            pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+        else:
+            pass 
+        json.dump(pred_labels, open(save_path, "w"))
+    # dataset 
+    dump_preds(data_args.train_file, os.path.join(output_dir, "train_preds.json"), model_args.paradigm)
+    dump_preds(data_args.validation_file, os.path.join(output_dir, "valid_preds.json"), model_args.paradigm)
+    dump_preds(data_args.test_file, os.path.join(output_dir, "test_preds.json"), model_args.paradigm)
+
 
 
 

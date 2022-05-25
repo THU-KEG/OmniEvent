@@ -4,12 +4,18 @@ do_predict: True
 
 paradigm: sequence_labeling
 
+task_name: EAE
+golden_trigger: False 
 dataset_name: ACE2005
 output_dir: output/ACE2005-EN
-label2id: ../data/ace_2005_td_v7/English/role2id.json 
+type2id_path: ../data/ace_2005_td_v7/English/label2id.json
+role2id_path: ../data/ace_2005_td_v7/English/role2id.json 
 train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
 test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
+train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
+validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
+test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
 language: English
 test_exists_labels: True
 
@@ -21,7 +27,7 @@ model_name_or_path: bert-base-uncased
 hidden_size: 768
 aggregation: none 
 
-num_train_epochs: 20
+num_train_epochs: 10
 max_seq_length: 128
 max_out_length: 128
 dataloader_num_workers: 2
