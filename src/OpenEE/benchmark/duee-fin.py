@@ -174,8 +174,8 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
                     "id": "{}-{}".format(instance["id"], e["id"]),
                     "trigger_word": e["trigger"],
                     "position": [char_start, char_end],
+                    "arguments": e["argument"]
                 })
-                event["arguments"] = e["argument"]
 
                 assert instance["text"][char_start:char_end] == e["trigger"]
                 assert e["trigger"] in tokens

@@ -172,9 +172,9 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
                     "id": "{}-{}".format(instance["id"], e["id"]),
                     "trigger_word": e["trigger"],
                     "position": e["offset"],
+                    "arguments": e["argument"]
                 })
 
-                event["arguments"] = e["argument"]
                 assert instance["text"][e["offset"][0]: e["offset"][1]] == e["trigger"]
 
                 for arg in e["argument"]:
