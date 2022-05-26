@@ -53,6 +53,8 @@ class DataProcessor(Dataset):
     def __init__(self, config, tokenizer):
         self.config = config
         self.tokenizer = tokenizer
+        self.examples = []
+        self.input_features = []
     
     def read_examples(self, input_file):
         raise NotImplementedError
@@ -168,34 +170,40 @@ class TCProcessor(DataProcessor):
         # merge and then tokenize
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for TC"):
-            text = example.text[:example.trigger_left] + self.config.markers[0] + " " \
-                        + example.text[example.trigger_left:example.trigger_right] \
-                        + " " + self.config.markers[1] + example.text[example.trigger_right:]
-            outputs = self.tokenizer(text, 
-                                    padding="max_length",
-                                    truncation=True,
-                                    max_length=self.config.max_seq_length)
+            text_left = example.text[:example.trigger_left]
+            text_mid = example.text[example.trigger_left:example.trigger_right]
+            text_right = example.text[example.trigger_right:]
+
+            if self.config.language == "Chinese":
+                text = text_left + self.config.markers[0] + text_mid + self.config.markers[1] + text_right
+            else:
+                text = text_left + self.config.markers[0] + " " + text_mid + " " + self.config.markers[1] + text_right
+
+            outputs = self.tokenizer(text, padding="max_length", truncation=True, max_length=self.config.max_seq_length)
             is_overflow = False 
             try:
                 left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
             except: 
                 logger.warning("Markers are not in the input tokens.")
+                left = self.config.max_seq_length
                 is_overflow = True
+
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
-            # trigger position mask 
-            left_mask = [1] * left + [0] * (self.config.max_seq_length-left)
-            right_mask = [1] * right + [0]* (self.config.max_seq_length-right)
+
+            # trigger position mask
+            left_mask = [1] * left + [0] * (self.config.max_seq_length - left)
+            right_mask = [0] * left + [1] * (self.config.max_seq_length - left)
                 
             features = InputFeatures(
-                example_id = example.example_id,
-                input_ids = outputs["input_ids"],
-                attention_mask = outputs["attention_mask"],
-                token_type_ids = outputs["token_type_ids"],
-                trigger_left_mask = left_mask,
-                trigger_right_mask = right_mask
+                example_id=example.example_id,
+                input_ids=outputs["input_ids"],
+                attention_mask=outputs["attention_mask"],
+                token_type_ids=outputs["token_type_ids"],
+                trigger_left_mask=left_mask,
+                trigger_right_mask=right_mask
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]

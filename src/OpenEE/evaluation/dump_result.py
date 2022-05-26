@@ -9,6 +9,20 @@ from .metric import select_start_position, compute_seq_F1
 from ..input_engineering.input_utils import get_start_poses, check_if_start, get_word_position
 
 
+def get_pred_per_mention(pos_start, pos_end, preds, id2label):
+    if pos_end > len(preds) or \
+            id2label[int(preds[pos_start])] == "O" or \
+            id2label[int(preds[pos_start])].split("-")[0] != "B":
+        return "NA"
+    predictions = set()
+    for pos in range(pos_start, pos_end):
+        _pred = id2label[int(preds[pos])][2:]
+        predictions.add(_pred)
+    if len(predictions) > 1:
+        return "NA"
+    return list(predictions)[0]
+
+
 def get_maven_submission(preds, instance_ids, result_file):
     all_results = defaultdict(list)
     for i, pred in enumerate(preds):
@@ -23,20 +37,6 @@ def get_maven_submission(preds, instance_ids, result_file):
             for candidate in all_results[data_id]:
                 format_result["predictions"].append(candidate)
             f.write(json.dumps(format_result) + "\n")
-
-
-def get_pred_per_mention(pos_start, pos_end, preds, id2label):
-    if pos_end > len(preds) or \
-        id2label[int(preds[pos_start])] == "O" or \
-        id2label[int(preds[pos_start])].split("-")[0] != "B":
-        return "NA"
-    predictions = set()
-    for pos in range(pos_start, pos_end):
-        _pred = id2label[int(preds[pos])][2:]
-        predictions.add(_pred)
-    if len(predictions) > 1:
-        return "NA"
-    return list(predictions)[0]
 
 
 def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config):
@@ -107,3 +107,21 @@ def get_leven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
 
 def get_leven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
     return get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args)
+
+
+def get_duee_ed_submission(preds, instance_ids, result_file, training_args):
+    all_results = defaultdict(list)
+    for i, pred in enumerate(preds):
+        example_id, candidate_id = instance_ids[i].split("-")
+        if pred != 0:
+            all_results[example_id].append({"event_type": training_args.id2type[pred]})
+    with open(result_file, "w", encoding='utf-8') as f:
+        for data_id in all_results.keys():
+            format_result = dict(id=data_id, event_list=[])
+            for candidate in all_results[data_id]:
+                format_result["event_list"].append(candidate)
+            f.write(json.dumps(format_result, ensure_ascii=False) + "\n")
+
+
+def get_duee_fin_ed_submission(preds, instance_ids, result_file, training_args):
+    return get_duee_ed_submission(preds, instance_ids, result_file, training_args)

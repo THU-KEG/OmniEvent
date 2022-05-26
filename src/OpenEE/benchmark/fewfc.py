@@ -14,15 +14,32 @@ label2id = {
     "NA": 0,
     "质押": 1,
     "股份股权转让": 2,
-    "投资": 3,
-    "起诉": 4,
-    "高管减持": 5,
+    "起诉": 3,
+    "投资": 4,
+    "减持": 5,
     "收购": 6,
-    "判决": 7,
-    "担保": 8,
-    "中标": 9,
-    "签署合同": 10
+    "担保": 7,
+    "中标": 8,
+    "签署合同": 9,
+    "判决": 10
 }
+
+
+def split_training_data(train_file, dev_file, ratio=0.15):
+    train_data = list(jsonlines.open(train_file))
+    random.shuffle(train_data)
+
+    dev_data = train_data[0:int(ratio*len(train_data))]
+    train_data = train_data[int(ratio*len(train_data)):]
+
+    with jsonlines.open(train_file, 'w') as f:
+        for t in train_data:
+            jsonlines.Writer.write(f, t)
+
+    with jsonlines.open(dev_file, 'w') as f:
+        for d in dev_data:
+            jsonlines.Writer.write(f, d)
+
 
 
 def detect_nested(input_data: List[dict]) -> List[dict]:
@@ -217,7 +234,10 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
 
 if __name__ == "__main__":
     json.dump(label2id, open("../../../data/FewFC/label2id.json", "w", encoding="utf-8"), indent=4, ensure_ascii=False)
+    split_training_data("../../../data/FewFC/train_base.json", "../../../data/FewFC/dev_base.json")
+
     convert_fewfc_to_unified("../../../data/FewFC/train_base.json")
+    convert_fewfc_to_unified("../../../data/FewFC/dev_base.json")
     convert_fewfc_to_unified("../../../data/FewFC/train_trans.json")
     convert_fewfc_to_unified("../../../data/FewFC/test_base.json")
     convert_fewfc_to_unified("../../../data/FewFC/test_trans.json")
