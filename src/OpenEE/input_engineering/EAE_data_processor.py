@@ -3,6 +3,7 @@ from operator import xor
 import os 
 import pdb 
 import json
+from re import L
 from string import whitespace
 from numpy import sort
 import torch 
@@ -184,10 +185,16 @@ class TCProcessor(DataProcessor):
                                 argu_for_trigger.add(mention['mention_id'])
                                 self.examples.append(example)
                         for entity in item["entities"]:
+                            # check whether the entity is an argument 
+                            is_argument = False 
                             for mention in entity["mentions"]:
-                                key = mention['mention_id']
-                                if key in argu_for_trigger:
-                                    continue
+                                if mention["mention_id"] in argu_for_trigger:
+                                    is_argument = True 
+                                    break 
+                            if is_argument:
+                                continue
+                            # negative arguments 
+                            for mention in entity["mentions"]:
                                 example = InputExample(
                                     example_id=trigger["id"],
                                     text=item["text"],

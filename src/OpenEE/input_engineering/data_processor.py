@@ -199,8 +199,6 @@ class TCProcessor(DataProcessor):
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
-                if is_overflow:
-                    features.labels = -100
             self.input_features.append(features)
 
 

@@ -32,6 +32,9 @@ from OpenEE.evaluation.dump_result import (
     get_maven_submission_sl,
     get_maven_submission_seq2seq
 )
+from OpenEE.evaluation.convert_format import (
+    get_ace2005_argument_extraction_sl
+)
 from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
 from OpenEE.trainer_seq2seq import Seq2SeqTrainer
@@ -143,14 +146,18 @@ if training_args.do_predict:
         ignore_keys = ["loss"]
     )
     # pdb.set_trace()
+    preds = np.argmax(logits, axis=-1)
     if data_args.test_exists_labels:
         # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
         print(metrics)
+        if model_args.paradigm == "sequence_labeling":
+            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+        else:
+            pass 
     else:
         # save name 
         aggregation = model_args.aggregation
         save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
-        preds = np.argmax(logits, axis=-1)
         if model_args.paradigm == "token_classification":
             if data_args.dataset_name == "MAVEN":
                 get_maven_submission(preds, test_dataset.get_ids(), save_path)

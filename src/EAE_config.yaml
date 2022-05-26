@@ -5,7 +5,7 @@ do_predict: True
 paradigm: sequence_labeling
 
 task_name: EAE
-golden_trigger: False 
+golden_trigger: True 
 dataset_name: ACE2005
 output_dir: output/ACE2005-EN
 type2id_path: ../data/ace_2005_td_v7/English/label2id.json

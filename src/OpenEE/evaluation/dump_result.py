@@ -25,15 +25,14 @@ def get_maven_submission(preds, instance_ids, result_file):
             f.write(json.dumps(format_result) + "\n")
 
 
-def get_pred_per_mention(pos_start, pos_end, preds, config):
-    id2type = {item[1]: item[0] for item in config.type2id.items()}
+def get_pred_per_mention(pos_start, pos_end, preds, id2label):
     if pos_end > len(preds) or \
-        id2type[int(preds[pos_start])] == "O" or \
-        id2type[int(preds[pos_start])].split("-")[0] != "B":
+        id2label[int(preds[pos_start])] == "O" or \
+        id2label[int(preds[pos_start])].split("-")[0] != "B":
         return "NA"
     predictions = set()
     for pos in range(pos_start, pos_end):
-        _pred = id2type[int(preds[pos])][2:]
+        _pred = id2label[int(preds[pos])][2:]
         predictions.add(_pred)
     if len(predictions) > 1:
         return "NA"
@@ -57,7 +56,7 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
                 word_pos_start = len(item["sentence"][:char_pos[0]].split())
                 word_pos_end = word_pos_start + len(item["sentence"][char_pos[0]:char_pos[1]].split())
                 # get predictions
-                pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], config)
+                pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], config.id2type)
                 # record results
                 results[item["id"]].append({
                     "id": candidate["id"].split("-")[-1],

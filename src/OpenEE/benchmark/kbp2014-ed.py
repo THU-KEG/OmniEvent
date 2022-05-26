@@ -17,26 +17,25 @@ class Config:
     """
     def __init__(self):
         # The configuration for the project (current) folder.
-        self.PROJECT_FOLDER = "../../../"
+        self.PROJECT_FOLDER = "../../../data"
 
         # The configurations for the training data.
-        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
+        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
                                                                    '2015/data/2014/training')
         self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'source')
         self.TRAIN_TOKEN_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'token_offset')
         self.TRAIN_ANNOTATION_TBF = os.path.join(self.TRAIN_DATA_FOLDER, 'annotation/annotation.tbf')
 
         # The configurations for the testing data.
-        self.TEST_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
+        self.TEST_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
                                                                   '2015/data/2014/eval')
         self.TEST_SOURCE_FOLDER = os.path.join(self.TEST_DATA_FOLDER, 'source')
         self.TEST_TOKEN_FOLDER = os.path.join(self.TEST_DATA_FOLDER, 'token_offset')
         self.TEST_ANNOTATION_TBF = os.path.join(self.TEST_DATA_FOLDER, 'annotation/annotation.tbf')
 
         # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                  '2015/tackbp2014')
-
+        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
+                                                                  '2015/TAC-KBP2014')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 

@@ -169,9 +169,7 @@ if training_args.do_ED_infer:
         print(metrics)
         preds = np.argmax(logits, axis=-1)
         if paradigm == "token_classification":
-            pred_labels = []
-            for pred in preds:
-                pred_labels.append(training_args.id2type[pred])
+            pred_labels = [training_args.id2type[pred] for pred in preds]
         elif paradigm == "sequence_labeling":
             pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
         else:
