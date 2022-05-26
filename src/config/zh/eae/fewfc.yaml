@@ -1,17 +1,21 @@
 seed: 42
 do_train: True
 do_predict: True
-do_ED_infer: True
 
 paradigm: sequence_labeling
 
 task_name: EAE
+golden_trigger: True
 dataset_name: FewFC
 output_dir: output/FewFC
 type2id_path: ../data/FewFC/label2id.json
+role2id_path: ../data/ace_2005_td_v7/Chinese/role2id.json
 train_file: ../data/FewFC/train_base.unified.json
 validation_file: ../data/FewFC/dev_base.unified.json
 test_file: ../data/FewFC/test_base.unified.json
+train_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese/train_preds.json
+validation_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese/valid_preds.json
+test_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese/test_preds.json
 language: Chinese
 test_exists_labels: True
 

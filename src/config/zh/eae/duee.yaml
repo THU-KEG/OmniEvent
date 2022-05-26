@@ -1,17 +1,21 @@
 seed: 42
 do_train: True
 do_predict: True
-do_ED_infer: True
 
 paradigm: sequence_labeling
 
 task_name: EAE
+golden_trigger: True
 dataset_name: DuEE1.0
 output_dir: output/DuEE1.0
 type2id_path: ../data/DuEE1.0/label2id.json
+role2id_path: ../data/DuEE1.0/role2id.json
 train_file: ../data/DuEE1.0/duee_train.unified.json
 validation_file: ../data/DuEE1.0/duee_dev.unified.json
 test_file: ../data/DuEE1.0/duee_test2.unified.json
+train_pred_file: output/DuEE1.0/ED/sequence_labeling/bert-base-chinese/train_preds.json
+validation_pred_file: output/DuEE1.0/ED/sequence_labeling/bert-base-chinese/valid_preds.json
+test_pred_file: output/DuEE1.0/ED/sequence_labeling/bert-base-chinese/test_preds.json
 language: Chinese
 test_exists_labels: False
 

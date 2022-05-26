@@ -7,7 +7,7 @@ paradigm: token_classification
 
 task_name: ED
 dataset_name: ACE2005
-output_dir: output/ACE2005
+output_dir: output/ACE2005-ZH
 type2id_path: ../data/ace_2005_td_v7/Chinese/label2id.json
 train_file: ../data/ace_2005_td_v7/Chinese/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/Chinese/valid.unified.jsonl

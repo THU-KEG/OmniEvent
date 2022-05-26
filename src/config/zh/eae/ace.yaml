@@ -1,17 +1,21 @@
 seed: 42
 do_train: True
 do_predict: True
-do_ED_infer: True
 
-paradigm: token_classification
+paradigm: sequence_labeling
 
-task_name: ED
+task_name: EAE
+golden_trigger: True
 dataset_name: ACE2005
-output_dir: output/ACE2005
+output_dir: output/ACE2005-ZH
 type2id_path: ../data/ace_2005_td_v7/Chinese/label2id.json
+role2id_path: ../data/ace_2005_td_v7/Chinese/role2id.json
 train_file: ../data/ace_2005_td_v7/Chinese/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/Chinese/valid.unified.jsonl
 test_file: ../data/ace_2005_td_v7/Chinese/test.unified.jsonl
+train_pred_file: output/ACE2005-ZH/ED/sequence_labeling/bert-base-chinese/train_preds.json
+validation_pred_file: output/ACE2005-ZH/ED/sequence_labeling/bert-base-chinese/valid_preds.json
+test_pred_file: output/ACE2005-ZH/ED/sequence_labeling/bert-base-chinese/test_preds.json
 language: Chinese
 test_exists_labels: True
 
@@ -53,4 +57,5 @@ evaluation_strategy: epoch
 eval_steps: 500
 save_strategy: epoch
 save_steps: 500
+
 

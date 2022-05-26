@@ -13,15 +13,22 @@ from collections import defaultdict
 random.seed(42)
 
 
-def generate_label2id(data_path: str):
-    label2id = dict(NA=0)
+def generate_label2id_role2id(data_path: str):
+    label2id, role2id = dict(NA=0), dict(NA=0)
+
     schema = list(jsonlines.open(data_path))
     for i, s in enumerate(schema):
         label2id[s["event_type"]] = i + 1
+        for role in s["role_list"]:
+            if role["role"] not in role2id:
+                role2id[role["role"]] = len(role2id)
 
     io_dir = "/".join(data_path.split("/")[:-1])
     with open(os.path.join(io_dir, "label2id.json"), "w", encoding="utf-8") as f:
         json.dump(label2id, f, indent=4, ensure_ascii=False)
+
+    with open(os.path.join(io_dir, "role2id.json"), "w", encoding="utf-8") as f:
+        json.dump(role2id, f, indent=4, ensure_ascii=False)
 
 
 def chinese_tokenizer(input_text: str, tokenizer="jieba") -> List[str]:
@@ -216,7 +223,7 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
 
 
 if __name__ == "__main__":
-    generate_label2id("../../../data/DuEE-fin/duee_fin_event_schema.json")
+    generate_label2id_role2id("../../../data/DuEE-fin/duee_fin_event_schema.json")
     convert_dueefin_to_unified("../../../data/DuEE-fin/duee_fin_train.json")
     convert_dueefin_to_unified("../../../data/DuEE-fin/duee_fin_dev.json")
     convert_dueefin_to_unified("../../../data/DuEE-fin/duee_fin_test2.json")

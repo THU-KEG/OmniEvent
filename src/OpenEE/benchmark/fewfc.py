@@ -25,6 +25,23 @@ label2id = {
 }
 
 
+def get_role2id(train_file, test_file, output_file):
+    role2id = dict(NA=0)
+    data = list(jsonlines.open(train_file)) + list(jsonlines.open(test_file))
+    for d in data:
+        for event in d['events']:
+            event_type = event['type']
+            for mention in event['mentions']:
+                role = mention['role']
+                if role != 'trigger':
+                    arg_role = '{}-{}'.format(event_type, role)
+                    if arg_role not in role2id:
+                        role2id[arg_role] = len(role2id)
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(role2id, f, indent=4, ensure_ascii=False)
+
+
 def split_training_data(train_file, dev_file, ratio=0.15):
     train_data = list(jsonlines.open(train_file))
     random.shuffle(train_data)
@@ -165,8 +182,8 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
                         tmp["trigger"] = d["word"]
                         tmp["offset"] = d["span"]
                     else:
-                        tmp["argument"].append({"role": d["role"], "mentions": [{"mention": d["word"],
-                                                                                 "position": d["span"]}]})
+                        tmp["argument"].append({"role": "{}-{}".format(event["type"], d["role"]),
+                                                "mentions": [{"mention": d["word"], "position": d["span"]}]})
                 if keep:
                     events.append(tmp)
             events = sorted(events, key=lambda x: len(x["trigger"]))
@@ -234,6 +251,9 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
 
 if __name__ == "__main__":
     json.dump(label2id, open("../../../data/FewFC/label2id.json", "w", encoding="utf-8"), indent=4, ensure_ascii=False)
+    get_role2id("../../../data/FewFC/train_base.json",
+                "../../../data/FewFC/test_base.json",
+                "../../../data/FewFC/role2id.json")
     split_training_data("../../../data/FewFC/train_base.json", "../../../data/FewFC/dev_base.json")
 
     convert_fewfc_to_unified("../../../data/FewFC/train_base.json")

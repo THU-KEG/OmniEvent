@@ -45,11 +45,11 @@ class InputExample(object):
 class InputFeatures(object):
     """Input features of an instance."""
     
-    def __init__(self, 
-                example_id, 
-                input_ids, 
-                attention_mask, 
-                token_type_ids=None, 
+    def __init__(self,
+                example_id,
+                input_ids,
+                attention_mask,
+                token_type_ids=None,
                 labels=None,
         ):
         self.example_id = example_id
@@ -66,6 +66,8 @@ class DataProcessor(Dataset):
         self.config = config
         self.tokenizer = tokenizer
         self.config.role2id["X"] = -100
+        self.examples = []
+        self.input_features = []
     
     def read_examples(self, input_file):
         raise NotImplementedError
@@ -305,13 +307,13 @@ class SLProcessor(DataProcessor):
                                 for i in range(left_pos+1, right_pos):
                                     labels[i] = f"I-{argument['role']}"
                         example = InputExample(
-                            example_id = item["id"],
-                            text = item["text"],
+                            example_id=item["id"],
+                            text=item["text"],
                             pred_type=preds[trigger_idx],
                             true_type=event["type"],
                             trigger_left=trigger["position"][0],
                             trigger_right=trigger["position"][1],
-                            labels = labels
+                            labels=labels,
                         )
                         if "train" in input_file or self.config.golden_trigger:
                             example.pred_type = event["type"]
@@ -397,7 +399,6 @@ class SLProcessor(DataProcessor):
         assert len(markered_text.split(space)) == len(markered_labels)
         return markered_text, markered_labels
 
-
     def convert_examples_to_features(self):
         self.input_features = []
         self.is_overflow = []
@@ -410,10 +411,10 @@ class SLProcessor(DataProcessor):
                                               self.config.markers,
                                               whitespace)
             outputs = self.tokenizer(text,
-                                    padding="max_length",
-                                    truncation=False,
-                                    max_length=self.config.max_seq_length,
-                                    return_offsets_mapping=True)
+                                     padding="max_length",
+                                     truncation=False,
+                                     max_length=self.config.max_seq_length,
+                                     return_offsets_mapping=True)
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
@@ -424,11 +425,11 @@ class SLProcessor(DataProcessor):
             else:
                 final_labels = self.get_final_labels_zh(text, labels, outputs)
             features = InputFeatures(
-                example_id = example.example_id,
-                input_ids = outputs["input_ids"],
-                attention_mask = outputs["attention_mask"],
-                token_type_ids = outputs["token_type_ids"],
-                labels = final_labels
+                example_id=example.example_id,
+                input_ids=outputs["input_ids"],
+                attention_mask=outputs["attention_mask"],
+                token_type_ids=outputs["token_type_ids"],
+                labels=final_labels
             )
             self.input_features.append(features)
 
