@@ -10,7 +10,8 @@ from ..input_engineering.input_utils import get_start_poses, check_if_start, get
 
 
 def get_pred_per_mention(pos_start, pos_end, preds, id2label):
-    if pos_end > len(preds) or \
+    if pos_start == pos_end or\
+            pos_end > len(preds) or \
             id2label[int(preds[pos_start])] == "O" or \
             id2label[int(preds[pos_start])].split("-")[0] != "B":
         return "NA"
@@ -49,12 +50,26 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
             item = json.loads(line.strip())
             # check for alignment 
             if not is_overflow[i]:
-                assert len(preds[i]) == len(item["sentence"].split())
+                if config.language == "English":
+                    assert len(preds[i]) == len(item["text"].split())
+                elif config.language == "Chinese":
+                    assert len(preds[i]) == len([w for w in item['text'] if w.strip()])  # remove space token
+                else:
+                    raise NotImplementedError
+
             for candidate in item["candidates"]:
                 # get word positions
                 char_pos = candidate["position"]
-                word_pos_start = len(item["sentence"][:char_pos[0]].split())
-                word_pos_end = word_pos_start + len(item["sentence"][char_pos[0]:char_pos[1]].split())
+
+                if config.language == "English":
+                    word_pos_start = len(item["text"][:char_pos[0]].split())
+                    word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                elif config.language == "Chinese":
+                    word_pos_start = len([w for w in item["text"][:char_pos[0]] if w.strip()])
+                    word_pos_end = len([w for w in item["text"][:char_pos[1]] if w.strip()])
+                else:
+                    raise NotImplementedError
+
                 # get predictions
                 pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], config.id2type)
                 # record results

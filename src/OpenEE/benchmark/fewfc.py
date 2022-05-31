@@ -145,98 +145,82 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
 
         tokens = chinese_tokenizer(sent["content"], tokenizer)
 
-        if "test" in data_path:
-            # if test dataset, we have to provide candidates
-            instance["candidates"] = []
-            start = 0
-            for candidate in tokens:
-                char_start = start
-                char_end = char_start + len(candidate)
-                start = char_end
+        # FewFC has provided labels for all data splits
+        instance["events"] = []
+        instance["negative_triggers"] = []
+        events_in_sen = list()
+        trigger_list = []
 
-                instance["candidates"].append({
-                    "id": "{}-{}".format(instance["id"], str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")),
-                    "trigger_word": candidate,
+        # reformat and rank the events by length
+        events = []
+        for event in sent["events"]:
+            tmp = dict(type=event["type"], trigger=str(), offset=list(), argument=list())
+            keep = True
+            for d in event["mentions"]:
+                if d["role"] == "trigger":
+                    # manually fix the annotation boundary errors in the dataset
+                    if d["word"] in ["了收", "的增", "讼诉", "元取", "员减"] \
+                            and d["span"] in [[14, 16], [70, 72], [18, 20], [50, 52], [20, 22]]:
+                        keep = False
+                        break
+                    tmp["trigger"] = d["word"]
+                    tmp["offset"] = d["span"]
+                else:
+                    tmp["argument"].append({"role": "{}-{}".format(event["type"], d["role"]),
+                                            "mentions": [{"mention": d["word"], "position": d["span"]}]})
+            if keep:
+                events.append(tmp)
+        events = sorted(events, key=lambda x: len(x["trigger"]))
+
+        # re-tokenize the sentence according to the triggers
+        for event in events:
+            trigger_list.append(event["trigger"])
+            events_in_sen.append(event)
+            if event["trigger"] not in tokens:
+                tokens = re_tokenize(tokens, event)
+
+        for e in events_in_sen:
+            event = dict()
+            event["type"] = e["type"]
+            event["triggers"] = []
+
+            e["id"] = str(uuid.uuid4()).replace("-", "")
+
+            event["triggers"].append({
+                "id": "{}-{}".format(instance["id"], e["id"]),
+                "trigger_word": e["trigger"],
+                "position": e["offset"],
+                "arguments": e["argument"]
+            })
+
+            assert instance["text"][e["offset"][0]: e["offset"][1]] == e["trigger"]
+
+            for arg in e["argument"]:
+                for a in arg["mentions"]:
+                    assert instance["text"][a["position"][0]: a["position"][1]] == a["mention"]
+
+            # the following triggers are not in the token list due to re-tokenizing.
+            if e["trigger"] not in ["新增", "买入", "收购"]:
+                assert e["trigger"] in tokens
+
+            instance["events"].append(event)
+
+        # negative triggers
+        start = 0
+        for token in tokens:
+            char_start = start
+            char_end = char_start + len(token)
+            start = char_end
+
+            if token not in trigger_list:
+                negative = token
+                instance["negative_triggers"].append({
+                    "id": "{}-{}".format(instance["id"],
+                                         str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")),
+                    "trigger_word": negative,
                     "position": [char_start, char_end]
                 })
-                assert instance["text"][char_start:char_end] == candidate
-        else:
-            # if train dataset, we have the labels.
-            instance["events"] = []
-            instance["negative_triggers"] = []
-            events_in_sen = list()
-            trigger_list = []
-
-            # reformat and rank the events by length
-            events = []
-            for event in sent["events"]:
-                tmp = dict(type=event["type"], trigger=str(), offset=list(), argument=list())
-                keep = True
-                for d in event["mentions"]:
-                    if d["role"] == "trigger":
-                        # manually fix the annotation boundary errors in the dataset
-                        if d["word"] in ["了收", "的增", "讼诉", "元取", "员减"] \
-                                and d["span"] in [[14, 16], [70, 72], [18, 20], [50, 52], [20, 22]]:
-                            keep = False
-                            break
-                        tmp["trigger"] = d["word"]
-                        tmp["offset"] = d["span"]
-                    else:
-                        tmp["argument"].append({"role": "{}-{}".format(event["type"], d["role"]),
-                                                "mentions": [{"mention": d["word"], "position": d["span"]}]})
-                if keep:
-                    events.append(tmp)
-            events = sorted(events, key=lambda x: len(x["trigger"]))
-
-            # re-tokenize the sentence according to the triggers
-            for event in events:
-                trigger_list.append(event["trigger"])
-                events_in_sen.append(event)
-                if event["trigger"] not in tokens:
-                    tokens = re_tokenize(tokens, event)
-
-            for e in events_in_sen:
-                event = dict()
-                event["type"] = e["type"]
-                event["triggers"] = []
-
-                e["id"] = str(uuid.uuid4()).replace("-", "")
-
-                event["triggers"].append({
-                    "id": "{}-{}".format(instance["id"], e["id"]),
-                    "trigger_word": e["trigger"],
-                    "position": e["offset"],
-                    "arguments": e["argument"]
-                })
-
-                assert instance["text"][e["offset"][0]: e["offset"][1]] == e["trigger"]
-
-                for arg in e["argument"]:
-                    for a in arg["mentions"]:
-                        assert instance["text"][a["position"][0]: a["position"][1]] == a["mention"]
-
-                # the following triggers are not in the token list due to re-tokenizing.
-                if e["trigger"] not in ["新增", "买入", "收购"]:
-                    assert e["trigger"] in tokens
-
-                instance["events"].append(event)
-
-            # negative triggers
-            start = 0
-            for token in tokens:
-                char_start = start
-                char_end = char_start + len(token)
-                start = char_end
-
-                if token not in trigger_list:
-                    negative = token
-                    instance["negative_triggers"].append({
-                        "id": "{}-{}".format(instance["id"],
-                                             str(uuid.UUID(int=random.getrandbits(128))).replace("-", "")),
-                        "trigger_word": negative,
-                        "position": [char_start, char_end]
-                    })
-                    assert instance["text"][char_start:char_end] == negative
+                assert instance["text"][char_start:char_end] == negative
         formatted_data.append(instance)
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(fewfc_data), data_path))

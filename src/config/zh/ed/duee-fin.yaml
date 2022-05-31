@@ -1,7 +1,7 @@
 seed: 42
 do_train: True
-do_predict: True
-do_ED_infer: True
+do_predict: False
+do_ED_infer: False
 
 paradigm: token_classification
 
@@ -26,7 +26,7 @@ aggregation: none
 num_train_epochs: 10
 max_seq_length: 512
 max_out_length: 512
-dataloader_num_workers: 2
+dataloader_num_workers: d2
 
 generation_max_length: 128
 generation_num_beams: 4

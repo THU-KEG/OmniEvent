@@ -21,7 +21,13 @@ def get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, is_ove
         for i, line in enumerate(lines):
             item = json.loads(line.strip())
             if not is_overflow[i]:
-                assert len(preds[i]) == len(item["text"].split())
+                if data_args.language == "English":
+                    assert len(preds[i]) == len(item["text"].split())
+                elif data_args.language == "Chinese":
+                    assert len(preds[i]) == len([w for w in item['text'] if w.strip('� ')])  # remove space token
+                else:
+                    raise NotImplementedError
+
             candidates = []
             for event in item["events"]:
                 for trigger in event["triggers"]:
@@ -34,10 +40,14 @@ def get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, is_ove
             for candidate in candidates:
                 # get word positions
                 char_pos = candidate["position"]
-                word_pos_start = len(item["text"][:char_pos[0]].split())
-                word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                if data_args.language == "English":
+                    word_pos_start = len(item["text"][:char_pos[0]].split())
+                    word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                else:
+                    word_pos_start = len([w for w in item["text"][:char_pos[0]] if w.strip()])
+                    word_pos_end = len([w for w in item["text"][:char_pos[1]] if w.strip()])
                 # get predictions
-                pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], data_args)
+                pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], data_args.id2type)
                 # record results
                 results.append(pred)
             

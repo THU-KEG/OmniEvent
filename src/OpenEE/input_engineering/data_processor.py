@@ -1,21 +1,20 @@
 from operator import xor
-import os 
-import pdb 
+import os
+import pdb
 import json
 from numpy import sort
-import torch 
+import torch
 import logging
 
-from tqdm import tqdm 
+from tqdm import tqdm
 from torch.utils.data import Dataset
 from .input_utils import get_start_poses, check_if_start, get_word_position
-
 
 logger = logging.getLogger(__name__)
 
 
 class InputExample(object):
-    """A single training/test example for event extractioin."""
+    """A single training/test example for event extraction."""
 
     def __init__(self, example_id, text, trigger_left=None, trigger_right=None, labels=None):
         """Constructs a InputExample.
@@ -29,7 +28,7 @@ class InputExample(object):
         """
         self.example_id = example_id
         self.text = text
-        self.trigger_left = trigger_left 
+        self.trigger_left = trigger_left
         self.trigger_right = trigger_right
         self.labels = labels
 
@@ -55,7 +54,7 @@ class DataProcessor(Dataset):
         self.tokenizer = tokenizer
         self.examples = []
         self.input_features = []
-    
+
     def read_examples(self, input_file):
         raise NotImplementedError
 
@@ -63,21 +62,21 @@ class DataProcessor(Dataset):
         raise NotImplementedError
 
     def _truncate(self, outputs, max_seq_length):
-        is_truncation = False 
+        is_truncation = False
         if len(outputs["input_ids"]) > max_seq_length:
             print("An instance exceeds the maximum length.")
-            is_truncation = True 
+            is_truncation = True
             for key in ["input_ids", "attention_mask", "token_type_ids", "offset_mapping"]:
                 if key not in outputs:
                     continue
                 outputs[key] = outputs[key][:max_seq_length]
         return outputs, is_truncation
-    
+
     def get_ids(self):
         ids = []
         for example in self.examples:
             ids.append(example.example_id)
-        return ids 
+        return ids
 
     def __len__(self):
         return len(self.input_features)
@@ -85,8 +84,8 @@ class DataProcessor(Dataset):
     def __getitem__(self, index):
         features = self.input_features[index]
         data_dict = dict(
-            input_ids = torch.tensor(features.input_ids, dtype=torch.long),
-            attention_mask = torch.tensor(features.attention_mask, dtype=torch.float32)
+            input_ids=torch.tensor(features.input_ids, dtype=torch.long),
+            attention_mask=torch.tensor(features.attention_mask, dtype=torch.float32)
         )
         if features.token_type_ids is not None and self.config.return_token_type_ids:
             data_dict["token_type_ids"] = torch.tensor(features.token_type_ids, dtype=torch.long)
@@ -97,7 +96,7 @@ class DataProcessor(Dataset):
         if features.labels is not None:
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
         return data_dict
-        
+
     def collate_fn(self, batch):
         output_batch = dict()
         for key in batch[0].keys():
@@ -109,10 +108,10 @@ class DataProcessor(Dataset):
             output_batch[key] = output_batch[key][:, :input_length]
         if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
             if self.config.truncate_seq2seq_output:
-                output_length = int((output_batch["labels"]!=-100).sum(-1).max())
+                output_length = int((output_batch["labels"] != -100).sum(-1).max())
                 output_batch["labels"] = output_batch["labels"][:, :output_length]
             else:
-                output_batch["labels"] = output_batch["labels"][:, :input_length] 
+                output_batch["labels"] = output_batch["labels"][:, :input_length]
         return output_batch
 
 
@@ -148,7 +147,7 @@ class TCProcessor(DataProcessor):
                             text=item["text"],
                             trigger_left=neg["position"][0],
                             trigger_right=neg["position"][1],
-                            labels="NA" 
+                            labels="NA"
                         )
                         self.examples.append(example)
                 # test set 
@@ -166,7 +165,7 @@ class TCProcessor(DataProcessor):
                         #     example.labels = candidate["type"]
                         self.examples.append(example)
 
-    def convert_examples_to_features(self): 
+    def convert_examples_to_features(self):
         # merge and then tokenize
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for TC"):
@@ -180,11 +179,11 @@ class TCProcessor(DataProcessor):
                 text = text_left + self.config.markers[0] + " " + text_mid + " " + self.config.markers[1] + text_right
 
             outputs = self.tokenizer(text, padding="max_length", truncation=True, max_length=self.config.max_seq_length)
-            is_overflow = False 
+            is_overflow = False
             try:
                 left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
-            except: 
+            except:
                 logger.warning("Markers are not in the input tokens.")
                 left = self.config.max_seq_length
                 is_overflow = True
@@ -196,7 +195,7 @@ class TCProcessor(DataProcessor):
             # trigger position mask
             left_mask = [1] * left + [0] * (self.config.max_seq_length - left)
             right_mask = [0] * left + [1] * (self.config.max_seq_length - left)
-                
+
             features = InputFeatures(
                 example_id=example.example_id,
                 input_ids=outputs["input_ids"],
@@ -210,6 +209,7 @@ class TCProcessor(DataProcessor):
             self.input_features.append(features)
 
 
+'''
 class SLProcessor(DataProcessor):
     """Data processor for sequence labeling."""
 
@@ -329,7 +329,96 @@ class SLProcessor(DataProcessor):
                 labels = final_labels
             )
             self.input_features.append(features)
-            
+'''
+
+
+class SLProcessor(DataProcessor):
+    """Data processor for sequence labeling."""
+
+    def __init__(self, config, tokenizer, input_file):
+        super().__init__(config, tokenizer)
+        self.read_examples(input_file)
+        self.is_overflow = []
+        self.convert_examples_to_features()
+
+    def read_examples(self, input_file):
+        self.examples = []
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+
+                if self.config.language == "English":
+                    words = item["text"].split()
+                elif self.config.language == "Chinese":
+                    words = list(item["text"])
+                else:
+                    raise NotImplementedError
+
+                labels = ["O"] * len(words)
+
+                if "events" in item:
+                    for event in item["events"]:
+                        for trigger in event["triggers"]:
+                            if self.config.language == "English":
+                                left_pos = len(item["text"][:trigger["position"][0]].split())
+                                right_pos = len(item["text"][:trigger["position"][1]].split())
+                            elif self.config.language == "Chinese":
+                                left_pos = trigger["position"][0]
+                                right_pos = trigger["position"][1]
+                            else:
+                                raise NotImplementedError
+
+                            labels[left_pos] = f"B-{event['type']}"
+                            for i in range(left_pos + 1, right_pos):
+                                labels[i] = f"I-{event['type']}"
+                example = InputExample(
+                    example_id=item["id"],
+                    text=words,
+                    labels=labels
+                )
+                self.examples.append(example)
+
+    def get_final_labels(self, example, word_ids_of_each_token, label_all_tokens=False):
+        final_labels = []
+        pre_word_id = None
+        for word_id in word_ids_of_each_token:
+            if word_id is None:
+                final_labels.append(-100)
+            elif word_id != pre_word_id:  # first split token of a word
+                final_labels.append(self.config.type2id[example.labels[word_id]])
+            else:
+                final_labels.append(self.config.type2id[example.labels[word_id]] if label_all_tokens else -100)
+            pre_word_id = word_id
+
+        return final_labels
+
+    def convert_examples_to_features(self):
+        self.input_features = []
+
+        for example in tqdm(self.examples, desc="Processing features for SL"):
+            outputs = self.tokenizer(example.text,
+                                     padding="max_length",
+                                     truncation=False,
+                                     max_length=self.config.max_seq_length,
+                                     is_split_into_words=True)
+            # Roberta tokenizer doesn't return token_type_ids
+            if "token_type_ids" not in outputs:
+                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
+            self.is_overflow.append(is_overflow)
+
+            word_ids_of_each_token = outputs.word_ids()[: self.config.max_seq_length]
+            final_labels = self.get_final_labels(example, word_ids_of_each_token, label_all_tokens=False)
+
+            features = InputFeatures(
+                example_id=example.example_id,
+                input_ids=outputs["input_ids"],
+                attention_mask=outputs["attention_mask"],
+                token_type_ids=outputs["token_type_ids"],
+                labels=final_labels
+            )
+            self.input_features.append(features)
+
 
 class Seq2SeqProcessor(DataProcessor):
     "Data processor for sequence to sequence."
@@ -338,7 +427,7 @@ class Seq2SeqProcessor(DataProcessor):
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
-    
+
     def read_examples(self, input_file):
         self.examples = []
         with open(input_file, "r", encoding="utf-8") as f:
@@ -354,50 +443,45 @@ class Seq2SeqProcessor(DataProcessor):
                                 "position": trigger["position"]
                             })
                 example = InputExample(
-                    example_id = item["id"],
-                    text = item["text"],
-                    trigger_left = -1,
-                    trigger_right = -1,
-                    labels = labels
+                    example_id=item["id"],
+                    text=item["text"],
+                    trigger_left=-1,
+                    trigger_right=-1,
+                    labels=labels
                 )
                 self.examples.append(example)
-        
+
     def convert_examples_to_features(self):
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
             outputs = self.tokenizer(example.text,
-                                    padding="max_length",
-                                    truncation=True,
-                                    max_length=self.config.max_seq_length,
-                                    return_offsets_mapping=True)
+                                     padding="max_length",
+                                     truncation=True,
+                                     max_length=self.config.max_seq_length,
+                                     return_offsets_mapping=True)
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
             labels = ""
             for mention_label in example.labels:
                 if outputs["offset_mapping"][-1][0] != 0 and \
-                    outputs["offset_mapping"][-1][1] != 0 and \
-                    mention_label["position"][1] > outputs["offset_mapping"][-1][1]:
+                        outputs["offset_mapping"][-1][1] != 0 and \
+                        mention_label["position"][1] > outputs["offset_mapping"][-1][1]:
                     continue
                 labels += f"{mention_label['type']}:{mention_label['word']};"
             label_outputs = self.tokenizer(labels,
-                                    padding="max_length",
-                                    truncation=True,
-                                    max_length=self.config.max_out_length)
+                                           padding="max_length",
+                                           truncation=True,
+                                           max_length=self.config.max_out_length)
             # set -100 to unused token 
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:
                     label_outputs["input_ids"][i] = -100
             features = InputFeatures(
-                example_id = example.example_id,
-                input_ids = outputs["input_ids"],
-                attention_mask = outputs["attention_mask"],
-                token_type_ids = outputs["token_type_ids"],
-                labels = label_outputs["input_ids"]
+                example_id=example.example_id,
+                input_ids=outputs["input_ids"],
+                attention_mask=outputs["attention_mask"],
+                token_type_ids=outputs["token_type_ids"],
+                labels=label_outputs["input_ids"]
             )
             self.input_features.append(features)
-
-            
-
-            
-

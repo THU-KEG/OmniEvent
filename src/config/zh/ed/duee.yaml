@@ -3,7 +3,7 @@ do_train: True
 do_predict: True
 do_ED_infer: True
 
-paradigm: token_classification
+paradigm: sequence_labeling
 
 task_name: ED
 dataset_name: DuEE1.0
@@ -24,8 +24,8 @@ hidden_size: 768
 aggregation: none
 
 num_train_epochs: 5
-max_seq_length: 350
-max_out_length: 350
+max_seq_length: 200
+max_out_length: 200
 dataloader_num_workers: 2
 
 generation_max_length: 128
