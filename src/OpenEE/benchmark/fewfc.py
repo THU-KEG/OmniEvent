@@ -1,4 +1,5 @@
 import re
+import os
 import json
 import uuid
 import jieba
@@ -56,7 +57,6 @@ def split_training_data(train_file, dev_file, ratio=0.15):
     with jsonlines.open(dev_file, 'w') as f:
         for d in dev_data:
             jsonlines.Writer.write(f, d)
-
 
 
 def detect_nested(input_data: List[dict]) -> List[dict]:
@@ -238,7 +238,8 @@ if __name__ == "__main__":
     get_role2id("../../../data/FewFC/train_base.json",
                 "../../../data/FewFC/test_base.json",
                 "../../../data/FewFC/role2id.json")
-    split_training_data("../../../data/FewFC/train_base.json", "../../../data/FewFC/dev_base.json")
+    if not os.path.exists("../../../data/FewFC/dev_base.json"):
+        split_training_data("../../../data/FewFC/train_base.json", "../../../data/FewFC/dev_base.json")
 
     convert_fewfc_to_unified("../../../data/FewFC/train_base.json")
     convert_fewfc_to_unified("../../../data/FewFC/dev_base.json")

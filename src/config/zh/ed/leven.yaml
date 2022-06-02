@@ -3,13 +3,13 @@ do_train: True
 do_predict: True
 do_ED_infer: True
 
-paradigm: sequence_labeling
+paradigm: token_classification
 
 task_name: ED
 dataset_name: LEVEN
 output_dir: output/LEVEN
 type2id_path: ../data/LEVEN/label2id.json
-train_file: ../data/mini/LEVEN/train.unified.jsonl
+train_file: ../data/LEVEN/train.unified.jsonl
 validation_file: ../data/LEVEN/valid.unified.jsonl
 test_file: ../data/LEVEN/test.unified.jsonl
 language: Chinese
@@ -23,7 +23,7 @@ model_name_or_path: bert-base-chinese
 hidden_size: 768
 aggregation: none
 
-num_train_epochs: 1
+num_train_epochs: 5
 max_seq_length: 256
 max_out_length: 256
 dataloader_num_workers: 2
@@ -33,8 +33,8 @@ generation_num_beams: 4
 predict_with_generate: True
 ignore_pad_token_for_loss: True
 
-per_device_train_batch_size: 4
-per_device_eval_batch_size: 2
+per_device_train_batch_size: 16
+per_device_eval_batch_size: 8
 gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5

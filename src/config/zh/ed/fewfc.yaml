@@ -3,7 +3,7 @@ do_train: True
 do_predict: True
 do_ED_infer: True
 
-paradigm: token_classification
+paradigm: sequence_labeling
 
 task_name: ED
 dataset_name: FewFC

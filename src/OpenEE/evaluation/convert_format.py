@@ -24,7 +24,7 @@ def get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, is_ove
                 if data_args.language == "English":
                     assert len(preds[i]) == len(item["text"].split())
                 elif data_args.language == "Chinese":
-                    assert len(preds[i]) == len([w for w in item['text'] if w.strip('� ')])  # remove space token
+                    assert len(preds[i]) == len([w for w in item['text'] if w.strip('\n\xa0� ')])  # remove space token
                 else:
                     raise NotImplementedError
 
@@ -43,9 +43,11 @@ def get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, is_ove
                 if data_args.language == "English":
                     word_pos_start = len(item["text"][:char_pos[0]].split())
                     word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                elif data_args.language == "Chinese":
+                    word_pos_start = len([w for w in item["text"][:char_pos[0]] if w.strip('\n\xa0� ')])
+                    word_pos_end = len([w for w in item["text"][:char_pos[1]] if w.strip('\n\xa0� ')])
                 else:
-                    word_pos_start = len([w for w in item["text"][:char_pos[0]] if w.strip()])
-                    word_pos_end = len([w for w in item["text"][:char_pos[1]] if w.strip()])
+                    raise NotImplementedError
                 # get predictions
                 pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], data_args.id2type)
                 # record results
@@ -71,7 +73,13 @@ def get_ace2005_argument_extraction_sl(preds, labels, data_file, data_args, is_o
             for event in item["events"]:
                 for trigger in event["triggers"]:
                     if not is_overflow[trigger_idx]:
-                        assert len(preds[trigger_idx]) == len(item["text"].split())
+                        if data_args.language == "English":
+                            assert len(preds[trigger_idx]) == len(item["text"].split())
+                        elif data_args.language == "Chinese":
+                            assert len(preds[trigger_idx]) == len(
+                                [w for w in item['text'] if w.strip('\n\xa0� ')])  # remove space token
+                        else:
+                            raise NotImplementedError
                     candidates = []
                     positive_mentions = set()
                     for argument in trigger["arguments"]:
@@ -96,8 +104,14 @@ def get_ace2005_argument_extraction_sl(preds, labels, data_file, data_args, is_o
                     for candidate in candidates:
                         # get word positions
                         char_pos = candidate["position"]
-                        word_pos_start = len(item["text"][:char_pos[0]].split())
-                        word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                        if data_args.language == "English":
+                            word_pos_start = len(item["text"][:char_pos[0]].split())
+                            word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                        elif data_args.language == "Chinese":
+                            word_pos_start = len([w for w in item["text"][:char_pos[0]] if w.strip('\n\xa0� ')])
+                            word_pos_end = len([w for w in item["text"][:char_pos[1]] if w.strip('\n\xa0� ')])
+                        else:
+                            raise NotImplementedError
                         # get predictions
                         pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[trigger_idx], data_args.id2role)
                         # record results

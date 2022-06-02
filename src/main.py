@@ -183,12 +183,19 @@ if training_args.do_ED_infer:
         if paradigm == "token_classification":
             pred_labels = [training_args.id2type[pred] for pred in preds]
         elif paradigm == "sequence_labeling":
-            pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+            if data_args.dataset_name in ["DuEE1.0"] and 'test' in save_path:
+                np.save(os.path.join(output_dir, "test_preds_raw.npy"), preds)
+                return None
+            elif data_args.dataset_name == "LEVEN" and 'test' in save_path:
+                return None
+            else:
+                pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
         else:
             pass
         json.dump(pred_labels, open(save_path, "w", encoding='utf-8'), ensure_ascii=False)
 
     # dataset
-    dump_preds(data_args.train_file, os.path.join(output_dir, "train_preds.json"), model_args.paradigm)
+    if data_args.dataset_name not in ["DuEE1.0", "LEVEN"]:
+        dump_preds(data_args.train_file, os.path.join(output_dir, "train_preds.json"), model_args.paradigm)
     dump_preds(data_args.validation_file, os.path.join(output_dir, "valid_preds.json"), model_args.paradigm)
     dump_preds(data_args.test_file, os.path.join(output_dir, "test_preds.json"), model_args.paradigm)

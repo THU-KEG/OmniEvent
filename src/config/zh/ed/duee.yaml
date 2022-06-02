@@ -3,7 +3,7 @@ do_train: True
 do_predict: True
 do_ED_infer: True
 
-paradigm: sequence_labeling
+paradigm: token_classification
 
 task_name: ED
 dataset_name: DuEE1.0

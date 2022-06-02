@@ -9,7 +9,7 @@ golden_trigger: True
 dataset_name: FewFC
 output_dir: output/FewFC
 type2id_path: ../data/FewFC/label2id.json
-role2id_path: ../data/ace_2005_td_v7/Chinese/role2id.json
+role2id_path: ../data/FewFC/role2id.json
 train_file: ../data/FewFC/train_base.unified.json
 validation_file: ../data/FewFC/dev_base.unified.json
 test_file: ../data/FewFC/test_base.unified.json
@@ -28,8 +28,8 @@ hidden_size: 768
 aggregation: none
 
 num_train_epochs: 10
-max_seq_length: 350
-max_out_length: 350
+max_seq_length: 256
+max_out_length: 256
 dataloader_num_workers: 2
 
 generation_max_length: 128
