@@ -31,7 +31,9 @@ from OpenEE.evaluation.dump_result import (
     get_leven_submission_seq2seq,
     get_maven_submission,
     get_maven_submission_sl,
-    get_maven_submission_seq2seq
+    get_maven_submission_seq2seq,
+    get_duee_submission,
+    get_duee_submission_sl,
 )
 from OpenEE.evaluation.convert_format import (
     get_ace2005_argument_extraction_sl
@@ -171,6 +173,8 @@ if training_args.do_predict:
             elif data_args.dataset_name == "LEVEN":
                 get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
                                         json.load(open(role2id_path)), data_args)
+            elif data_args.dataset_name == "DuEE1.0":
+                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
         elif model_args.paradigm == "seq2seq":
             if data_args.dataset_name == "MAVEN":
                 get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(role2id_path)), tokenizer,

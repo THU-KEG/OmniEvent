@@ -111,6 +111,10 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                 error_annotations.append(sent)
                 continue
 
+            # manually remove bad case.
+            if instance["id"] == "326ece324c848949f96db780db85fc22":
+                continue
+
             # if train dataset, we have the labels.
             instance["events"] = list()
             instance["negative_triggers"] = list()
@@ -123,7 +127,9 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                     role = arg["role"]
                     arg_start = arg["argument_start_index"]
                     arg_end = arg_start + len(arg["argument"])
-                    event["argument"].append({"role": role, "mentions": [{"mention": arg["argument"],
+                    event["argument"].append({"id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                              "role": role, "mentions": [{"mention_id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                                                          "mention": arg["argument"],
                                                                           "position": [arg_start, arg_end]}]})
                 events_in_sen.append(event)
                 trigger_list.append(event["trigger"])

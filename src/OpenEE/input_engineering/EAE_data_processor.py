@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class InputExample(object):
-    """A single training/test example for event extractioin."""
+    """A single training/test example for event extraction."""
 
     def __init__(self, example_id, text, pred_type, true_type, trigger_left=None, trigger_right=None, argu_left=None, argu_right=None, labels=None):
         """Constructs a InputExample.
@@ -454,53 +454,82 @@ class SLProcessor(DataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-                for event in item["events"]:
-                    for trigger in event["triggers"]:
+
+                if self.config.language == "English":
+                    words = item["text"].split()
+                elif self.config.language == "Chinese":
+                    words = list(item["text"])
+                else:
+                    raise NotImplementedError
+
+                if "events" in item:
+                    for event in item["events"]:
+                        for trigger in event["triggers"]:
+                            if self.config.language == "English":
+                                trigger_left = len(item["text"][:trigger["position"][0]].split())
+                                trigger_right = len(item["text"][:trigger["position"][1]].split())
+                            elif self.config.language == "Chinese":
+                                trigger_left = trigger["position"][0]
+                                trigger_right = trigger["position"][1]
+                            else:
+                                raise NotImplementedError
+                            labels = ["O"] * len(words)
+
+                            for argument in trigger["arguments"]:
+                                for mention in argument["mentions"]:
+                                    if self.config.language == "English":
+                                        left_pos = len(item["text"][:mention["position"][0]].split())
+                                        right_pos = len(item["text"][:mention["position"][1]].split())
+                                    elif self.config.language == "Chinese":
+                                        left_pos = mention["position"][0]
+                                        right_pos = mention["position"][1]
+                                    else:
+                                        raise NotImplementedError
+
+                                    labels[left_pos] = f"B-{argument['role']}"
+                                    for i in range(left_pos + 1, right_pos):
+                                        labels[i] = f"I-{argument['role']}"
+
+                            example = InputExample(
+                                example_id=item["id"],
+                                text=words,
+                                pred_type=preds[trigger_idx],
+                                true_type=event["type"],
+                                trigger_left=trigger_left,
+                                trigger_right=trigger_right,
+                                labels=labels,
+                            )
+                            if "train" in input_file or self.config.golden_trigger:
+                                example.pred_type = event["type"]
+                            trigger_idx += 1
+                            self.examples.append(example)
+                    # negative triggers
+                    for neg in item["negative_triggers"]:
+                        trigger_idx += 1
+                else:
+                    for candi in item["candidates"]:
                         if self.config.language == "English":
-                            words = item["text"].split()
-
-                            trigger_left = len(item["text"][:trigger["position"][0]].split())
-                            trigger_right = len(item["text"][:trigger["position"][1]].split())
+                            trigger_left = len(item["text"][:candi["position"][0]].split())
+                            trigger_right = len(item["text"][:candi["position"][1]].split())
                         elif self.config.language == "Chinese":
-                            words = list(item["text"])
-
-                            trigger_left = trigger["position"][0]
-                            trigger_right = trigger["position"][1]
+                            trigger_left = candi["position"][0]
+                            trigger_right = candi["position"][1]
                         else:
                             raise NotImplementedError
                         labels = ["O"] * len(words)
 
-                        for argument in trigger["arguments"]:
-                            for mention in argument["mentions"]:
-                                if self.config.language == "English":
-                                    left_pos = len(item["text"][:mention["position"][0]].split())
-                                    right_pos = len(item["text"][:mention["position"][1]].split())
-                                elif self.config.language == "Chinese":
-                                    left_pos = mention["position"][0]
-                                    right_pos = mention["position"][1]
-                                else:
-                                    raise NotImplementedError
-
-                                labels[left_pos] = f"B-{argument['role']}"
-                                for i in range(left_pos + 1, right_pos):
-                                    labels[i] = f"I-{argument['role']}"
-
-                        example = InputExample(
-                            example_id=item["id"],
-                            text=words,
-                            pred_type=preds[trigger_idx],
-                            true_type=event["type"],
-                            trigger_left=trigger_left,
-                            trigger_right=trigger_right,
-                            labels=labels,
-                        )
-                        if "train" in input_file or self.config.golden_trigger:
-                            example.pred_type = event["type"]
+                        if preds[trigger_idx] != "NA":
+                            example = InputExample(
+                                example_id=item["id"],
+                                text=words,
+                                pred_type=preds[trigger_idx],
+                                true_type="NA",   # true type not given, set to NA.
+                                trigger_left=trigger_left,
+                                trigger_right=trigger_right,
+                                labels=labels,
+                            )
+                            self.examples.append(example)
                         trigger_idx += 1
-                        self.examples.append(example)
-                # negative triggers
-                for neg in item["negative_triggers"]:
-                    trigger_idx += 1
 
     def get_final_labels(self, labels, word_ids_of_each_token, label_all_tokens=False):
         final_labels = []

@@ -166,8 +166,11 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
                     tmp["trigger"] = d["word"]
                     tmp["offset"] = d["span"]
                 else:
-                    tmp["argument"].append({"role": "{}-{}".format(event["type"], d["role"]),
-                                            "mentions": [{"mention": d["word"], "position": d["span"]}]})
+                    tmp["argument"].append({"id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                            "role": "{}-{}".format(event["type"], d["role"]),
+                                            "mentions": [{"mention_id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                                          "mention": d["word"],
+                                                          "position": d["span"]}]})
             if keep:
                 events.append(tmp)
         events = sorted(events, key=lambda x: len(x["trigger"]))

@@ -31,8 +31,6 @@ from OpenEE.evaluation.dump_result import (
     get_maven_submission,
     get_maven_submission_sl,
     get_maven_submission_seq2seq,
-    get_duee_ed_submission,
-    get_duee_fin_ed_submission,
 )
 from OpenEE.evaluation.convert_format import (
     get_ace2005_trigger_detection_sl
@@ -150,10 +148,6 @@ if training_args.do_predict:
                 get_maven_submission(preds, test_dataset.get_ids(), save_path)
             elif data_args.dataset_name == "LEVEN":
                 get_leven_submission(preds, test_dataset.get_ids(), save_path)
-            elif data_args.dataset_name == "DuEE1.0":
-                get_duee_ed_submission(preds, test_dataset.get_ids(), save_path, training_args)
-            elif data_args.dataset_name == "DuEE-fin":
-                get_duee_fin_ed_submission(preds, test_dataset.get_ids(), save_path, training_args)
 
         elif model_args.paradigm == "sequence_labeling":
             if data_args.dataset_name == "MAVEN":
@@ -183,19 +177,17 @@ if training_args.do_ED_infer:
         if paradigm == "token_classification":
             pred_labels = [training_args.id2type[pred] for pred in preds]
         elif paradigm == "sequence_labeling":
-            if data_args.dataset_name in ["DuEE1.0"] and 'test' in save_path:
-                np.save(os.path.join(output_dir, "test_preds_raw.npy"), preds)
-                return None
-            elif data_args.dataset_name == "LEVEN" and 'test' in save_path:
-                return None
-            else:
-                pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+            pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
         else:
-            pass
+            raise NotImplementedError
+
         json.dump(pred_labels, open(save_path, "w", encoding='utf-8'), ensure_ascii=False)
 
     # dataset
-    if data_args.dataset_name not in ["DuEE1.0", "LEVEN"]:
+    if data_args.dataset_name not in ["LEVEN", "MAVEN"]:
         dump_preds(data_args.train_file, os.path.join(output_dir, "train_preds.json"), model_args.paradigm)
+
     dump_preds(data_args.validation_file, os.path.join(output_dir, "valid_preds.json"), model_args.paradigm)
-    dump_preds(data_args.test_file, os.path.join(output_dir, "test_preds.json"), model_args.paradigm)
+
+    if data_args.dataset_name not in ["LEVEN", "MAVEN"]:
+        dump_preds(data_args.test_file, os.path.join(output_dir, "test_preds.json"), model_args.paradigm)

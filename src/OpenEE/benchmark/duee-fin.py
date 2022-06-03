@@ -163,7 +163,9 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
                     if arg_start == arg_end == -1 and arg["role"] != "环节":
                         continue
 
-                    event["argument"].append({"role": arg["role"], "mentions": [{"mention": arg["argument"],
+                    event["argument"].append({"id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                              "role": arg["role"], "mentions": [{"mention_id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                                                                 "mention": arg["argument"],
                                                                                  "position": [arg_start, arg_end]}]})
 
                 events_in_sen.append(event)
