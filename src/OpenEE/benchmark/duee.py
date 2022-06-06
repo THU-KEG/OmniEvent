@@ -12,15 +12,22 @@ from typing import List
 random.seed(42)
 
 
-def generate_label2id(data_path: str):
-    label2id = dict(NA=0)
+def generate_label2id_role2id(data_path: str):
+    label2id, role2id = dict(NA=0), dict(NA=0)
+
     schema = list(jsonlines.open(data_path))
     for i, s in enumerate(schema):
         label2id[s["event_type"]] = i + 1
+        for role in s["role_list"]:
+            if role["role"] not in role2id:
+                role2id[role["role"]] = len(role2id)
 
     io_dir = "/".join(data_path.split("/")[:-1])
     with open(os.path.join(io_dir, "label2id.json"), "w", encoding="utf-8") as f:
         json.dump(label2id, f, indent=4, ensure_ascii=False)
+
+    with open(os.path.join(io_dir, "role2id.json"), "w", encoding="utf-8") as f:
+        json.dump(role2id, f, indent=4, ensure_ascii=False)
 
 
 def chinese_tokenizer(input_text: str, tokenizer="jieba") -> List[str]:
@@ -104,6 +111,10 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                 error_annotations.append(sent)
                 continue
 
+            # manually remove bad case.
+            if instance["id"] == "326ece324c848949f96db780db85fc22":
+                continue
+
             # if train dataset, we have the labels.
             instance["events"] = list()
             instance["negative_triggers"] = list()
@@ -116,7 +127,9 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
                     role = arg["role"]
                     arg_start = arg["argument_start_index"]
                     arg_end = arg_start + len(arg["argument"])
-                    event["argument"].append({"role": role, "mentions": [{"mention": arg["argument"],
+                    event["argument"].append({"id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                              "role": role, "mentions": [{"mention_id": str(uuid.UUID(int=random.getrandbits(128))).replace("-", ""),
+                                                                          "mention": arg["argument"],
                                                                           "position": [arg_start, arg_end]}]})
                 events_in_sen.append(event)
                 trigger_list.append(event["trigger"])
@@ -175,7 +188,7 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
 
 
 if __name__ == "__main__":
-    generate_label2id("../../../data/DuEE1.0/duee_event_schema.json")
+    generate_label2id_role2id("../../../data/DuEE1.0/duee_event_schema.json")
     convert_duee_to_unified("../../../data/DuEE1.0/duee_train.json")
     convert_duee_to_unified("../../../data/DuEE1.0/duee_dev.json")
     convert_duee_to_unified("../../../data/DuEE1.0/duee_test2.json")

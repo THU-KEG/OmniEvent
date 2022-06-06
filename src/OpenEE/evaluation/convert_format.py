@@ -16,35 +16,53 @@ def get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, is_ove
     preds, labels = select_start_position(preds, labels, False)
     results = []
     label_names = []
-    with open(data_file, "r") as f:
+    with open(data_file, "r", encoding='utf-8') as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             item = json.loads(line.strip())
             if not is_overflow[i]:
-                assert len(preds[i]) == len(item["text"].split())
+                if data_args.language == "English":
+                    assert len(preds[i]) == len(item["text"].split())
+                elif data_args.language == "Chinese":
+                    assert len(preds[i]) == len("".join(item["text"].split()))  # remove space token
+                else:
+                    raise NotImplementedError
+
             candidates = []
-            for event in item["events"]:
-                for trigger in event["triggers"]:
-                    label_names.append(event["type"])
-                    candidates.append(trigger)
-            for neg_trigger in item["negative_triggers"]:
-                label_names.append("NA")
-                candidates.append(neg_trigger)
+            if "events" in item:
+                for event in item["events"]:
+                    for trigger in event["triggers"]:
+                        label_names.append(event["type"])
+                        candidates.append(trigger)
+                for neg_trigger in item["negative_triggers"]:
+                    label_names.append("NA")
+                    candidates.append(neg_trigger)
+            else:
+                candidates = item["candidates"]
+
             # loop for converting 
             for candidate in candidates:
                 # get word positions
                 char_pos = candidate["position"]
-                word_pos_start = len(item["text"][:char_pos[0]].split())
-                word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                if data_args.language == "English":
+                    word_pos_start = len(item["text"][:char_pos[0]].split())
+                    word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                elif data_args.language == "Chinese":
+                    word_pos_start = len("".join(item["text"][:char_pos[0]].split()))
+                    word_pos_end = len("".join(item["text"][:char_pos[1]].split()))
+                else:
+                    raise NotImplementedError
                 # get predictions
-                pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], data_args)
+                pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], data_args.id2type)
                 # record results
                 results.append(pred)
-            
-    pos_labels = list(set(label_names))
-    pos_labels.remove("NA")
-    micro_f1 = f1_score(label_names, results, labels=pos_labels, average="micro") * 100.0
-    print("After converting, the micro_f1 is %.4f" % micro_f1)
+
+    if "events" in item:
+        pos_labels = list(set(label_names))
+        pos_labels.remove("NA")
+        micro_f1 = f1_score(label_names, results, labels=pos_labels, average="micro") * 100.0
+        print("After converting, the micro_f1 is %.4f" % micro_f1)
+
     return results
 
 
@@ -61,7 +79,12 @@ def get_ace2005_argument_extraction_sl(preds, labels, data_file, data_args, is_o
             for event in item["events"]:
                 for trigger in event["triggers"]:
                     if not is_overflow[trigger_idx]:
-                        assert len(preds[trigger_idx]) == len(item["text"].split())
+                        if data_args.language == "English":
+                            assert len(preds[trigger_idx]) == len(item["text"].split())
+                        elif data_args.language == "Chinese":
+                            assert len(preds[trigger_idx]) == len("".join(item["text"].split()))  # remove space token
+                        else:
+                            raise NotImplementedError
                     candidates = []
                     positive_mentions = set()
                     for argument in trigger["arguments"]:
@@ -86,8 +109,14 @@ def get_ace2005_argument_extraction_sl(preds, labels, data_file, data_args, is_o
                     for candidate in candidates:
                         # get word positions
                         char_pos = candidate["position"]
-                        word_pos_start = len(item["text"][:char_pos[0]].split())
-                        word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                        if data_args.language == "English":
+                            word_pos_start = len(item["text"][:char_pos[0]].split())
+                            word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
+                        elif data_args.language == "Chinese":
+                            word_pos_start = len("".join(item["text"][:char_pos[0]].split()))
+                            word_pos_end = len("".join(item["text"][:char_pos[1]].split()))
+                        else:
+                            raise NotImplementedError
                         # get predictions
                         pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[trigger_idx], data_args.id2role)
                         # record results
