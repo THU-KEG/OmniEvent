@@ -43,6 +43,9 @@ class DataArguments:
     test_pred_file: Optional[str] = field(
         default=None, metadata={"help": "A csv or a json file containing the test data."}
     )
+    ontology_file: Optional[str] = field(
+        default=None, metadata={"help": "Path to ontology file."}
+    )
     golden_trigger: bool = field(
         default=False,
         metadata={"help":" Whether or not golden trigger"}

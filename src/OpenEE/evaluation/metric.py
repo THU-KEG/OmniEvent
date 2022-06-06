@@ -25,34 +25,30 @@ def compute_seq_F1(logits, labels, **kwargs):
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=True)
-    if training_args.ignore_pad_token_for_loss:
+    # if training_args.ignore_pad_token_for_loss:
         # Replace -100 in the labels as we can't decode them.
-        labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        # labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    # decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-    # Some simple post-processing
-    decoded_preds = postprocess_text(decoded_preds)
-    decoded_labels = postprocess_text(decoded_labels)
-
+    converter = training_args.seq2seq_converter
+    # Extract structured knowledge from text
+    decoded_preds = converter.extract_from_text(decoded_preds, training_args.true_types)
+    # decoded_labels = converter.extract_from_text(decoded_labels, training_args.true_types)
+    decoded_labels = training_args.golden_arguments
     assert len(decoded_preds) == len(decoded_labels)
+    # metric 
+    final_labels, final_preds = converter.convert_to_final_list(decoded_labels,
+                                                                decoded_preds, 
+                                                                training_args.true_types,
+                                                                training_args.pred_types)
+    pos_labels = list(training_args.id2role.values())
+    pos_labels.remove(training_args.id2role[0])
+    micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0
+    return {"micro_f1": micro_f1}
 
-    if "return_decoded_preds" in kwargs and kwargs["return_decoded_preds"]:
-        return decoded_preds
-    
-    correct, total = 0, 0
-    for i in range(len(decoded_preds)):
-        pred = decoded_preds[i]
-        label = decoded_labels[i]
-        for key in pred:
-            if key in label and pred[key] == label[key]:
-                correct += 1
-        total += len(label)
-    total = 1e-10 if total == 0 else total 
-    return dict(
-        accuracy=correct/total,
-        correct=correct,
-        total=total
-    )
+    # if "return_decoded_preds" in kwargs and kwargs["return_decoded_preds"]:
+        # return decoded_preds
+
 
 
 def select_start_position(preds, labels, merge=True):

@@ -1,4 +1,5 @@
 from cProfile import label
+from collections import defaultdict
 from operator import xor
 import os 
 import pdb 
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 class InputExample(object):
     """A single training/test example for event extractioin."""
 
-    def __init__(self, example_id, text, pred_type, true_type, trigger_left=None, trigger_right=None, argu_left=None, argu_right=None, labels=None):
+    def __init__(self, example_id, text, pred_type, true_type, input_template=None, trigger_left=None, trigger_right=None, argu_left=None, argu_right=None, labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -35,6 +36,7 @@ class InputExample(object):
         self.text = text
         self.pred_type = pred_type
         self.true_type = true_type
+        self.input_template = input_template
         self.trigger_left = trigger_left 
         self.trigger_right = trigger_right
         self.argu_left = argu_left
@@ -84,7 +86,7 @@ class DataProcessor(Dataset):
         for example in self.examples:
             true_types.append(example.true_type)
         return true_types
-
+    
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False 
         if len(outputs["input_ids"]) > max_seq_length:
@@ -436,65 +438,107 @@ class SLProcessor(DataProcessor):
 class Seq2SeqProcessor(DataProcessor):
     "Data processor for sequence to sequence."
 
-    def __init__(self, config, tokenizer, input_file):
+    def __init__(self, config, tokenizer, input_file, pred_file):
         super().__init__(config, tokenizer)
-        self.read_examples(input_file)
+        self.read_examples(input_file, pred_file)
         self.convert_examples_to_features()
     
-    def read_examples(self, input_file):
+    def read_examples(self, input_file, pred_file):
         self.examples = []
+        self.golden_arguments = []
+        trigger_idx = 0
+        preds = json.load(open(pred_file))
+        converter = self.config.seq2seq_converter
+        ontology_dict = converter.ontology_dict
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-                labels = []
-                if "events" in item:
-                    for event in item["events"]:
-                        for trigger in event["triggers"]:
-                            labels.append({
-                                "type": event["type"],
-                                "word": trigger["trigger_word"],
-                                "position": trigger["position"]
-                            })
-                example = InputExample(
-                    example_id = item["id"],
-                    text = item["text"],
-                    trigger_left = -1,
-                    trigger_right = -1,
-                    labels = labels
-                )
-                self.examples.append(example)
+                for event in item["events"]:
+                    for trigger in event["triggers"]:
+                        arguments_per_trigger = defaultdict(list)
+                        for argument in trigger["arguments"]:
+                            for mention in argument["mentions"]:
+                                arguments_per_trigger[argument["role"]].append(mention["mention"])
+                        self.golden_arguments.append(dict(arguments_per_trigger))
+                        input_template, output_template = converter.serialize(trigger["arguments"], ontology_dict[event["type"]])
+                        example = InputExample(
+                            example_id=trigger["id"],
+                            text=item["text"],
+                            pred_type=preds[trigger_idx],
+                            true_type=event["type"],
+                            input_template=input_template,
+                            trigger_left=trigger["position"][0],
+                            trigger_right=trigger["position"][1],
+                            labels=output_template
+                        )
+                        if "train" in input_file or self.config.golden_trigger:
+                            example.pred_type = event["type"]
+                        trigger_idx += 1
+                        self.examples.append(example)
+                # negative triggers 
+                for neg in item["negative_triggers"]:
+                    trigger_idx += 1   
+
+
+    def get_golden_arguments(self):
+        """Return List of arguments
+        """
+        return self.golden_arguments
+
+
+    def insert_marker(self, text, type, trigger_pos, markers, whitespace=True):
+        space = " " if whitespace else ""
+        markered_text = ""
+        tokens = text.split()
+        char_pos = 0
+        for i, token in enumerate(tokens):
+            if char_pos == trigger_pos[0]:
+                markered_text += markers[type][0] + space
+            char_pos += len(token) + len(space)
+            markered_text += token + space
+            if char_pos == trigger_pos[1] + len(space):
+                markered_text += markers[type][1] + space
+        markered_text = markered_text.strip()
+        return markered_text
         
     def convert_examples_to_features(self):
         self.input_features = []
+        whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
-            outputs = self.tokenizer(example.text,
-                                    padding="max_length",
-                                    truncation=True,
-                                    max_length=self.config.max_seq_length,
-                                    return_offsets_mapping=True)
-            # Roberta tokenizer doesn't return token_type_ids
-            if "token_type_ids" not in outputs:
-                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
-            labels = ""
-            for mention_label in example.labels:
-                if outputs["offset_mapping"][-1][0] != 0 and \
-                    outputs["offset_mapping"][-1][1] != 0 and \
-                    mention_label["position"][1] > outputs["offset_mapping"][-1][1]:
-                    continue
-                labels += f"{mention_label['type']}:{mention_label['word']};"
-            label_outputs = self.tokenizer(labels,
-                                    padding="max_length",
-                                    truncation=True,
-                                    max_length=self.config.max_out_length)
+            # template 
+            input_template = self.tokenizer(example.input_template, 
+                                            truncation=True,
+                                            max_length=self.config.max_seq_length)
+            # context 
+            text = self.insert_marker(example.text, 
+                                      example.true_type, 
+                                      [example.trigger_left, example.trigger_right],
+                                      self.config.markers,
+                                      whitespace)
+            input_context = self.tokenizer(text,
+                                           truncation=True,
+                                           padding="max_length",
+                                           max_length=self.config.max_seq_length)
+            # concatnate 
+            input_ids = input_template["input_ids"] + input_context["input_ids"]
+            attention_mask = input_template["attention_mask"] + input_context["attention_mask"]
+            # truncation
+            input_ids = input_ids[:self.config.max_seq_length]
+            attention_mask = attention_mask[:self.config.max_seq_length]
+
+            # output labels
+            label_outputs = self.tokenizer(example.labels,
+                                           padding="max_length",
+                                           truncation=True,
+                                           max_length=self.config.max_out_length)
             # set -100 to unused token 
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:
                     label_outputs["input_ids"][i] = -100
             features = InputFeatures(
                 example_id = example.example_id,
-                input_ids = outputs["input_ids"],
-                attention_mask = outputs["attention_mask"],
-                token_type_ids = outputs["token_type_ids"],
+                input_ids = input_ids,
+                attention_mask = attention_mask,
                 labels = label_outputs["input_ids"]
             )
             self.input_features.append(features)
