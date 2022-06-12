@@ -2,6 +2,7 @@ import pdb
 from typing import Tuple 
 import torch 
 import numpy as np
+from tqdm import tqdm
 from sklearn.metrics import f1_score
 from seqeval.metrics import f1_score as span_f1_score
 from seqeval.scheme import IOB2
@@ -51,11 +52,26 @@ def compute_seq_F1(logits, labels, **kwargs):
         # return decoded_preds
 
 
+def select_start_position(preds, labels, merge=True):
+    final_preds = []
+    final_labels = []
 
+    if merge:
+        final_preds = preds[labels != -100].tolist()
+        final_labels = labels[labels != -100].tolist()
+    else:
+        for i in range(labels.shape[0]):
+            final_preds.append(preds[i][labels[i] != -100].tolist())
+            final_labels.append(labels[i][labels[i] != -100].tolist())
+
+    return final_preds, final_labels
+
+
+'''
 def select_start_position(preds, labels, merge=True):
     final_preds = [[] for _ in range(labels.shape[0])]
     final_labels = [[] for _ in range(labels.shape[0])]
-    for i in range(labels.shape[0]):
+    for i in tqdm(range(labels.shape[0])):
         for j in range(labels.shape[1]):
             if labels[i][j] == -100:
                 continue
@@ -65,6 +81,7 @@ def select_start_position(preds, labels, merge=True):
         final_preds = [pred for preds in final_preds for pred in preds]
         final_labels = [label for labels in final_labels for label in labels]
     return final_preds, final_labels
+'''
 
 
 def convert_to_names(instances, id2label):

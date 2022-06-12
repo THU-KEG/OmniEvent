@@ -6,6 +6,7 @@ import json
 import torch
 
 import numpy as np
+from tqdm import tqdm
 from collections import defaultdict
 
 from transformers import set_seed
@@ -28,6 +29,7 @@ from OpenEE.evaluation.metric import (
     compute_mrc_F1
 )
 from OpenEE.evaluation.dump_result import (
+    get_sub_files,
     get_leven_submission,
     get_leven_submission_sl,
     get_leven_submission_seq2seq,
@@ -145,6 +147,80 @@ trainer = Trainer(
 )
 trainer.train()
 
+do_eval = True
+if do_eval:
+    logits, labels, metrics = trainer.predict(
+        test_dataset=eval_dataset,
+        ignore_keys=["loss"]
+    )
+    preds = np.argmax(logits, axis=-1)
+    print(metrics)
+    if model_args.paradigm == "sequence_labeling":
+        get_ace2005_argument_extraction_sl(preds, labels, data_args.validation_file, data_args, eval_dataset.is_overflow)
+    else:
+        pass
+
+
+if training_args.do_predict:
+    def predict(trainer, data_args, tokenizer):
+        test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
+        training_args.pred_types = test_dataset.get_pred_types()
+        training_args.true_types = test_dataset.get_true_types()
+        logits, labels, metrics = trainer.predict(test_dataset=test_dataset, ignore_keys=["loss"])
+
+        return logits, labels, metrics, test_dataset
+
+    def predict_sub(trainer, data_args, tokenizer):
+        test_file_full, test_pred_file_full = data_args.test_file, data_args.test_pred_file
+        test_file_list, test_pred_file_list = get_sub_files(test_file_full, test_pred_file_full, sub_size=5000)
+
+        logits_list, labels_list = [], []
+        for test_file, test_pred_file in tqdm(list(zip(test_file_list, test_pred_file_list)), desc='Split Evaluate'):
+            data_args.test_file = test_file
+            data_args.test_pred_file = test_pred_file
+
+            logits, labels, metrics, _ = predict(trainer, data_args, tokenizer)
+            logits_list.append(logits)
+            labels_list.append(labels)
+
+        # TODO: concat operation is slow
+        logits = np.concatenate(logits_list, axis=0)
+        labels = np.concatenate(labels_list, axis=0)
+        data_args.test_file = test_file_full
+        data_args.test_pred_file = test_pred_file_full
+
+        test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
+        return logits, labels, test_dataset
+
+
+    if data_args.test_exists_labels:
+        logits, labels, metrics, test_dataset = predict(trainer, data_args, tokenizer)
+    else:
+        logits, labels, test_dataset = predict_sub(trainer, data_args, tokenizer)
+
+    # pdb.set_trace()
+    preds = np.argmax(logits, axis=-1)
+    if data_args.test_exists_labels:
+        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
+        print(metrics)
+        if model_args.paradigm == "sequence_labeling":
+            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+        else:
+            pass
+    else:
+        # save name
+        aggregation = model_args.aggregation
+        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
+        if model_args.paradigm == "token_classification":
+            pass
+
+        elif model_args.paradigm == "sequence_labeling":
+            if data_args.dataset_name == "DuEE1.0":
+                print("Start get duee submission++++++++++++++++++")
+                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+
+
+'''
 if training_args.do_predict:
     test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file, False)
     training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
@@ -170,6 +246,7 @@ if training_args.do_predict:
                 get_maven_submission(preds, test_dataset.get_ids(), save_path)
             elif data_args.dataset_name == "LEVEN":
                 get_leven_submission(preds, test_dataset.get_ids(), save_path)
+
         elif model_args.paradigm == "sequence_labeling":
             if data_args.dataset_name == "MAVEN":
                 get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
@@ -179,6 +256,7 @@ if training_args.do_predict:
                                         json.load(open(role2id_path)), data_args)
             elif data_args.dataset_name == "DuEE1.0":
                 get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+
         elif model_args.paradigm == "seq2seq":
             if data_args.dataset_name == "MAVEN":
                 get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(role2id_path)), tokenizer,
@@ -186,3 +264,4 @@ if training_args.do_predict:
             elif data_args.dataset_name == "LEVEN":
                 get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(role2id_path)), tokenizer,
                                              training_args, data_args)
+'''

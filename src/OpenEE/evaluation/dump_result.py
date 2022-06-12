@@ -2,8 +2,10 @@ import os
 import sys
 import pdb 
 import argparse
+import jsonlines
 import json
 import numpy as np
+from tqdm import tqdm
 from collections import defaultdict
 from .metric import select_start_position, compute_seq_F1
 from ..input_engineering.input_utils import get_start_poses, check_if_start, get_word_position
@@ -24,6 +26,70 @@ def get_pred_per_mention(pos_start, pos_end, preds, id2label):
     return list(predictions)[0]
 
 
+def get_sub_files(input_test_file, input_test_pred_file, sub_size=5000):
+    test_data = list(jsonlines.open(input_test_file))
+    pred_data = json.load(open(input_test_pred_file, encoding='utf-8'))
+
+    sub_data_folder = '/'.join(input_test_file.split('/')[:-1]) + '/test_cache/'
+    sub_pred_folder = '/'.join(input_test_pred_file.split('/')[:-1]) + '/test_cache/'
+
+    os.makedirs(sub_pred_folder, exist_ok=True)
+    os.makedirs(sub_data_folder, exist_ok=True)
+
+    output_test_files, output_pred_files = [], []
+
+    pred_start = 0
+    for sub_id, i in enumerate(range(0, len(test_data), sub_size)):
+        test_data_sub = test_data[i: i+sub_size]
+
+        pred_end = pred_start + sum([len(d['candidates']) for d in test_data_sub])
+        test_pred_sub = pred_data[pred_start: pred_end]
+        pred_start = pred_end
+
+        test_file_sub = sub_data_folder + 'sub-{}.json'.format(sub_id)
+        test_pred_file_sub = sub_pred_folder + 'sub-{}.json'.format(sub_id)
+
+        with jsonlines.open(test_file_sub, 'w') as f:
+            for data in test_data_sub:
+                jsonlines.Writer.write(f, data)
+
+        with open(test_pred_file_sub, 'w', encoding='utf-8') as f:
+            json.dump(test_pred_sub, f, ensure_ascii=False)
+
+        output_test_files.append(test_file_sub)
+        output_pred_files.append(test_pred_file_sub)
+
+    return output_test_files, output_pred_files
+
+
+def get_sentence_arguments(input_sentence):
+    input_sentence.append({"role": "NA", "word": "<EOS>"})
+    arguments = []
+
+    previous_role = None
+    previous_arg = ""
+    for item in input_sentence:
+        if item["role"] != "NA" and previous_role is None:
+            previous_role = item["role"]
+            previous_arg = item["word"]
+
+        elif item["role"] == previous_role:
+            previous_arg += item["word"]
+
+        elif item["role"] != "NA":
+            arguments.append({"role": previous_role, "argument": previous_arg})
+            previous_role = item["role"]
+            previous_arg = item["word"]
+
+        elif previous_role is not None:
+            arguments.append({"role": previous_role, "argument": previous_arg})
+            previous_role = None
+            previous_arg = ""
+
+    return arguments
+
+
+'''
 def get_sentence_arguments(input_sentence):
     input_sentence.append({"role": "NA", "word": "<EOS>"})
     arguments = []
@@ -40,10 +106,15 @@ def get_sentence_arguments(input_sentence):
                 current_arg += item["word"]
             elif current_role:
                 arguments.append({"role": current_role, "argument": current_arg})
-                current_role = None
-                current_arg = ""
+                if item["role"] != "NA":
+                    current_role = item["role"]
+                    current_arg = item["word"]
+                else:
+                    current_role = None
+                    current_arg = ""
 
     return arguments
+'''
 
 
 def get_maven_submission(preds, instance_ids, result_file):
@@ -160,27 +231,33 @@ def get_duee_submission_sl(preds, labels, is_overflow, result_file, config):
 
     with open(config.test_file, "r", encoding='utf-8') as f:
         trigger_idx = 0
+        example_idx = 0
         lines = f.readlines()
-        for line in lines:
+        for line in tqdm(lines, desc='Generating DuEE1.0 Submission Files'):
             item = json.loads(line.strip())
 
             item_id = item["id"]
             event_list = []
 
-            for trigger in item["candidates"]:
-                if not is_overflow[trigger_idx]:
-                    if config.language == "English":
-                        assert len(preds[trigger_idx]) == len(item["text"].split())
-                    elif config.language == "Chinese":
-                        assert len(preds[trigger_idx]) == len("".join(item["text"].split()))  # remove space token
-                    else:
-                        raise NotImplementedError
-
+            for tid, trigger in enumerate(item["candidates"]):
                 pred_event_type = ed_preds[trigger_idx]
                 if pred_event_type != "NA":
+                    if not is_overflow[example_idx]:
+                        if config.language == "English":
+                            assert len(preds[example_idx]) == len(item["text"].split())
+                        elif config.language == "Chinese":
+                            # print('len preds: {}'.format(len(preds[example_idx])))
+                            # print('len clean text: {}'.format(len("".join(item["text"].split()))))
+                            # print('text:{}'.format(item['text']))
+                            assert len(preds[example_idx]) == len("".join(item["text"].split()))  # remove space token
+                        else:
+                            raise NotImplementedError
+
                     pred_event = dict(event_type=pred_event_type, arguments=[])
-                    sentence = []
-                    for candidate in item["candidates"]:
+                    sentence_result = []
+                    for cid, candidate in enumerate(item["candidates"]):
+                        if cid == tid:
+                            continue
                         char_pos = candidate["position"]
                         if config.language == "English":
                             word_pos_start = len(item["text"][:char_pos[0]].split())
@@ -191,39 +268,23 @@ def get_duee_submission_sl(preds, labels, is_overflow, result_file, config):
                         else:
                             raise NotImplementedError
                         # get predictions
-                        pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[trigger_idx], config.id2role)
-                        sentence.append({"role": pred, "word": candidate["trigger_word"]})
+                        pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[example_idx], config.id2role)
+                        sentence_result.append({"role": pred, "word": candidate["trigger_word"]})
 
-                    pred_event["arguments"] = get_sentence_arguments(sentence)
+                    pred_event["arguments"] = get_sentence_arguments(sentence_result)
                     if pred_event["arguments"]:
                         event_list.append(pred_event)
+
+                    example_idx += 1
 
                 trigger_idx += 1
 
             all_results.append({"id": item_id, "event_list": event_list})
 
     # dump results
-    with open(result_file, "w", encoding='"utf-8') as f:
-        json.dump(all_results, f, indent=4, ensure_ascii=False)
+    with jsonlines.open(result_file, "w") as f:
+        for r in all_results:
+            jsonlines.Writer.write(f, r)
 
     return all_results
 
-
-"""
-def get_duee_ed_submission(preds, instance_ids, result_file, training_args):
-    all_results = defaultdict(list)
-    for i, pred in enumerate(preds):
-        example_id, candidate_id = instance_ids[i].split("-")
-        if pred != 0:
-            all_results[example_id].append({"event_type": training_args.id2type[pred]})
-    with open(result_file, "w", encoding='utf-8') as f:
-        for data_id in all_results.keys():
-            format_result = dict(id=data_id, event_list=[])
-            for candidate in all_results[data_id]:
-                format_result["event_list"].append(candidate)
-            f.write(json.dumps(format_result, ensure_ascii=False) + "\n")
-
-
-def get_duee_fin_ed_submission(preds, instance_ids, result_file, training_args):
-    return get_duee_ed_submission(preds, instance_ids, result_file, training_args)
-"""

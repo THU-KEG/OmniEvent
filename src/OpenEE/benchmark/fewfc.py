@@ -133,7 +133,10 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
     Convert FewFC dataset to unified format.
     Dataset link: https://github.com/TimeBurningFish/FewFC/tree/main/rearranged
     """
-    fewfc_data = list(jsonlines.open(data_path))
+    fewfc_data = []
+    with open(data_path, 'r', encoding='utf-8') as f:
+        for line in f.readlines():
+            fewfc_data.append(json.loads(line.strip().replace('�', ' ')))   # replace special chars
 
     formatted_data = []
 
@@ -143,7 +146,7 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
         instance["id"] = sent["id"]
         instance["text"] = sent["content"]
 
-        tokens = chinese_tokenizer(sent["content"], tokenizer)
+        tokens = chinese_tokenizer(instance["text"], tokenizer)
 
         # FewFC has provided labels for all data splits
         instance["events"] = []

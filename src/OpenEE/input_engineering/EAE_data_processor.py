@@ -466,6 +466,7 @@ class SLProcessor(DataProcessor):
     def __init__(self, config, tokenizer, input_file, pred_file, is_training):
         super().__init__(config, tokenizer, is_training)
         self.pred_file = pred_file
+        self.positive_candidate_indices = []
         self.is_overflow = []
         self.config.role2id["X"] = -100
         self.read_examples(input_file)
@@ -553,6 +554,8 @@ class SLProcessor(DataProcessor):
                                 labels=labels,
                             )
                             self.examples.append(example)
+                            self.positive_candidate_indices.append(trigger_idx)
+
                         trigger_idx += 1
 
     def get_final_labels(self, labels, word_ids_of_each_token, label_all_tokens=False):
