@@ -75,6 +75,12 @@ class DataArguments:
         default=None,
         metadata={"help": "Path to role2id file."}
     )
+    prompt_file: str = field(
+        default=None, 
+        metadata={
+            "help": "path to prompt file."
+        }
+    )
     return_token_type_ids: bool = field(
         default=False,
         metadata={
@@ -85,6 +91,12 @@ class DataArguments:
         default=False,
         metadata={
             "help": "Used for Seq2Seq. Whether truncate output labels."
+        }
+    )
+    truncate_in_batch: bool = field(
+        default=True, 
+        metadata={
+            "help": "whether truncate in batch. False only if mrc."
         }
     )
     language: str = field(

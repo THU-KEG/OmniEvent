@@ -1,16 +1,19 @@
 """
 @ File:    tac-kbp2014.py
 @ Author:  Zimu Wang
-# Update:  May 31, 2022
+# Update:  June 10, 2022
 @ Purpose: Convert the TAC KBP 2014 dataset in document level.
 """
 import copy
-
 import jsonlines
 import os
 import re
+import json 
 
+from tqdm import tqdm 
 from nltk.tokenize.punkt import PunktSentenceTokenizer
+
+from utils import token_pos_to_char_pos, generate_negative_trigger
 
 
 class Config(object):
@@ -19,24 +22,24 @@ class Config(object):
     """
     def __init__(self):
         # The configuration for the current folder.
-        self.PROJECT_FOLDER = "../../../"
+        self.PROJECT_FOLDER = "../../../data"
 
         # The configurations for the training data.
-        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
+        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
                                                                    '2015/data/2014/training')
         self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'source')
         self.TRAIN_TOKEN_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'token_offset')
         self.TRAIN_ANNOTATION_TBF = os.path.join(self.TRAIN_DATA_FOLDER, 'annotation/annotation.tbf')
 
         # The configurations for the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
+        self.EVAL_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
                                                                   '2015/data/2014/eval')
         self.EVAL_SOURCE_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'source')
         self.EVAL_TOKEN_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'token_offset')
         self.EVAL_ANNOTATION_TBF = os.path.join(self.EVAL_DATA_FOLDER, 'annotation/annotation.tbf')
 
-        # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
+        # The configuration for the saving path.
+        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
                                                                   '2015/TAC-KBP2014')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
@@ -55,14 +58,14 @@ def read_annotation(ann_file_tbf, source_folder, token_folder):
     # Initialise the structure of the first document.
     document = {
         'id': str(),
-        'sentence': str(),
+        'text': str(),
         'events': list(),
         'negative_triggers': list()
     }
 
     # Extract the annotation.tbf information.
     with open(ann_file_tbf) as ann_file:
-        for line in ann_file:
+        for line in tqdm(ann_file, desc="Reading annotation..."):
             # Set the id of the document.
             if line.startswith('#BeginOfDocument'):
                 document['id'] = line.strip().split(' ')[-1]
@@ -71,8 +74,8 @@ def read_annotation(ann_file_tbf, source_folder, token_folder):
                 _, _, event_id, offsets, trigger, event_type, _, _ = line.strip().split('\t')
                 event = {
                     'type': event_type,
-                    'triggers': [{'id': event_id, 'trigger_word': trigger, 'position': offsets}],
-                    'arguments': list()
+                    'triggers': [{'id': event_id, 'trigger_word': trigger,
+                                  'position': offsets, 'arguments': list()}]
                 }   # Set the position using offsets temporarily, which will be replaced later.
                 document['events'].append(event)
             # Initialise the structure for the next document.
@@ -80,7 +83,7 @@ def read_annotation(ann_file_tbf, source_folder, token_folder):
                 documents.append(document)
                 document = {
                     'id': str(),
-                    'sentence': str(),
+                    'text': str(),
                     'events': list(),
                     'negative_triggers': list()
                 }
@@ -90,39 +93,39 @@ def read_annotation(ann_file_tbf, source_folder, token_folder):
 
 def read_source(documents, source_folder, token_folder):
     """
-    Extract the source sentences and replace the tokens' character positions.
+    Extract the source texts and replace the tokens' character positions.
     :param documents:     The structured documents list.
     :param source_folder: Path of the source folder.
     :param token_folder:  Path of the token_offset folder.
     :return: documents:   The manipulated documents list.
     """
-    for document in documents:
-        # Extract the sentence of each document.
+    for document in tqdm(documents, desc="Reading source..."):
+        # Extract the text of each document.
         with open(os.path.join(source_folder, str(document['id'] + '.tkn.txt')),
                   'r') as source:
-            document['sentence'] = source.read()
+            document['text'] = source.read()
 
             # Find the number of xml characters before each character.
             xml_char = list()
-            for i in range(len(document['sentence'])):
+            for i in range(len(document['text'])):
                 # Retrieve the top i characters.
-                sentence = document['sentence'][:i]
-                # Find the length of the sentence after deleting the
+                text = document['text'][:i]
+                # Find the length of the text after deleting the
                 # xml elements and line breaks before the current index.
-                # Delete the urls from the sentence.
-                sentence_del = re.sub('<a href=(.*?)>http(.*?)</a>', ' ', sentence)
-                # Delete the <DATETIME> elements from the sentence.
-                sentence_del = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', sentence_del)
-                # Delete the xml characters from the sentence.
-                sentence_del = re.sub('<.*?>', ' ', sentence_del)
+                # Delete the <DATETIME> elements from the text.
+                text_del = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', text)
+                # Delete the xml characters from the text.
+                text_del = re.sub('<.*?>', ' ', text_del)
                 # Delete the unpaired '< / DOC' element.
-                sentence_del = re.sub('< / DOC', ' ', sentence_del)
+                text_del = re.sub('< / DOC', ' ', text_del)
+                # Delete the url elements from the text.
+                text_del = re.sub('http(.*?) ', ' ', text_del)
                 # Replace the line breaks using spaces.
-                sentence_del = re.sub('\n', ' ', sentence_del)
+                text_del = re.sub('\n', ' ', text_del)
                 # Delete extra spaces.
-                sentence_del = re.sub(' +', ' ', sentence_del)
-                # Delete the spaces before the sentence.
-                xml_char.append(len(sentence_del.lstrip()))
+                text_del = re.sub(' +', ' ', text_del)
+                # Delete the spaces before the text.
+                xml_char.append(len(text_del.lstrip()))
 
         # Replace the character position of each event.
         for event in document['events']:
@@ -150,34 +153,34 @@ def read_source(documents, source_folder, token_folder):
                             elif token_id == end_token:
                                 end_pos = int(end_line.strip('\n'))
                         # Slice the trigger word for multiple spans.
-                        trigger['trigger_word'] = document['sentence'][start_pos:end_pos + 1]
+                        trigger['trigger_word'] = document['text'][start_pos:end_pos + 1]
                         # Delete the line break within the trigger.
                         trigger['trigger_word'] = re.sub('\n', ' ', trigger['trigger_word'])
                         trigger['trigger_word'] = re.sub(' +', ' ', trigger['trigger_word'])
                         # Obtain the start and end position of the trigger.
                         trigger['position'] = [xml_char[start_pos], xml_char[start_pos] + len(trigger['trigger_word'])]
 
-        # Delete the urls from the sentence.
-        document['sentence'] = re.sub('<a href=(.*?)>http(.*?)</a>', ' ', document['sentence'])
-        # Delete the <DATETIME> elements from the sentence.
-        document['sentence'] = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', document['sentence'])
-        # Delete the xml characters from the sentence.
-        document['sentence'] = re.sub('<.*?>', ' ', document['sentence'])
-        # Delete the unpaired '< / DOC' element.
-        document['sentence'] = re.sub('< / DOC', ' ', document['sentence'])
+        # Delete the <DATETIME> elements from the text.
+        document['text'] = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', document['text'])
+        # Delete the xml characters from the text.
+        document['text'] = re.sub('<.*?>', ' ', document['text'])
+        # Delete the unpaired '</DOC' element.
+        document['text'] = re.sub('< / DOC', ' ', document['text'])
+        # Delete the url elements from the text.
+        document['text'] = re.sub('http(.*?) ', ' ', document['text'])
         # Replace the line breaks using spaces.
-        document['sentence'] = re.sub('\n', ' ', document['sentence'])
+        document['text'] = re.sub('\n', ' ', document['text'])
         # Delete extra spaces.
-        document['sentence'] = re.sub(' +', ' ', document['sentence'])
-        # Delete the spaces before the sentence.
-        document['sentence'] = document['sentence'].strip()
+        document['text'] = re.sub(' +', ' ', document['text'])
+        # Delete the spaces before the text.
+        document['text'] = document['text'].strip()
 
     # Fix annotation errors & Delete wrong annotations.
     for document in documents:
         for event in document['events']:
             for trigger in event['triggers']:
-                if document['sentence'][trigger['position'][0]:trigger['position'][1]] != \
-                        trigger['trigger_word']:
+                if document['text'][trigger['position'][0]:trigger['position'][1]] \
+                        != trigger['trigger_word']:
                     # Manually fix an annotation error.
                     if document['id'] == 'ac6d66326a43c5c3fe546d82f66c4f16.cmp' and \
                             trigger['trigger_word'] == 'War':
@@ -210,16 +213,17 @@ def sentence_tokenize(documents):
         # Tokenize the sentence of the document.
         sentence_pos = list()
         sentence_tokenize = list()
-        for start_pos, end_pos in PunktSentenceTokenizer().span_tokenize(document['sentence']):
+        for start_pos, end_pos in PunktSentenceTokenizer().span_tokenize(document['text']):
             sentence_pos.append([start_pos, end_pos])
-            sentence_tokenize.append(document['sentence'][start_pos:end_pos])
+            sentence_tokenize.append(document['text'][start_pos:end_pos])
+        sentence_tokenize, sentence_pos = fix_tokenize(sentence_tokenize, sentence_pos)
 
         # Filter the events for each document.
         for i in range(len(sentence_tokenize)):
             # Initialise the structure of each sentence.
             sentence = {
                 'id': document['id'] + '-' + str(i),
-                'sentence': sentence_tokenize[i],
+                'text': sentence_tokenize[i],
                 'events': list(),
                 'negative_triggers': list()
             }
@@ -227,8 +231,7 @@ def sentence_tokenize(documents):
             for event in document['events']:
                 event_sent = {
                     'type': event['type'],
-                    'triggers': list(),
-                    'arguments': list()
+                    'triggers': list()
                 }
                 for trigger in event['triggers']:
                     if sentence_pos[i][0] <= trigger['position'][0] < sentence_pos[i][1]:
@@ -236,8 +239,8 @@ def sentence_tokenize(documents):
                 # Modify the start and end positions.
                 if not len(event_sent['triggers']) == 0:
                     for triggers in event_sent['triggers']:
-                        if not sentence['sentence'][triggers['position'][0]:triggers['position'][1]] == \
-                                triggers['trigger_word']:
+                        if not sentence['text'][triggers['position'][0]:triggers['position'][1]] \
+                                == triggers['trigger_word']:
                             triggers['position'][0] -= sentence_pos[i][0]
                             triggers['position'][1] -= sentence_pos[i][0]
                     sentence['events'].append(event_sent)
@@ -246,22 +249,48 @@ def sentence_tokenize(documents):
             if not len(sentence['events']) == 0:
                 documents_split.append(sentence)
             else:
-                document_without_event['sentences'].append(sentence['sentence'])
+                document_without_event['sentences'].append(sentence['text'])
 
         # Append the sentence without event into the list.
         if len(document_without_event['sentences']) != 0:
             documents_without_event.append(document_without_event)
 
-    # TODO: Search for methods to deal with wrong tokenisation.
-    for document in documents_split:
-        for event in document['events']:
-            for trigger in event['triggers']:
-                if document['sentence'][trigger['position'][0]:trigger['position'][1]] != \
-                        trigger['trigger_word']:
-                    event['triggers'].remove(trigger)
-
     assert check_position(documents_split)
     return documents_split, documents_without_event
+
+
+def fix_tokenize(sentence_tokenize, sentence_pos):
+    """
+    Fix the wrong tokenization within a sentence.
+    :param sentence_pos:      List of starting and ending position of each sentence.
+    :param sentence_tokenize: The tokenized sentences list.
+    :return: The fixed sentence position and tokenization lists.
+    """
+    # Set a list for the deleted indexes.
+    del_index = list()
+
+    # Fix the errors in tokenization.
+    for i in range(len(sentence_tokenize) - 1, -1, -1):
+        if sentence_tokenize[i].endswith('U.S.'):
+            if i not in del_index:
+                sentence_tokenize[i] = sentence_tokenize[i] + ' ' + sentence_tokenize[i + 1]
+                sentence_pos[i][1] = sentence_pos[i + 1][1]
+            else:
+                sentence_tokenize[i - 1] = sentence_tokenize[i - 1] + ' ' + sentence_tokenize[i]
+                sentence_pos[i - 1][1] = sentence_pos[i][1]
+            del_index.append(i)
+
+    # Store the undeleted elements into new lists.
+    new_sentence_tokenize = list()
+    new_sentence_pos = list()
+    assert len(sentence_tokenize) == len(sentence_pos)
+    for i in range(len(sentence_tokenize)):
+        if i not in del_index:
+            new_sentence_tokenize.append(sentence_tokenize[i])
+            new_sentence_pos.append(sentence_pos[i])
+
+    assert len(new_sentence_tokenize) == len(new_sentence_pos)
+    return new_sentence_tokenize, new_sentence_pos
 
 
 def check_position(documents):
@@ -273,8 +302,8 @@ def check_position(documents):
     for document in documents:
         for event in document['events']:
             for trigger in event['triggers']:
-                if document['sentence'][trigger['position'][0]:trigger['position'][1]] != \
-                        trigger['trigger_word']:
+                if document['text'][trigger['position'][0]:trigger['position'][1]] \
+                        != trigger['trigger_word']:
                     return False
     return True
 
@@ -294,15 +323,18 @@ if __name__ == '__main__':
     config = Config()
 
     # Construct the training and evaluation documents.
-    train_documents_sent, train_documents_without_event = \
-        read_annotation(config.TRAIN_ANNOTATION_TBF, config.TRAIN_SOURCE_FOLDER, config.TRAIN_TOKEN_FOLDER)
-    eval_documents_sent, eval_documents_without_event = \
-        read_annotation(config.EVAL_ANNOTATION_TBF, config.EVAL_SOURCE_FOLDER, config.EVAL_TOKEN_FOLDER)
+    train_documents_sent, train_documents_without_event \
+        = read_annotation(config.TRAIN_ANNOTATION_TBF, config.TRAIN_SOURCE_FOLDER, config.TRAIN_TOKEN_FOLDER)
+    eval_documents_sent, eval_documents_without_event \
+        = read_annotation(config.EVAL_ANNOTATION_TBF, config.EVAL_SOURCE_FOLDER, config.EVAL_TOKEN_FOLDER)
 
     # Save the documents into jsonl files.
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2014_train_sent.jsonl'), train_documents_sent)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2014_train_without_event.jsonl'),
-             train_documents_without_event)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2014_eval_sent.jsonl'), eval_documents_sent)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2014_eval_without_event.jsonl'),
-             eval_documents_without_event)
+    all_train_data = generate_negative_trigger(train_documents_sent, train_documents_without_event)
+    json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'train.json'), "w"), indent=4)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'train.unified.jsonl'), all_train_data)
+    
+    all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
+    json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'test.json'), "w"), indent=4)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'test.unified.jsonl'), all_test_data)
+
+

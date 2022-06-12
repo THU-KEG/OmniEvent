@@ -210,7 +210,8 @@ class Extractor():
                 Entities = [e for e in self.Entities if e['dir']==dir and e['file']==file]
                 for event in events:
                     event_id = event.getAttribute("ID")
-                    event_type =  str(event.getAttribute("SUBTYPE"))
+                    # event_type =  str(event.getAttribute("SUBTYPE"))
+                    event_type =  str(event.getAttribute("TYPE")) + "." + str(event.getAttribute("SUBTYPE"))
                     event_mentions = event.getElementsByTagName("event_mention")
                     for event_mention in event_mentions:
                         mention_id = event_mention.getAttribute("ID")
@@ -426,6 +427,8 @@ class Extractor():
             for i in range(len(tokens)):
                 if trigger_position[i]:
                     continue
+                if tokens[i] == "":
+                    continue
                 _event = {
                         "id": len(refined_sen_events["negative_triggers"]),
                         "trigger_word": tokens[i],
@@ -456,6 +459,8 @@ class Extractor():
             refined_sen_events["file"] = none_event["file"]
             refined_sen_events["entities"] = []
             for i in range(len(none_event['tokens'])):
+                if none_event['tokens'][i] == "":
+                    continue
                 _none_event = {
                     "id": len(refined_sen_events["negative_triggers"]),
                     'trigger_word': none_event['tokens'][i],

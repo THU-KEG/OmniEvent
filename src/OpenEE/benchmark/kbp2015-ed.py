@@ -1,42 +1,47 @@
 """
-@ File:    tac-kbp2015.py
+@ File:    tac-kbp2015_sent.py
 @ Author:  Zimu Wang
-# Update:  May 17, 2022
-@ Purpose: Convert the TAC KBP 2015 dataset.
+# Update:  June 10, 2022
+@ Purpose: Convert the TAC KBP 2015 dataset in sentence level.
 """
+import copy
 import re
 import jsonlines
 import os
+import json 
 
-from nltk.tokenize import sent_tokenize
+from nltk.tokenize.punkt import PunktSentenceTokenizer
 from xml.dom.minidom import parse
+from tqdm import tqdm 
+
+from utils import token_pos_to_char_pos, generate_negative_trigger
 
 
-class Config:
+class Config(object):
     """
     The configurations of this project.
     """
     def __init__(self):
         # The configuration for the current folder.
-        self.PROJECT_FOLDER = "../../../"
+        self.PROJECT_FOLDER = "../../../data"
 
         # The configurations for the training data.
-        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                   '2015/data/2015/training')
+        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
+                                                                   '2014-2015/data/2015/training')
         self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'source')
         self.TRAIN_HOPPER_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'event_hopper')
         self.TRAIN_NUGGET_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'event_nugget')
 
-        # The configurations for the testing data.
-        self.TEST_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                  '2015/data/2015/eval')
-        self.TEST_SOURCE_FOLDER = os.path.join(self.TEST_DATA_FOLDER, 'source')
-        self.TEST_HOPPER_FOLDER = os.path.join(self.TEST_DATA_FOLDER, 'hopper')
-        self.TEST_NUGGET_FOLDER = os.path.join(self.TEST_DATA_FOLDER, 'nugget')
+        # The configurations for the evaluation data.
+        self.EVAL_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
+                                                                  '2014-2015/data/2015/eval')
+        self.EVAL_SOURCE_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'source')
+        self.EVAL_HOPPER_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'hopper')
+        self.EVAL_NUGGET_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'nugget')
 
-        # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'data/tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                  '2015/tackbp2015')
+        # The configuration for the saving path.
+        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
+                                                                  '2014-2015/TAC-KBP2015')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
@@ -51,100 +56,124 @@ def read_xml(hopper_folder, source_folder):
     # Initialise the document list.
     documents = list()
 
-    # List all the files under the event_nugget folder.
+    # List all the files under the event_hopper folder.
     hopper_files = os.listdir(hopper_folder)
-    for hopper_file in hopper_files:
-        if hopper_file.endswith('xml'):
-            # Initialise the structure of a document.
-            document = {
-                'id': str(),
-                'sentence': str(),
-                'events': list(),
-                'negative_triggers': list()
+    # Construct the document of each annotation data.
+    for hopper_file in tqdm(hopper_files):
+        # Initialise the structure of each document.
+        document = {
+            'id': str(),
+            'text': str(),
+            'events': list(),
+            'negative_triggers': list()
+        }
+
+        # Parse the data from the xml file.
+        dom_tree = parse(os.path.join(hopper_folder, hopper_file))
+        # Set the id (filename) as document id.
+        document['id'] = dom_tree.documentElement.getAttribute('doc_id')
+        # Extract the hoppers from the xml file.
+        hoppers = dom_tree.documentElement.getElementsByTagName('hoppers')[0] \
+                                          .getElementsByTagName('hopper')
+        for hopper in hoppers:
+            # Initialise a dictionary for each hopper.
+            hopper_dict = {
+                'type': hopper.getElementsByTagName('event_mention')[0]
+                              .getAttribute('subtype'),
+                'triggers': list()
             }
-
-            # Extract the data from the XML file.
-            dom_tree = parse(os.path.join(hopper_folder, hopper_file))
-            # document['id'] <- The id of each document (filename).
-            document['id'] = dom_tree.documentElement.getAttribute('doc_id')
-
-            # Extract the hoppers from the XML file.
-            hoppers = dom_tree.documentElement.getElementsByTagName('hoppers')[0] \
-                                              .getElementsByTagName('hopper')
-            for hopper in hoppers:
-                # Initialise a dictionary for each hopper.
-                hopper_dict = {
-                    'type': hopper.getElementsByTagName('event_mention')[0]
-                                  .getAttribute('subtype'),
-                    'triggers': list(),
+            # Extract the mentions within each hopper.
+            mentions = hopper.getElementsByTagName('event_mention')
+            # Extract the trigger from each mention.
+            for mention in mentions:
+                trigger = mention.getElementsByTagName('trigger')[0]
+                trigger_dict = {
+                    'id': mention.getAttribute('id'),
+                    'trigger_word': trigger.childNodes[0].data,
+                    'position': [int(trigger.getAttribute('offset')),
+                                 int(trigger.getAttribute('offset')) + len(trigger.childNodes[0].data)],
                     'arguments': list()
                 }
-                # Extract the mentions within each hopper.
-                mentions = hopper.getElementsByTagName('event_mention')
-                for mention in mentions:
-                    # Extract the triggers.
-                    trigger = mention.getElementsByTagName('trigger')[0]
-                    trigger_dict = {
-                        'id': mention.getAttribute('id'),
-                        'trigger_word': trigger.childNodes[0].data,
-                        'position': [int(trigger.getAttribute('offset')),
-                                     int(trigger.getAttribute('offset')) + int(trigger.getAttribute('length'))]
-                    }
-                    hopper_dict['triggers'].append(trigger_dict)
-                document['events'].append(hopper_dict)
+                hopper_dict['triggers'].append(trigger_dict)
+            document['events'].append(hopper_dict)
 
-            documents.append(document)
+        # Save the processed document into the list.
+        documents.append(document)
 
     return read_source(documents, source_folder)
 
 
 def read_source(documents, source_folder):
     """
-    Extract the source sentences from the corresponding file.
-    :param documents:     The structured documents list.
+    Extract the source texts from the corresponding file.
+    :param documents:     The documents lists with triggers.
     :param source_folder: Path of the source folder.
     :return: documents:   The set of the constructed documents.
     """
-    for document in documents:
+    for document in tqdm(documents):
         # Extract the sentence of each document.
         with open(os.path.join(source_folder, str(document['id'] + '.txt')),
                   'r') as source:
-            document['sentence'] = source.read()
+            document['text'] = source.read()
 
-        # Find the number of XML elements before each character.
+        # Find the number of xml characters before each character.
         xml_char = list()
-        for i in range(len(document['sentence'])):
+        for i in range(len(document['text'])):
             # Retrieve the top i characters.
-            sentence = document['sentence'][:i]
-            # Find the length of the sentence after deleting the
-            # XML elements and line breaks before the current index.
-            sentence_del = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', sentence)
-            sentence_del = re.sub('<.*?>', ' ', sentence_del)
-            sentence_del = re.sub('</DOC', ' ', sentence_del)
-            sentence_del = re.sub('\n', ' ', sentence_del)
-            sentence_del = re.sub(' +', ' ', sentence_del)
-            num_del = len(sentence_del.lstrip())
-            xml_char.append(num_del)
+            text = document['text'][:i]
+            # Find the length of the text after deleting the
+            # xml elements and line breaks before the current index.
+            # Delete the <DATETIME> elements from the text.
+            text_del = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', text)
+            # Delete the xml characters from the text.
+            text_del = re.sub('<.*?>', ' ', text_del)
+            # Delete the unpaired '</DOC' element.
+            text_del = re.sub('</DOC', ' ', text_del)
+            # Delete the url elements from the text.
+            text_del = re.sub('http(.*?) ', ' ', text_del)
+            # Replace the line breaks using spaces.
+            text_del = re.sub('\n', ' ', text_del)
+            # Delete extra spaces.
+            text_del = re.sub(' +', ' ', text_del)
+            # Delete the spaces before the text.
+            xml_char.append(len(text_del.lstrip()))
 
-        # Delete the <DATETIME> elements from the sentences.
-        document['sentence'] = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', document['sentence'])
-        # Delete the XML characters from the sentences.
-        document['sentence'] = re.sub('<.*?>', ' ', document['sentence'])
-        # Delete the unpaired '</DOC' characters.
-        document['sentence'] = re.sub('</DOC', ' ', document['sentence'])
-        # Replace the line break using space.
-        document['sentence'] = re.sub('\n', ' ', document['sentence'])
+        # Delete the <DATETIME> elements from the text.
+        document['text'] = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', document['text'])
+        # Delete the xml characters from the text.
+        document['text'] = re.sub('<.*?>', ' ', document['text'])
+        # Delete the unpaired '</DOC' element.
+        document['text'] = re.sub('</DOC', ' ', document['text'])
+        # Delete the url elements from the text.
+        document['text'] = re.sub('http(.*?) ', ' ', document['text'])
+        # Replace the line breaks using spaces.
+        document['text'] = re.sub('\n', ' ', document['text'])
         # Delete extra spaces.
-        document['sentence'] = re.sub(' +', ' ', document['sentence'])
-        # Delete the space before the sentences.
-        document['sentence'] = document['sentence'].strip()
+        document['text'] = re.sub(' +', ' ', document['text'])
+        # Delete the spaces before the text.
+        document['text'] = document['text'].strip()
 
-        # Subtract the number of XML elements and line breaks.
+        # Subtract the number of xml elements and line breaks.
         for event in document['events']:
             for trigger in event['triggers']:
-                trigger['position'][0] = xml_char[trigger['position'][0]]
-                trigger['position'][1] = xml_char[trigger['position'][1]]
+                if not document['text'][trigger['position'][0]:trigger['position'][1]] \
+                       == trigger['trigger_word']:
+                    trigger['position'][0] = xml_char[trigger['position'][0]]
+                    trigger['position'][1] = xml_char[trigger['position'][1]]
 
+        # Remove the triggers from the xml elements.
+        for event in document['events']:
+            for trigger in event['triggers']:
+                if not document['text'][trigger['position'][0]:trigger['position'][1]] \
+                       == trigger['trigger_word']:
+                    event['triggers'].remove(trigger)
+                    continue
+            # Delete the event if there's no event within.
+            if len(event['triggers']) == 0:
+                document['events'].remove(event)
+                continue
+
+    assert check_position(documents)
     return sentence_tokenize(documents)
 
 
@@ -154,7 +183,7 @@ def sentence_tokenize(documents):
     :param documents:         The structured documents list.
     :return: documents_split: The split sentences' document.
     """
-    # Initialise a list of the split documents.
+    # Initialise a list of the splitted documents.
     documents_split = list()
     documents_without_event = list()
 
@@ -166,52 +195,67 @@ def sentence_tokenize(documents):
         }
 
         # Tokenize the sentence of the document.
-        sentences_tokenize = sent_tokenize(document['sentence'])
-        # Obtain the start and end position of each sentence.
         sentence_pos = list()
-        for i in range(len(sentences_tokenize) - 1):
-            start_pos = document['sentence'].find(sentences_tokenize[i])
-            end_pos = document['sentence'].find(sentences_tokenize[i + 1])
+        sentence_tokenize = list()
+        for start_pos, end_pos in PunktSentenceTokenizer().span_tokenize(document['text']):
             sentence_pos.append([start_pos, end_pos])
-        # Set the start and end position of the last sentence.
-        sentence_pos.append([document['sentence'].find(sentences_tokenize[-1]), len(document['sentence'])])
+            sentence_tokenize.append(document['text'][start_pos:end_pos])
 
-        # Filter the annotations for each document.
-        for i in range(len(sentences_tokenize)):
+        # Filter the events for each document.
+        for i in range(len(sentence_tokenize)):
             # Initialise the structure of each sentence.
             sentence = {
                 'id': document['id'] + '-' + str(i),
-                'sentence': sentences_tokenize[i],
+                'text': sentence_tokenize[i],
                 'events': list(),
                 'negative_triggers': list()
             }
-
-            # Append the events belong to the sentence.
+            # Filter the events belong to the sentence.
             for event in document['events']:
-                new_event = {
+                event_sent = {
                     'type': event['type'],
                     'triggers': list(),
                     'arguments': list()
                 }
                 for trigger in event['triggers']:
                     if sentence_pos[i][0] <= trigger['position'][0] < sentence_pos[i][1]:
-                        new_event['triggers'].append(trigger)
-                if not len(new_event['triggers']) == 0:
-                    # Modify the start and end positions.
-                    for trigger in new_event['triggers']:
-                        trigger['position'][0] -= sentence_pos[i][0]
-                        trigger['position'][1] -= sentence_pos[i][0]
-                    sentence['events'].append(new_event)
+                        event_sent['triggers'].append(copy.deepcopy(trigger))
+                # Modify the start and end positions.
+                if not len(event_sent['triggers']) == 0:
+                    for triggers in event_sent['triggers']:
+                        if not sentence['text'][triggers['position'][0]:triggers['position'][1]] \
+                                == triggers['trigger_word']:
+                            triggers['position'][0] -= sentence_pos[i][0]
+                            triggers['position'][1] -= sentence_pos[i][0]
+                    sentence['events'].append(event_sent)
 
             # Append the manipulated sentence into documents.
             if not len(sentence['events']) == 0:
                 documents_split.append(sentence)
             else:
-                document_without_event['sentences'].append(sentence['sentence'])
+                document_without_event['sentences'].append(sentence['text'])
 
-        documents_without_event.append(document_without_event)
+        # Append the sentence without event into the list.
+        if len(document_without_event['sentences']) != 0:
+            documents_without_event.append(document_without_event)
 
+    assert check_position(documents_split)
     return documents_split, documents_without_event
+
+
+def check_position(documents):
+    """
+    Check whether the position of each trigger is correct.
+    :param documents: The set of the constructed documents.
+    :return: True/False
+    """
+    for document in documents:
+        for event in document['events']:
+            for trigger in event['triggers']:
+                if document['text'][trigger['position'][0]:trigger['position'][1]] \
+                        != trigger['trigger_word']:
+                    return False
+    return True
 
 
 def to_jsonl(filename, documents):
@@ -225,19 +269,77 @@ def to_jsonl(filename, documents):
         w.write_all(documents)
 
 
+def token_pos_to_char_pos(tokens, token_pos):
+    word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
+    char_start, char_end = -1, -1
+    curr_pos = 0
+    for i, token in enumerate(tokens):
+        if i == token_pos[0]:
+            char_start = curr_pos
+            break 
+        curr_pos += len(token) + 1
+    assert char_start != -1
+    char_end = char_start + len(word_span) 
+    sen = " ".join(tokens)
+    assert sen[char_start:char_end] == word_span
+    return [char_start, char_end]
+
+
+def generate_negative_trigger(data, none_event_instances):
+    for item in data:
+        tokens = item["text"].split()
+        trigger_position = {i: False for i in range(len(tokens))}
+        for event in item["events"]:
+            for trigger in event["triggers"]:
+                start_pos = len(item["text"][:trigger["position"][0]].split())
+                end_pos = start_pos + len(trigger["trigger_word"].split())
+                for pos in range(start_pos, end_pos):
+                    trigger_position[pos] = True 
+        item["negative_triggers"] = []
+        for i, token in enumerate(tokens):
+            if trigger_position[i] or token == "":
+                continue
+            _event = {
+                    "id": len(item["negative_triggers"]),
+                    "trigger_word": tokens[i],
+                    "position": token_pos_to_char_pos(tokens, [i, i+1])
+            }
+            item["negative_triggers"].append(_event)
+    none_event_data = []
+    for ins_idx, item in enumerate(none_event_instances):
+        for sentence in item["sentences"]:
+            refined_sen_events = dict(id="%s-%d"%(item["id"], len(data)+ins_idx))
+            refined_sen_events["text"] = sentence
+            refined_sen_events["events"] = []
+            refined_sen_events["negative_triggers"] = []
+            refined_sen_events["entities"] = []
+            tokens = sentence.split()
+            for i, token in enumerate(tokens):
+                _none_event = {
+                    "id": len(refined_sen_events["negative_triggers"]),
+                    'trigger_word': tokens[i],
+                    'position': token_pos_to_char_pos(tokens, [i, i+1])
+                }
+                refined_sen_events["negative_triggers"].append(_none_event)
+            none_event_data.append(refined_sen_events)
+    all_data = data + none_event_data
+    return all_data
+
+
 if __name__ == '__main__':
     config = Config()
 
-    # Construct the training and testing documents.
-    train_documents, train_documents_without_event = \
-        read_xml(config.TRAIN_HOPPER_FOLDER, config.TRAIN_SOURCE_FOLDER)
-    test_documents, test_documents_without_event = \
-        read_xml(config.TEST_HOPPER_FOLDER, config.TEST_SOURCE_FOLDER)
+    # Construct the training and evaluation documents.
+    train_documents_sent, train_documents_without_event \
+        = read_xml(config.TRAIN_HOPPER_FOLDER, config.TRAIN_SOURCE_FOLDER)
+    eval_documents_sent, eval_documents_without_event \
+        = read_xml(config.EVAL_HOPPER_FOLDER, config.EVAL_SOURCE_FOLDER)
 
     # Save the documents into jsonl files.
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2015_training.jsonl'), train_documents)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2015_training_without_event.jsonl'),
-             train_documents_without_event)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2015_eval.jsonl'), test_documents)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'tac-kbp2015_eval_without_event.jsonl.jsonl'),
-             test_documents_without_event)
+    all_train_data = generate_negative_trigger(train_documents_sent, train_documents_without_event)
+    json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'train.json'), "w"), indent=4)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'train.unified.jsonl'), all_train_data)
+    
+    all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
+    json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'test.json'), "w"), indent=4)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'test.unified.jsonl'), all_test_data)

@@ -332,7 +332,7 @@ class Extractor():
                 # negative triggers
                 curr_pos = 0
                 for i in range(len(tokens)):
-                    if curr_pos in trigger_starts:
+                    if curr_pos in trigger_starts or tokens[i] == "":
                         curr_pos += len(tokens[i]) + 1
                         continue
                     curr_pos += len(tokens[i]) + 1

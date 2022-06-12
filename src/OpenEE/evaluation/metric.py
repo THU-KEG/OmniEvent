@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.metrics import f1_score
 from seqeval.metrics import f1_score as span_f1_score
 from seqeval.scheme import IOB2
+from ..input_engineering.mrc_converter import make_preditions, compute_mrc_F1_cls
 
 
 def postprocess_text(labels):
@@ -142,5 +143,14 @@ def compute_accuracy(logits, labels, **kwargs):
     predictions = np.argmax(softmax(logits), axis=-1)
     accuracy = (predictions == labels).sum() / labels.shape[0]
     return {"accuracy": accuracy}
+
+
+def compute_mrc_F1(logits, labels, **kwargs):
+    start_logits, end_logits = np.split(logits, 2, axis=-1)
+    training_args = kwargs["training_args"]
+    all_predictions, all_labels = make_preditions(start_logits, end_logits, kwargs["training_args"])
+    micro_f1 = compute_mrc_F1_cls(all_predictions, all_labels)
+    return {"micro_f1": micro_f1}
+
 
 

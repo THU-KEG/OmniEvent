@@ -101,17 +101,18 @@ class DataProcessor(Dataset):
         output_batch = dict()
         for key in batch[0].keys():
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
-        input_length = int(output_batch["attention_mask"].sum(-1).max())
-        for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
-            if key not in output_batch:
-                continue
-            output_batch[key] = output_batch[key][:, :input_length]
-        if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
-            if self.config.truncate_seq2seq_output:
-                output_length = int((output_batch["labels"] != -100).sum(-1).max())
-                output_batch["labels"] = output_batch["labels"][:, :output_length]
-            else:
-                output_batch["labels"] = output_batch["labels"][:, :input_length]
+        if self.config.truncate_in_batch:
+            input_length = int(output_batch["attention_mask"].sum(-1).max())
+            for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
+                if key not in output_batch:
+                    continue
+                output_batch[key] = output_batch[key][:, :input_length]
+            if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
+                if self.config.truncate_seq2seq_output:
+                    output_length = int((output_batch["labels"] != -100).sum(-1).max())
+                    output_batch["labels"] = output_batch["labels"][:, :output_length]
+                else:
+                    output_batch["labels"] = output_batch["labels"][:, :input_length]
         return output_batch
 
 
@@ -419,7 +420,7 @@ class SLProcessor(DataProcessor):
             )
             self.input_features.append(features)
 
-
+'''
 class Seq2SeqProcessor(DataProcessor):
     "Data processor for sequence to sequence."
 
@@ -485,3 +486,4 @@ class Seq2SeqProcessor(DataProcessor):
                 labels=label_outputs["input_ids"]
             )
             self.input_features.append(features)
+'''

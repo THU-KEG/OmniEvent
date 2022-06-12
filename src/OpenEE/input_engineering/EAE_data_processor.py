@@ -1,19 +1,20 @@
-from cProfile import label
-from collections import defaultdict
-from operator import xor
+
 import os 
 import pdb 
 import json
 from re import L
 from string import whitespace
-from numpy import sort
 import torch 
 import logging
+import collections
+
+from collections import defaultdict
 
 from typing import List
 from tqdm import tqdm 
 from torch.utils.data import Dataset
 from .input_utils import get_start_poses, check_if_start, get_word_position
+from .mrc_converter import read_query_templates
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,13 @@ logger = logging.getLogger(__name__)
 class InputExample(object):
     """A single training/test example for event extraction."""
 
-    def __init__(self, example_id, text, pred_type, true_type, input_template=None, trigger_left=None, trigger_right=None, argu_left=None, argu_right=None, labels=None):
+    def __init__(self, example_id, text, pred_type, true_type, 
+                input_template=None, 
+                trigger_left=None, 
+                trigger_right=None, 
+                argu_left=None, 
+                argu_right=None, 
+                labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -53,20 +60,25 @@ class InputFeatures(object):
                 attention_mask,
                 token_type_ids=None,
                 labels=None,
+                start_positions=None,
+                end_positions=None
         ):
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
         self.labels = labels
+        self.start_positions = start_positions
+        self.end_positions = end_positions
 
 
 class DataProcessor(Dataset):
     """Base class of data processor."""
 
-    def __init__(self, config, tokenizer):
+    def __init__(self, config, tokenizer, is_training):
         self.config = config
         self.tokenizer = tokenizer
+        self.is_training = is_training
         self.config.role2id["X"] = -100
         self.examples = []
         self.input_features = []
@@ -76,6 +88,11 @@ class DataProcessor(Dataset):
 
     def convert_examples_to_features(self):
         raise NotImplementedError
+
+    def get_data_for_evaluation(self):
+        self.data_for_evaluation["pred_type"] = self.get_pred_types()
+        self.data_for_evaluation["true_type"] = self.get_true_types()
+        return self.data_for_evaluation
 
     def get_pred_types(self):
         pred_types = []
@@ -119,31 +136,36 @@ class DataProcessor(Dataset):
             data_dict["token_type_ids"] = torch.tensor(features.token_type_ids, dtype=torch.long)
         if features.labels is not None:
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
+        if features.start_positions is not None: 
+            data_dict["start_positions"] = torch.tensor(features.start_positions, dtype=torch.long)
+        if features.end_positions is not None:
+            data_dict["end_positions"] = torch.tensor(features.end_positions, dtype=torch.long)
         return data_dict
         
     def collate_fn(self, batch):
         output_batch = dict()
         for key in batch[0].keys():
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
-        input_length = int(output_batch["attention_mask"].sum(-1).max())
-        for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
-            if key not in output_batch:
-                continue
-            output_batch[key] = output_batch[key][:, :input_length]
-        if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
-            if self.config.truncate_seq2seq_output:
-                output_length = int((output_batch["labels"]!=-100).sum(-1).max())
-                output_batch["labels"] = output_batch["labels"][:, :output_length]
-            else:
-                output_batch["labels"] = output_batch["labels"][:, :input_length] 
+        if self.config.truncate_in_batch:
+            input_length = int(output_batch["attention_mask"].sum(-1).max())
+            for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
+                if key not in output_batch:
+                    continue
+                output_batch[key] = output_batch[key][:, :input_length]
+            if "labels" in output_batch and len(output_batch["labels"].shape) == 2:
+                if self.config.truncate_seq2seq_output:
+                    output_length = int((output_batch["labels"]!=-100).sum(-1).max())
+                    output_batch["labels"] = output_batch["labels"][:, :output_length]
+                else:
+                    output_batch["labels"] = output_batch["labels"][:, :input_length] 
         return output_batch
 
 
 class TCProcessor(DataProcessor):
     """Data processor for token classification."""
 
-    def __init__(self, config, tokenizer, input_file, pred_file):
-        super().__init__(config, tokenizer)
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+        super().__init__(config, tokenizer, is_training)
         self.read_examples(input_file, pred_file)
         self.convert_examples_to_features()
 
@@ -441,8 +463,8 @@ class SLProcessor(DataProcessor):
 class SLProcessor(DataProcessor):
     """Data processor for sequence labeling."""
 
-    def __init__(self, config, tokenizer, input_file, pred_file):
-        super().__init__(config, tokenizer)
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+        super().__init__(config, tokenizer, is_training)
         self.pred_file = pred_file
         self.is_overflow = []
         self.config.role2id["X"] = -100
@@ -594,10 +616,11 @@ class SLProcessor(DataProcessor):
 class Seq2SeqProcessor(DataProcessor):
     "Data processor for sequence to sequence."
 
-    def __init__(self, config, tokenizer, input_file, pred_file):
-        super().__init__(config, tokenizer)
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+        super().__init__(config, tokenizer, is_training)
         self.read_examples(input_file, pred_file)
         self.convert_examples_to_features()
+        self.data_for_evaluation = dict()
     
     def read_examples(self, input_file, pred_file):
         self.examples = []
@@ -698,6 +721,163 @@ class Seq2SeqProcessor(DataProcessor):
                 labels = label_outputs["input_ids"]
             )
             self.input_features.append(features)
+
+
+class MRCProcessor(DataProcessor):
+    "Data processor for machine reading comprehension."
+
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+        super().__init__(config, tokenizer, is_training)
+        self.data_for_evaluation = dict()
+        self.read_examples(input_file, pred_file)
+        self.convert_examples_to_features()
+
+    def read_examples(self, input_file, pred_file):
+        self.examples = []
+        self.data_for_evaluation["golden_arguments"] = []
+        trigger_idx = 0
+        preds = json.load(open(pred_file))
+        query_templates = read_query_templates(self.config.prompt_file)
+        template_id = 3
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+                for event in item["events"]:
+                    for trigger in event["triggers"]:
+                        event_type = preds[trigger_idx]
+                        if "train" in input_file or self.config.golden_trigger:
+                            event_type = event["type"]
+                        for role in query_templates[event_type].keys():
+                            query = query_templates[event_type][role][template_id]
+                            query = query.replace("[trigger]", trigger["trigger_word"])
+                            if self.is_training:
+                                no_answer = True 
+                                for argument in trigger["arguments"]:
+                                    if argument["role"] != role:
+                                        continue
+                                    no_answer = False
+                                    for mention in argument["mentions"]:
+                                        example = InputExample(
+                                            example_id=trigger["id"],
+                                            text=item["text"],
+                                            pred_type=event_type,
+                                            true_type=event["type"],
+                                            input_template=query,
+                                            trigger_left=trigger["position"][0],
+                                            trigger_right=trigger["position"][1],
+                                            argu_left=mention["position"][0],
+                                            argu_right=mention["position"][1]-1
+                                        )
+                                        self.examples.append(example)
+                                if no_answer:
+                                    example = InputExample(
+                                        example_id=trigger["id"],
+                                        text=item["text"],
+                                        pred_type=event_type,
+                                        true_type=event["type"],
+                                        input_template=query,
+                                        trigger_left=trigger["position"][0],
+                                        trigger_right=trigger["position"][1],
+                                        argu_left=-1,
+                                        argu_right=-1
+                                    )
+                                    self.examples.append(example)
+                            else:
+                                # golden label
+                                key = str(item["id"]) + "_" + trigger["id"]
+                                arguments_per_trigger = dict(id=key, role=role, arguments=[])
+                                arguments_per_trigger["pred_type"] = event_type
+                                arguments_per_trigger["true_type"] = event["type"]
+                                for argument in trigger["arguments"]:
+                                    if argument["role"] == role:
+                                        arguments_per_trigger["arguments"].append(argument)
+                                self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
+                                # one instance per query 
+                                example = InputExample(
+                                    example_id=trigger["id"],
+                                    text=item["text"],
+                                    pred_type=event_type,
+                                    true_type=event["type"],
+                                    input_template=query,
+                                    trigger_left=trigger["position"][0],
+                                    trigger_right=trigger["position"][1]
+                                )
+                                self.examples.append(example)
+                        trigger_idx += 1
+                # negative triggers 
+                for neg in item["negative_triggers"]:
+                    trigger_idx += 1  
+
+
+    def word_offset_to_subword_offset(self, position, offsets):
+        for i, offset in enumerate(offsets):
+            if offset[0] == position:
+                return i 
+        return -1
+    
+
+    def subword_offset_to_word_offset(self, offset_mapping, text, base):
+        subword_to_word = dict()
+        for i, offset in enumerate(offset_mapping):
+            if offset[0] == offset[1]:
+                subword_to_word[i+base] = -1
+            else:
+                word_pos = len(text[:offset[0]].split())
+                subword_to_word[i+base] = word_pos
+        return subword_to_word
+
+
+    def convert_examples_to_features(self):
+        self.input_features = []
+        self.data_for_evaluation["text_range"] = []
+        self.data_for_evaluation["subword_to_word"] = []
+        self.data_for_evaluation["text"] = []
+        whitespace = True if self.config.language == "English" else False 
+        for example in tqdm(self.examples, desc="Processing features for MRC"):
+            # template 
+            input_template = self.tokenizer(example.input_template, 
+                                            truncation=True,
+                                            max_length=self.config.max_seq_length)
+            # context 
+            input_context = self.tokenizer(example.text,
+                                           truncation=True,
+                                           padding="max_length",
+                                           max_length=self.config.max_seq_length,
+                                           return_offsets_mapping=True)
+            # concatnate 
+            input_ids = input_template["input_ids"] + input_context["input_ids"][1:]
+            attention_mask = input_template["attention_mask"] + input_context["attention_mask"][1:]
+            # truncation
+            input_ids = input_ids[:self.config.max_seq_length]
+            attention_mask = attention_mask[:self.config.max_seq_length]
+            # output labels
+            template_offset = len(input_template["input_ids"])
+            offsets = input_context["offset_mapping"][1:]
+            start_position = self.word_offset_to_subword_offset(example.argu_left, offsets)
+            end_position = self.word_offset_to_subword_offset(example.argu_right, offsets)
+            start_position = 0 if start_position == -1 else start_position + template_offset
+            end_position = 0 if end_position == -1 else end_position + template_offset
+            # data for evaluation
+            text_range = dict()
+            text_range["start"] = len(input_template["input_ids"])
+            text_length = len(self.tokenizer.tokenize(example.text))
+            text_range["end"] = text_range["start"] + text_length
+            subword_to_word = self.subword_offset_to_word_offset(offsets, example.text, text_range["start"])
+            self.data_for_evaluation["text_range"].append(text_range)
+            self.data_for_evaluation["subword_to_word"].append(subword_to_word)
+            self.data_for_evaluation["text"].append(example.text)
+            # features
+            features = InputFeatures(
+                example_id = example.example_id,
+                input_ids = input_ids,
+                attention_mask = attention_mask,
+                start_positions=start_position,
+                end_positions=end_position
+            )
+            self.input_features.append(features)
+
+
+
             
 
 

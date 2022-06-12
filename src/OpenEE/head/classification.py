@@ -23,7 +23,16 @@ class ClassificationHead(nn.Module):
         return logits
 
 
-
 class MRCHead(nn.Module):
-    pass 
+    def __init__(self, config) -> None:
+        super(MRCHead, self).__init__()
+        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+    
+    def forward(self, hidden_state: torch.Tensor):
+        logits = self.qa_outputs(hidden_state)
+        start_logits, end_logits = logits.split(1, dim=-1)
+        start_logits = start_logits.squeeze(-1).contiguous()
+        end_logits = end_logits.squeeze(-1).contiguous()
+        return start_logits, end_logits
+
 

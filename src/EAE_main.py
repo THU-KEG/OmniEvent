@@ -18,12 +18,14 @@ from OpenEE.input_engineering.EAE_data_processor import (
     TCProcessor,
     SLProcessor,
     Seq2SeqProcessor,
+    MRCProcessor
 )
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
     compute_F1,
     compute_span_F1,
-    compute_seq_F1
+    compute_seq_F1,
+    compute_mrc_F1
 )
 from OpenEE.evaluation.dump_result import (
     get_leven_submission,
@@ -116,16 +118,19 @@ elif model_args.paradigm == "sequence_labeling":
 elif model_args.paradigm == "seq2seq":
     data_class = Seq2SeqProcessor
     metric_fn = compute_seq_F1
+elif model_args.paradigm == "mrc":
+    data_class = MRCProcessor
+    metric_fn = compute_mrc_F1
+    training_args.label_names = ["start_positions", "end_positions"]
 else:
     raise ValueError("No such paradigm.")
 
 # dataset 
-train_dataset = data_class(data_args, tokenizer, data_args.train_file, data_args.train_pred_file)
-eval_dataset = data_class(data_args, tokenizer, data_args.validation_file, data_args.validation_pred_file)
+train_dataset = data_class(data_args, tokenizer, data_args.train_file, data_args.train_pred_file, True)
+eval_dataset = data_class(data_args, tokenizer, data_args.validation_file, data_args.validation_pred_file, False)
 
 # set event types
-training_args.pred_types = eval_dataset.get_pred_types()
-training_args.true_types = eval_dataset.get_true_types()
+training_args.data_for_evaluation = eval_dataset.get_data_for_evaluation()
 
 # Trainer 
 trainer = Trainer(
@@ -141,9 +146,8 @@ trainer = Trainer(
 trainer.train()
 
 if training_args.do_predict:
-    test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
-    training_args.pred_types = test_dataset.get_pred_types()
-    training_args.true_types = test_dataset.get_true_types()
+    test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file, False)
+    training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
     logits, labels, metrics = trainer.predict(
         test_dataset=test_dataset,
         ignore_keys=["loss"]
