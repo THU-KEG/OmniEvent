@@ -27,11 +27,7 @@ def compute_seq_F1(logits, labels, **kwargs):
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=True)
-    # if training_args.ignore_pad_token_for_loss:
-        # Replace -100 in the labels as we can't decode them.
-        # labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-    # decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-
+    # convert to structured predictions
     converter = training_args.seq2seq_converter
     # Extract structured knowledge from text
     decoded_preds = converter.extract_from_text(decoded_preds, training_args.true_types)
@@ -47,9 +43,6 @@ def compute_seq_F1(logits, labels, **kwargs):
     pos_labels.remove(training_args.id2role[0])
     micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0
     return {"micro_f1": micro_f1}
-
-    # if "return_decoded_preds" in kwargs and kwargs["return_decoded_preds"]:
-        # return decoded_preds
 
 
 def select_start_position(preds, labels, merge=True):
@@ -67,23 +60,6 @@ def select_start_position(preds, labels, merge=True):
     return final_preds, final_labels
 
 
-'''
-def select_start_position(preds, labels, merge=True):
-    final_preds = [[] for _ in range(labels.shape[0])]
-    final_labels = [[] for _ in range(labels.shape[0])]
-    for i in tqdm(range(labels.shape[0])):
-        for j in range(labels.shape[1]):
-            if labels[i][j] == -100:
-                continue
-            final_preds[i].append(preds[i][j])
-            final_labels[i].append(labels[i][j])
-    if merge:
-        final_preds = [pred for preds in final_preds for pred in preds]
-        final_labels = [label for labels in final_labels for label in labels]
-    return final_preds, final_labels
-'''
-
-
 def convert_to_names(instances, id2label):
     name_instances = []
     for instance in instances:
@@ -98,11 +74,10 @@ def compute_span_F1(logits, labels, **kwargs):
         preds = logits
     # convert id to name
     training_args = kwargs["training_args"]
-    id2label = None 
     if training_args.task_name == "EAE":
-        id2label = training_args.id2role 
+        id2label = {id: role for role, id in training_args.id2role.items()}
     elif training_args.task_name == "ED":
-        id2label = training_args.id2type 
+        id2label = {id: role for role, id in training_args.id2type.items()}
     else:
         raise ValueError("No such task!")
     final_preds, final_labels = select_start_position(preds, labels, False)
@@ -126,18 +101,7 @@ def compute_F1(logits, labels, **kwargs):
     predictions = np.argmax(logits, axis=-1)
     pos_labels = list(set(labels.tolist()))
     pos_labels.remove(0)
-    # convert id to name
     training_args = kwargs["training_args"]
-    id2label = None 
-    if training_args.task_name == "EAE":
-        id2label = training_args.id2role
-    elif training_args.task_name == "ED":
-        id2label = training_args.id2type
-    else:
-        raise ValueError("No such task!")
-    predictions = [id2label[p] for p in predictions]
-    labels = [id2label[l] for l in labels]
-    pos_labels = [id2label[pl] for pl in pos_labels]
     # if the type is wrongly predicted, set arguments NA
     if training_args.task_name == "EAE":
         pred_types = training_args.pred_types
@@ -146,7 +110,7 @@ def compute_F1(logits, labels, **kwargs):
         assert len(pred_types) == len(predictions)
         for i, (pred, true) in enumerate(zip(pred_types, true_types)):
             if pred != true:
-                predictions[i] = id2label[0] # set to NA
+                predictions[i] = 0 # set to NA
     micro_f1 = f1_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
     return {"micro_f1": micro_f1}
 

@@ -75,24 +75,32 @@ class InputFeatures(object):
 class DataProcessor(Dataset):
     """Base class of data processor."""
 
-    def __init__(self, config, tokenizer, is_training):
+    def __init__(self, config, tokenizer, pred_file, is_training):
         self.config = config
         self.tokenizer = tokenizer
         self.is_training = is_training
         self.config.role2id["X"] = -100
         self.examples = []
         self.input_features = []
-    
+        if pred_file is not None:
+            self.event_preds = json.load(open(pred_file))
+        else:
+            logger.warning("Event predictions is none! We used golden triggers.")
+            self.event_preds = None 
+        
     def read_examples(self, input_file):
         raise NotImplementedError
 
+
     def convert_examples_to_features(self):
         raise NotImplementedError
+
 
     def get_data_for_evaluation(self):
         self.data_for_evaluation["pred_type"] = self.get_pred_types()
         self.data_for_evaluation["true_type"] = self.get_true_types()
         return self.data_for_evaluation
+
 
     def get_pred_types(self):
         pred_types = []
@@ -100,11 +108,13 @@ class DataProcessor(Dataset):
             pred_types.append(example.pred_type)
         return pred_types 
 
+
     def get_true_types(self):
         true_types = []
         for example in self.examples:
             true_types.append(example.true_type)
         return true_types
+    
     
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False 
@@ -117,14 +127,17 @@ class DataProcessor(Dataset):
                 outputs[key] = outputs[key][:max_seq_length]
         return outputs, is_truncation
     
+
     def get_ids(self):
         ids = []
         for example in self.examples:
             ids.append(example.example_id)
         return ids 
 
+
     def __len__(self):
         return len(self.input_features)
+
 
     def __getitem__(self, index):
         features = self.input_features[index]
@@ -165,26 +178,14 @@ class TCProcessor(DataProcessor):
     """Data processor for token classification."""
 
     def __init__(self, config, tokenizer, input_file, pred_file, is_training):
-        super().__init__(config, tokenizer, is_training)
-        self.read_examples(input_file, pred_file)
+        super().__init__(config, tokenizer, pred_file, is_training)
+        self.read_examples(input_file)
         self.convert_examples_to_features()
 
 
-    def is_overlap(self, pos1, pos2):
-        pos1_range = list(range(pos1[0], pos1[1]))
-        pos2_range = list(range(pos2[0], pos2[1]))
-        if pos1[0] in pos2_range or \
-            pos1[1] in pos2_range or \
-            pos2[0] in pos1_range or \
-            pos2[1] in pos1_range:
-            return True 
-        return False 
-
-
-    def read_examples(self, input_file, pred_file):
+    def read_examples(self, input_file):
         self.examples = []
         trigger_idx = 0
-        preds = json.load(open(pred_file))
         with open(input_file, "r") as f:
             all_lines = f.readlines()
             for line in tqdm(all_lines, desc="Reading from %s" % input_file):
@@ -193,12 +194,18 @@ class TCProcessor(DataProcessor):
                 for event in item["events"]:
                     for trigger in event["triggers"]:
                         argu_for_trigger = set()
+                        if self.event_preds is not None \
+                            and not self.config.golden_trigger \
+                            and not self.is_training:    
+                            pred_event_type = self.event_preds[trigger_idx] 
+                        else:
+                            pred_event_type = event["type"]
                         for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
                                 example = InputExample(
                                     example_id=trigger["id"],
                                     text=item["text"],
-                                    pred_type=preds[trigger_idx],
+                                    pred_type=pred_event_type,
                                     true_type=event["type"],
                                     trigger_left=trigger["position"][0],
                                     trigger_right=trigger["position"][1],
@@ -206,8 +213,6 @@ class TCProcessor(DataProcessor):
                                     argu_right=mention["position"][1],
                                     labels=argument["role"]
                                 )
-                                if "train" in input_file or self.config.golden_trigger:
-                                    example.pred_type = event["type"]
                                 argu_for_trigger.add(mention['mention_id'])
                                 self.examples.append(example)
                         for entity in item["entities"]:
@@ -240,6 +245,7 @@ class TCProcessor(DataProcessor):
                 for neg in item["negative_triggers"]:
                     trigger_idx += 1         
     
+
     def insert_marker(self, text, type, trigger_position, argument_position, markers, whitespace=True):
         markered_text = ""
         for i, char in enumerate(text):
@@ -297,175 +303,11 @@ class TCProcessor(DataProcessor):
             self.input_features.append(features)
 
 
-'''
-class SLProcessor(DataProcessor):
-    """Data processor for sequence labeling."""
-
-    def __init__(self, config, tokenizer, input_file, pred_file):
-        super().__init__(config, tokenizer)
-        self.read_examples(input_file, pred_file)
-        self.convert_examples_to_features()
-
-    def read_examples(self, input_file, pred_file):
-        self.examples = []
-        trigger_idx = 0
-        preds = json.load(open(pred_file))
-        with open(input_file, "r", encoding="utf-8") as f:
-            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
-                item = json.loads(line.strip())
-                for event in item["events"]:
-                    for trigger in event["triggers"]:
-                        if self.config.language == "English":
-                            labels = ["O"] * len(item["text"].split())
-                        else:
-                            labels = ["O"] * len(item["text"])
-                        for argument in trigger["arguments"]:
-                            for mention in argument["mentions"]:
-                                if self.config.language == "English": 
-                                    left_pos = len(item["text"][:mention["position"][0]].split())
-                                    right_pos = len(item["text"][:mention["position"][1]].split())
-                                else:
-                                    assert self.config.language == "Chinese"
-                                    left_pos = mention["position"][0]
-                                    right_pos = mention["position"][1]
-                                labels[left_pos] = f"B-{argument['role']}"
-                                for i in range(left_pos+1, right_pos):
-                                    labels[i] = f"I-{argument['role']}"
-                        example = InputExample(
-                            example_id=item["id"],
-                            text=item["text"],
-                            pred_type=preds[trigger_idx],
-                            true_type=event["type"],
-                            trigger_left=trigger["position"][0],
-                            trigger_right=trigger["position"][1],
-                            labels=labels,
-                        )
-                        if "train" in input_file or self.config.golden_trigger:
-                            example.pred_type = event["type"]
-                        trigger_idx += 1
-                        self.examples.append(example)
-                # negative triggers 
-                for neg in item["negative_triggers"]:
-                    trigger_idx += 1   
-        
-    def get_final_labels(self, text, labels, outputs):
-         # map subtoken to word
-        start_poses = get_start_poses(text)
-        subtoken2word = []
-        current_word_idx = None
-        for offset in outputs["offset_mapping"]:
-            if offset[0] == offset[1]:
-                subtoken2word.append(-1)
-            else:
-                if check_if_start(start_poses, offset):
-                    current_word_idx = get_word_position(start_poses, offset)
-                    subtoken2word.append(current_word_idx)
-                else:
-                    subtoken2word.append(current_word_idx)
-        # mapping word labels to subtoken labels
-        final_labels = []
-        last_word_idx = None 
-        for word_idx in subtoken2word:
-            if word_idx == -1:
-                final_labels.append(-100)
-            else:
-                if word_idx == last_word_idx: # subtoken
-                    final_labels.append(-100)
-                else:  # new word
-                    final_labels.append(self.config.role2id[labels[word_idx]])
-                    last_word_idx = word_idx
-        return final_labels
-    
-    def get_final_labels_zh(self, text, labels, outputs):
-         # map subtoken to word
-        start_poses = list(range(len(text)))
-        subtoken2word = []
-        current_word_idx = None
-        for offset in outputs["offset_mapping"]:
-            if offset[0] == offset[1]:
-                subtoken2word.append(-1)
-            else:
-                current_word_idx = get_word_position(start_poses, offset)
-                subtoken2word.append(current_word_idx)
-        # mapping word labels to subtoken labels
-        final_labels = []
-        last_word_idx = None 
-        for word_idx in subtoken2word:
-            if word_idx == -1:
-                final_labels.append(-100)
-            else:
-                if word_idx == last_word_idx: # subtoken
-                    final_labels.append(-100)
-                else:  # new word
-                    final_labels.append(self.config.role2id[labels[word_idx]])
-                    last_word_idx = word_idx
-        return final_labels
-    
-
-    def insert_marker(self, text, type, labels, trigger_pos, markers, whitespace=True):
-        space = " " if whitespace else ""
-        markered_text = ""
-        markered_labels = []
-        tokens = text.split()
-        assert len(tokens) == len(labels)
-        char_pos = 0
-        for i, token in enumerate(tokens):
-            if char_pos == trigger_pos[0]:
-                markered_text += markers[type][0] + space
-                markered_labels.append("X")
-            char_pos += len(token) + len(space)
-            markered_text += token + space
-            markered_labels.append(labels[i])
-            if char_pos == trigger_pos[1] + len(space):
-                markered_text += markers[type][1] + space
-                markered_labels.append("X")
-        markered_text = markered_text.strip()
-        # pdb.set_trace()
-        assert len(markered_text.split(space)) == len(markered_labels)
-        return markered_text, markered_labels
-
-    def convert_examples_to_features(self):
-        self.input_features = []
-        self.is_overflow = []
-        whitespace = True if self.config.language == "English" else False 
-        for example in tqdm(self.examples, desc="Processing features for SL"):
-            text, labels = self.insert_marker(example.text, 
-                                              example.pred_type, 
-                                              example.labels,
-                                              [example.trigger_left, example.trigger_right],
-                                              self.config.markers,
-                                              whitespace)
-            outputs = self.tokenizer(text,
-                                     padding="max_length",
-                                     truncation=False,
-                                     max_length=self.config.max_seq_length,
-                                     return_offsets_mapping=True)
-            # Roberta tokenizer doesn't return token_type_ids
-            if "token_type_ids" not in outputs:
-                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
-            outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
-            self.is_overflow.append(is_overflow)
-            if self.config.language == "English":
-                final_labels = self.get_final_labels(text, labels, outputs)
-            else:
-                final_labels = self.get_final_labels_zh(text, labels, outputs)
-            features = InputFeatures(
-                example_id=example.example_id,
-                input_ids=outputs["input_ids"],
-                attention_mask=outputs["attention_mask"],
-                token_type_ids=outputs["token_type_ids"],
-                labels=final_labels
-            )
-            self.input_features.append(features)
-'''
-
-
 class SLProcessor(DataProcessor):
     """Data processor for sequence labeling."""
 
     def __init__(self, config, tokenizer, input_file, pred_file, is_training):
-        super().__init__(config, tokenizer, is_training)
-        self.pred_file = pred_file
+        super().__init__(config, tokenizer, pred_file, is_training)
         self.positive_candidate_indices = []
         self.is_overflow = []
         self.config.role2id["X"] = -100
@@ -475,7 +317,6 @@ class SLProcessor(DataProcessor):
     def read_examples(self, input_file):
         self.examples = []
         trigger_idx = 0
-        preds = json.load(open(self.pred_file))
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
@@ -490,6 +331,12 @@ class SLProcessor(DataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
+                            if self.event_preds is not None \
+                                and not self.config.golden_trigger \
+                                and not self.is_training:    
+                                pred_event_type = self.event_preds[trigger_idx] 
+                            else:
+                                pred_event_type = event["type"]
                             if self.config.language == "English":
                                 trigger_left = len(item["text"][:trigger["position"][0]].split())
                                 trigger_right = len(item["text"][:trigger["position"][1]].split())
@@ -518,14 +365,12 @@ class SLProcessor(DataProcessor):
                             example = InputExample(
                                 example_id=item["id"],
                                 text=words,
-                                pred_type=preds[trigger_idx],
+                                pred_type=pred_event_type,
                                 true_type=event["type"],
                                 trigger_left=trigger_left,
                                 trigger_right=trigger_right,
                                 labels=labels,
                             )
-                            if "train" in input_file or self.config.golden_trigger:
-                                example.pred_type = event["type"]
                             trigger_idx += 1
                             self.examples.append(example)
                     # negative triggers
@@ -620,16 +465,16 @@ class Seq2SeqProcessor(DataProcessor):
     "Data processor for sequence to sequence."
 
     def __init__(self, config, tokenizer, input_file, pred_file, is_training):
-        super().__init__(config, tokenizer, is_training)
-        self.read_examples(input_file, pred_file)
+        super().__init__(config, tokenizer, pred_file, is_training)
+        self.read_examples(input_file)
         self.convert_examples_to_features()
         self.data_for_evaluation = dict()
     
-    def read_examples(self, input_file, pred_file):
+    def read_examples(self, input_file):
         self.examples = []
         self.golden_arguments = []
         trigger_idx = 0
-        preds = json.load(open(pred_file))
+        
         converter = self.config.seq2seq_converter
         ontology_dict = converter.ontology_dict
         with open(input_file, "r", encoding="utf-8") as f:
@@ -637,6 +482,12 @@ class Seq2SeqProcessor(DataProcessor):
                 item = json.loads(line.strip())
                 for event in item["events"]:
                     for trigger in event["triggers"]:
+                        if self.event_preds is not None \
+                            and not self.config.golden_trigger \
+                            and not self.is_training:    
+                            pred_event_type = self.event_preds[trigger_idx] 
+                        else:
+                            pred_event_type = event["type"]
                         arguments_per_trigger = defaultdict(list)
                         for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
@@ -646,7 +497,7 @@ class Seq2SeqProcessor(DataProcessor):
                         example = InputExample(
                             example_id=trigger["id"],
                             text=item["text"],
-                            pred_type=preds[trigger_idx],
+                            pred_type=pred_event_type,
                             true_type=event["type"],
                             input_template=input_template,
                             trigger_left=trigger["position"][0],
@@ -730,16 +581,15 @@ class MRCProcessor(DataProcessor):
     "Data processor for machine reading comprehension."
 
     def __init__(self, config, tokenizer, input_file, pred_file, is_training):
-        super().__init__(config, tokenizer, is_training)
+        super().__init__(config, tokenizer, pred_file, is_training)
         self.data_for_evaluation = dict()
-        self.read_examples(input_file, pred_file)
+        self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file, pred_file):
+    def read_examples(self, input_file):
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
         trigger_idx = 0
-        preds = json.load(open(pred_file))
         query_templates = read_query_templates(self.config.prompt_file)
         template_id = 3
         with open(input_file, "r", encoding="utf-8") as f:
@@ -747,11 +597,14 @@ class MRCProcessor(DataProcessor):
                 item = json.loads(line.strip())
                 for event in item["events"]:
                     for trigger in event["triggers"]:
-                        event_type = preds[trigger_idx]
-                        if "train" in input_file or self.config.golden_trigger:
-                            event_type = event["type"]
-                        for role in query_templates[event_type].keys():
-                            query = query_templates[event_type][role][template_id]
+                        if self.event_preds is not None \
+                            and not self.config.golden_trigger \
+                            and not self.is_training:    
+                            pred_event_type = self.event_preds[trigger_idx] 
+                        else:
+                            pred_event_type = event["type"]
+                        for role in query_templates[pred_event_type].keys():
+                            query = query_templates[pred_event_type][role][template_id]
                             query = query.replace("[trigger]", trigger["trigger_word"])
                             if self.is_training:
                                 no_answer = True 
@@ -763,7 +616,7 @@ class MRCProcessor(DataProcessor):
                                         example = InputExample(
                                             example_id=trigger["id"],
                                             text=item["text"],
-                                            pred_type=event_type,
+                                            pred_type=pred_event_type,
                                             true_type=event["type"],
                                             input_template=query,
                                             trigger_left=trigger["position"][0],
@@ -776,7 +629,7 @@ class MRCProcessor(DataProcessor):
                                     example = InputExample(
                                         example_id=trigger["id"],
                                         text=item["text"],
-                                        pred_type=event_type,
+                                        pred_type=pred_event_type,
                                         true_type=event["type"],
                                         input_template=query,
                                         trigger_left=trigger["position"][0],
@@ -789,7 +642,7 @@ class MRCProcessor(DataProcessor):
                                 # golden label
                                 key = str(item["id"]) + "_" + trigger["id"]
                                 arguments_per_trigger = dict(id=key, role=role, arguments=[])
-                                arguments_per_trigger["pred_type"] = event_type
+                                arguments_per_trigger["pred_type"] = pred_event_type
                                 arguments_per_trigger["true_type"] = event["type"]
                                 for argument in trigger["arguments"]:
                                     if argument["role"] == role:
@@ -799,7 +652,7 @@ class MRCProcessor(DataProcessor):
                                 example = InputExample(
                                     example_id=trigger["id"],
                                     text=item["text"],
-                                    pred_type=event_type,
+                                    pred_type=pred_event_type,
                                     true_type=event["type"],
                                     input_template=query,
                                     trigger_left=trigger["position"][0],
@@ -878,12 +731,6 @@ class MRCProcessor(DataProcessor):
                 end_positions=end_position
             )
             self.input_features.append(features)
-
-
-
-            
-
-
             
 
             

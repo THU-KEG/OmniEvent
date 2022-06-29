@@ -3,26 +3,31 @@ do_train: True
 do_predict: False 
 do_ED_infer: True 
 
+# top-level config #
 paradigm: token_classification
-
 task_name: ED
 dataset_name: ACE2005
+language: English
+test_exists_labels: True
+
+# file path # 
 output_dir: output/ACE2005-EN
 type2id_path: ../data/ace_2005_td_v7/English/label2id.json 
 train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
 test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
-language: English
-test_exists_labels: True
 
+# config for data processor #
 return_token_type_ids: True 
 truncate_seq2seq_output: False
 
+# model config #
 model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
 aggregation: none 
 
+# training config #
 num_train_epochs: 5
 max_seq_length: 128
 max_out_length: 128

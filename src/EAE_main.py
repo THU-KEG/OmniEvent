@@ -4,6 +4,7 @@ import pdb
 import sys
 import json
 import torch
+import logging
 
 import numpy as np
 from tqdm import tqdm
@@ -70,6 +71,13 @@ training_args.output_dir = output_dir
 # local rank
 # training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
+# logging config 
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    datefmt="%m/%d/%Y %H:%M:%S",
+    level=logging.INFO,
+)
+
 # prepare labels
 role2id_path = data_args.role2id_path
 data_args.role2id = json.load(open(role2id_path))
@@ -79,8 +87,9 @@ training_args.label_name = ["labels"]
 if model_args.paradigm == "sequence_labeling":
     data_args.role2id = get_bio_labels(data_args.role2id)
     model_args.num_labels = len(data_args.role2id)
-data_args.id2role = {id: label for label, id in data_args.role2id.items()}
-training_args.id2role = data_args.id2role
+
+# used for evaluation
+training_args.role2id = data_args.role2id 
 
 # markers 
 type2id = json.load(open(data_args.type2id_path))
@@ -98,8 +107,6 @@ print(data_args, model_args, training_args)
 set_seed(training_args.seed)
 
 # writter 
-# writer = SummaryWriter(training_args.output_dir)
-# tensorboardCallBack = TensorBoardCallback(writer)
 earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience, \
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
@@ -146,19 +153,6 @@ trainer = Trainer(
     callbacks=[earlystoppingCallBack]
 )
 trainer.train()
-
-do_eval = True
-if do_eval:
-    logits, labels, metrics = trainer.predict(
-        test_dataset=eval_dataset,
-        ignore_keys=["loss"]
-    )
-    preds = np.argmax(logits, axis=-1)
-    print(metrics)
-    if model_args.paradigm == "sequence_labeling":
-        get_ace2005_argument_extraction_sl(preds, labels, data_args.validation_file, data_args, eval_dataset.is_overflow)
-    else:
-        pass
 
 
 if training_args.do_predict:
@@ -218,50 +212,3 @@ if training_args.do_predict:
             if data_args.dataset_name == "DuEE1.0":
                 print("Start get duee submission++++++++++++++++++")
                 get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
-
-
-'''
-if training_args.do_predict:
-    test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file, False)
-    training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
-    logits, labels, metrics = trainer.predict(
-        test_dataset=test_dataset,
-        ignore_keys=["loss"]
-    )
-    # pdb.set_trace()
-    preds = np.argmax(logits, axis=-1)
-    if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
-        print(metrics)
-        if model_args.paradigm == "sequence_labeling":
-            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-        else:
-            pass
-    else:
-        # save name 
-        aggregation = model_args.aggregation
-        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
-        if model_args.paradigm == "token_classification":
-            if data_args.dataset_name == "MAVEN":
-                get_maven_submission(preds, test_dataset.get_ids(), save_path)
-            elif data_args.dataset_name == "LEVEN":
-                get_leven_submission(preds, test_dataset.get_ids(), save_path)
-
-        elif model_args.paradigm == "sequence_labeling":
-            if data_args.dataset_name == "MAVEN":
-                get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
-                                        json.load(open(role2id_path)), data_args)
-            elif data_args.dataset_name == "LEVEN":
-                get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
-                                        json.load(open(role2id_path)), data_args)
-            elif data_args.dataset_name == "DuEE1.0":
-                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
-
-        elif model_args.paradigm == "seq2seq":
-            if data_args.dataset_name == "MAVEN":
-                get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(role2id_path)), tokenizer,
-                                             training_args, data_args)
-            elif data_args.dataset_name == "LEVEN":
-                get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(role2id_path)), tokenizer,
-                                             training_args, data_args)
-'''

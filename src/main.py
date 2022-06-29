@@ -4,6 +4,7 @@ import pdb
 import sys
 import json
 import torch
+import logging
 
 import numpy as np
 
@@ -15,8 +16,7 @@ from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, A
 from OpenEE.backbone.backbone import get_backbone
 from OpenEE.input_engineering.data_processor import (
     TCProcessor,
-    SLProcessor,
-    Seq2SeqProcessor
+    SLProcessor
 )
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
@@ -63,6 +63,13 @@ training_args.output_dir = output_dir
 # local rank
 # training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
+# logging config 
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    datefmt="%m/%d/%Y %H:%M:%S",
+    level=logging.INFO,
+)
+
 # prepare labels
 type2id_path = data_args.type2id_path
 data_args.type2id = json.load(open(type2id_path))
@@ -72,8 +79,10 @@ training_args.label_name = ["labels"]
 if model_args.paradigm == "sequence_labeling":
     data_args.type2id = get_bio_labels(data_args.type2id)
     model_args.num_labels = len(data_args.type2id)
-data_args.id2type = {id: label for label, id in data_args.type2id.items()}
-training_args.id2type = data_args.id2type
+
+# used for evaluation
+training_args.type2id = data_args.type2id
+
 
 # markers 
 # data_args.markers =  ["[unused0]", "[unused1]"]
@@ -85,8 +94,6 @@ print(data_args, model_args, training_args)
 set_seed(training_args.seed)
 
 # writter 
-# writer = SummaryWriter(training_args.output_dir)
-# tensorboardCallBack = TensorBoardCallback(writer)
 earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience,
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
@@ -128,6 +135,7 @@ trainer = Trainer(
 )
 trainer.train()
 
+
 if training_args.do_predict:
     test_dataset = data_class(data_args, tokenizer, data_args.test_file)
     logits, labels, metrics = trainer.predict(
@@ -163,6 +171,7 @@ if training_args.do_predict:
             elif data_args.dataset_name == "LEVEN":
                 get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
                                              training_args, data_args)
+
 
 if training_args.do_ED_infer:
     def dump_preds(data_file, save_path, paradigm):
