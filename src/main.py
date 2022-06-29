@@ -82,6 +82,7 @@ if model_args.paradigm == "sequence_labeling":
 
 # used for evaluation
 training_args.type2id = data_args.type2id
+data_args.id2type = {id: type for type, id in data_args.type2id.items()}
 
 
 # markers 
@@ -112,9 +113,6 @@ if model_args.paradigm == "token_classification":
 elif model_args.paradigm == "sequence_labeling":
     data_class = SLProcessor
     metric_fn = compute_span_F1
-elif model_args.paradigm == "seq2seq":
-    data_class = Seq2SeqProcessor
-    metric_fn = compute_seq_F1
 else:
     raise ValueError("No such paradigm.")
 
@@ -181,10 +179,10 @@ if training_args.do_ED_infer:
             ignore_keys=["loss"]
         )
         print("-" * 50)
-        print(metrics)
+        print(data_file, metrics)
         preds = np.argmax(logits, axis=-1)
         if paradigm == "token_classification":
-            pred_labels = [training_args.id2type[pred] for pred in preds]
+            pred_labels = [data_args.id2type[pred] for pred in preds]
         elif paradigm == "sequence_labeling":
             pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
         else:

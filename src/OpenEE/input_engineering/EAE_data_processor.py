@@ -82,10 +82,17 @@ class DataProcessor(Dataset):
         self.config.role2id["X"] = -100
         self.examples = []
         self.input_features = []
+        # data for trainer evaluation 
+        self.data_for_evaluation = {}
+        # event prediction file path 
         if pred_file is not None:
-            self.event_preds = json.load(open(pred_file))
+            if not os.path.exists(pred_file):
+                logger.warning("%s doesn't exist.We use golden triggers" % pred_file)
+                self.event_preds = None 
+            else:
+                self.event_preds = json.load(open(pred_file))
         else:
-            logger.warning("Event predictions is none! We used golden triggers.")
+            logger.warning("Event predictions is none! We use golden triggers.")
             self.event_preds = None 
         
     def read_examples(self, input_file):
@@ -97,8 +104,8 @@ class DataProcessor(Dataset):
 
 
     def get_data_for_evaluation(self):
-        self.data_for_evaluation["pred_type"] = self.get_pred_types()
-        self.data_for_evaluation["true_type"] = self.get_true_types()
+        self.data_for_evaluation["pred_types"] = self.get_pred_types()
+        self.data_for_evaluation["true_types"] = self.get_true_types()
         return self.data_for_evaluation
 
 
@@ -177,7 +184,7 @@ class DataProcessor(Dataset):
 class TCProcessor(DataProcessor):
     """Data processor for token classification."""
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
@@ -229,7 +236,7 @@ class TCProcessor(DataProcessor):
                                 example = InputExample(
                                     example_id=trigger["id"],
                                     text=item["text"],
-                                    pred_type=preds[trigger_idx],
+                                    pred_type=pred_event_type,
                                     true_type=event["type"],
                                     trigger_left=trigger["position"][0],
                                     trigger_right=trigger["position"][1],
@@ -306,7 +313,7 @@ class TCProcessor(DataProcessor):
 class SLProcessor(DataProcessor):
     """Data processor for sequence labeling."""
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
         super().__init__(config, tokenizer, pred_file, is_training)
         self.positive_candidate_indices = []
         self.is_overflow = []
@@ -388,11 +395,11 @@ class SLProcessor(DataProcessor):
                             raise NotImplementedError
                         labels = ["O"] * len(words)
 
-                        if preds[trigger_idx] != "NA":
+                        if pred_event_type != "NA":
                             example = InputExample(
                                 example_id=item["id"],
                                 text=words,
-                                pred_type=preds[trigger_idx],
+                                pred_type=pred_event_type,
                                 true_type="NA",   # true type not given, set to NA.
                                 trigger_left=trigger_left,
                                 trigger_right=trigger_right,
@@ -464,11 +471,10 @@ class SLProcessor(DataProcessor):
 class Seq2SeqProcessor(DataProcessor):
     "Data processor for sequence to sequence."
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
-        self.data_for_evaluation = dict()
     
     def read_examples(self, input_file):
         self.examples = []
@@ -580,9 +586,8 @@ class Seq2SeqProcessor(DataProcessor):
 class MRCProcessor(DataProcessor):
     "Data processor for machine reading comprehension."
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training):
+    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
         super().__init__(config, tokenizer, pred_file, is_training)
-        self.data_for_evaluation = dict()
         self.read_examples(input_file)
         self.convert_examples_to_features()
 

@@ -90,6 +90,7 @@ if model_args.paradigm == "sequence_labeling":
 
 # used for evaluation
 training_args.role2id = data_args.role2id 
+data_args.id2role = {id: role for role, id in data_args.role2id.items()}
 
 # markers 
 type2id = json.load(open(data_args.type2id_path))
@@ -158,8 +159,7 @@ trainer.train()
 if training_args.do_predict:
     def predict(trainer, data_args, tokenizer):
         test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
-        training_args.pred_types = test_dataset.get_pred_types()
-        training_args.true_types = test_dataset.get_true_types()
+        training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
         logits, labels, metrics = trainer.predict(test_dataset=test_dataset, ignore_keys=["loss"])
 
         return logits, labels, metrics, test_dataset

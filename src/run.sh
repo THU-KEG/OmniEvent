@@ -6,3 +6,6 @@
 
 # ED 
 CUDA_VISIBLE_DEVICES=3 python main.py config.yaml
+
+# EAE
+# CUDA_VISIBLE_DEVICES=2 python EAE_main.py EAE_config.yaml 

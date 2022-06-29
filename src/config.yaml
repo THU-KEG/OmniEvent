@@ -1,10 +1,10 @@
 seed: 42
 do_train: True
-do_predict: False 
+do_predict: True 
 do_ED_infer: True 
 
 # top-level config #
-paradigm: token_classification
+paradigm: sequence_labeling
 task_name: ED
 dataset_name: ACE2005
 language: English
@@ -28,7 +28,7 @@ hidden_size: 768
 aggregation: none 
 
 # training config #
-num_train_epochs: 5
+num_train_epochs: 10
 max_seq_length: 128
 max_out_length: 128
 dataloader_num_workers: 2

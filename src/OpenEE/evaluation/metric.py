@@ -37,8 +37,8 @@ def compute_seq_F1(logits, labels, **kwargs):
     # metric 
     final_labels, final_preds = converter.convert_to_final_list(decoded_labels,
                                                                 decoded_preds, 
-                                                                training_args.true_types,
-                                                                training_args.pred_types)
+                                                                training_args.data_for_evaluation["true_types"],
+                                                                training_args.data_for_evaluation["pred_types"])
     pos_labels = list(training_args.id2role.values())
     pos_labels.remove(training_args.id2role[0])
     micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0
@@ -75,9 +75,9 @@ def compute_span_F1(logits, labels, **kwargs):
     # convert id to name
     training_args = kwargs["training_args"]
     if training_args.task_name == "EAE":
-        id2label = {id: role for role, id in training_args.id2role.items()}
+        id2label = {id: role for role, id in training_args.role2id.items()}
     elif training_args.task_name == "ED":
-        id2label = {id: role for role, id in training_args.id2type.items()}
+        id2label = {id: role for role, id in training_args.type2id.items()}
     else:
         raise ValueError("No such task!")
     final_preds, final_labels = select_start_position(preds, labels, False)
@@ -85,8 +85,8 @@ def compute_span_F1(logits, labels, **kwargs):
     final_labels = convert_to_names(final_labels, id2label)
     # if the type is wrongly predicted, set arguments NA
     if training_args.task_name == "EAE":
-        pred_types = training_args.pred_types
-        true_types = training_args.true_types 
+        pred_types = training_args.data_for_evaluation["pred_types"]
+        true_types = training_args.data_for_evaluation["true_types"]
         assert len(pred_types) == len(true_types)
         assert len(pred_types) == len(final_labels)
         for i, (pred, true) in enumerate(zip(pred_types, true_types)):
@@ -99,18 +99,20 @@ def compute_span_F1(logits, labels, **kwargs):
 
 def compute_F1(logits, labels, **kwargs):
     predictions = np.argmax(logits, axis=-1)
-    pos_labels = list(set(labels.tolist()))
-    pos_labels.remove(0)
     training_args = kwargs["training_args"]
     # if the type is wrongly predicted, set arguments NA
     if training_args.task_name == "EAE":
-        pred_types = training_args.pred_types
-        true_types = training_args.true_types 
+        pred_types = training_args.data_for_evaluation["pred_types"]
+        true_types = training_args.data_for_evaluation["true_types"]
         assert len(pred_types) == len(true_types)
         assert len(pred_types) == len(predictions)
         for i, (pred, true) in enumerate(zip(pred_types, true_types)):
             if pred != true:
                 predictions[i] = 0 # set to NA
+        pos_labels = list(set(training_args.role2id.values()))
+    else:
+        pos_labels = list(set(training_args.type2id.values()))
+    pos_labels.remove(0)
     micro_f1 = f1_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
     return {"micro_f1": micro_f1}
 
