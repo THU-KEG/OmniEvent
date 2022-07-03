@@ -24,6 +24,10 @@ from OpenEE.evaluation.metric import (
     compute_span_F1,
     compute_seq_F1
 )
+from OpenEE.evaluation.utils import (
+    predict_ed,
+    predict_sub_ed,
+)
 from OpenEE.evaluation.dump_result import (
     get_leven_submission,
     get_leven_submission_sl,
@@ -173,13 +177,13 @@ if training_args.do_predict:
 
 if training_args.do_ED_infer:
     def dump_preds(data_file, save_path, paradigm):
-        dataset = data_class(data_args, tokenizer, data_file)
-        logits, labels, metrics = trainer.predict(
-            test_dataset=dataset,
-            ignore_keys=["loss"]
-        )
-        print("-" * 50)
-        print(data_file, metrics)
+        if not data_args.split_infer:
+            logits, labels, metrics, dataset = predict_ed(trainer, tokenizer, data_class, data_args, data_file)
+            print("-" * 50)
+            print(data_file, metrics)
+        else:
+            logits, labels, dataset = predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file)
+
         preds = np.argmax(logits, axis=-1)
         if paradigm == "token_classification":
             pred_labels = [data_args.id2type[pred] for pred in preds]

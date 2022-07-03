@@ -103,6 +103,18 @@ class DataArguments:
         default="English",
         metadata={"help": "data language."}
     )
+    split_infer: bool = field(
+        default=True,
+        metadata={
+            "help": "whether split large dataset for inference. False only if truncate_in_batch"
+        }
+    )
+    split_infer_size: int = field(
+        default=500,
+        metadata={
+            "help": "sub-batch size for split inference."
+        }
+    )
 
 
 @dataclass

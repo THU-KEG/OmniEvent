@@ -55,13 +55,13 @@ class InputFeatures(object):
     """Input features of an instance."""
     
     def __init__(self,
-                example_id,
-                input_ids,
-                attention_mask,
-                token_type_ids=None,
-                labels=None,
-                start_positions=None,
-                end_positions=None
+                 example_id,
+                 input_ids,
+                 attention_mask,
+                 token_type_ids=None,
+                 labels=None,
+                 start_positions=None,
+                 end_positions=None
         ):
         self.example_id = example_id
         self.input_ids = input_ids
@@ -98,16 +98,13 @@ class DataProcessor(Dataset):
     def read_examples(self, input_file):
         raise NotImplementedError
 
-
     def convert_examples_to_features(self):
         raise NotImplementedError
-
 
     def get_data_for_evaluation(self):
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()
         return self.data_for_evaluation
-
 
     def get_pred_types(self):
         pred_types = []
@@ -115,14 +112,12 @@ class DataProcessor(Dataset):
             pred_types.append(example.pred_type)
         return pred_types 
 
-
     def get_true_types(self):
         true_types = []
         for example in self.examples:
             true_types.append(example.true_type)
         return true_types
-    
-    
+
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False 
         if len(outputs["input_ids"]) > max_seq_length:
@@ -133,7 +128,6 @@ class DataProcessor(Dataset):
                     continue
                 outputs[key] = outputs[key][:max_seq_length]
         return outputs, is_truncation
-    
 
     def get_ids(self):
         ids = []
@@ -141,10 +135,8 @@ class DataProcessor(Dataset):
             ids.append(example.example_id)
         return ids 
 
-
     def __len__(self):
         return len(self.input_features)
-
 
     def __getitem__(self, index):
         features = self.input_features[index]
@@ -188,7 +180,6 @@ class TCProcessor(DataProcessor):
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
-
 
     def read_examples(self, input_file):
         self.examples = []
@@ -251,7 +242,6 @@ class TCProcessor(DataProcessor):
                 # negative triggers 
                 for neg in item["negative_triggers"]:
                     trigger_idx += 1         
-    
 
     def insert_marker(self, text, type, trigger_position, argument_position, markers, whitespace=True):
         markered_text = ""
@@ -395,6 +385,7 @@ class SLProcessor(DataProcessor):
                             raise NotImplementedError
                         labels = ["O"] * len(words)
 
+                        pred_event_type = self.event_preds[trigger_idx]
                         if pred_event_type != "NA":
                             example = InputExample(
                                 example_id=item["id"],
@@ -516,14 +507,12 @@ class Seq2SeqProcessor(DataProcessor):
                         self.examples.append(example)
                 # negative triggers 
                 for neg in item["negative_triggers"]:
-                    trigger_idx += 1   
-
+                    trigger_idx += 1
 
     def get_golden_arguments(self):
         """Return List of arguments
         """
         return self.golden_arguments
-
 
     def insert_marker(self, text, type, trigger_pos, markers, whitespace=True):
         space = " " if whitespace else ""

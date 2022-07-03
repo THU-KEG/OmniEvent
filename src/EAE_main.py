@@ -30,7 +30,6 @@ from OpenEE.evaluation.metric import (
     compute_mrc_F1
 )
 from OpenEE.evaluation.dump_result import (
-    get_sub_files,
     get_leven_submission,
     get_leven_submission_sl,
     get_leven_submission_seq2seq,
@@ -43,6 +42,12 @@ from OpenEE.evaluation.dump_result import (
 from OpenEE.evaluation.convert_format import (
     get_ace2005_argument_extraction_sl
 )
+
+from OpenEE.evaluation.utils import (
+    predict_eae,
+    predict_sub_eae,
+)
+
 from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
 from OpenEE.trainer_seq2seq import Seq2SeqTrainer
@@ -157,40 +162,10 @@ trainer.train()
 
 
 if training_args.do_predict:
-    def predict(trainer, data_args, tokenizer):
-        test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
-        training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
-        logits, labels, metrics = trainer.predict(test_dataset=test_dataset, ignore_keys=["loss"])
-
-        return logits, labels, metrics, test_dataset
-
-    def predict_sub(trainer, data_args, tokenizer):
-        test_file_full, test_pred_file_full = data_args.test_file, data_args.test_pred_file
-        test_file_list, test_pred_file_list = get_sub_files(test_file_full, test_pred_file_full, sub_size=5000)
-
-        logits_list, labels_list = [], []
-        for test_file, test_pred_file in tqdm(list(zip(test_file_list, test_pred_file_list)), desc='Split Evaluate'):
-            data_args.test_file = test_file
-            data_args.test_pred_file = test_pred_file
-
-            logits, labels, metrics, _ = predict(trainer, data_args, tokenizer)
-            logits_list.append(logits)
-            labels_list.append(labels)
-
-        # TODO: concat operation is slow
-        logits = np.concatenate(logits_list, axis=0)
-        labels = np.concatenate(labels_list, axis=0)
-        data_args.test_file = test_file_full
-        data_args.test_pred_file = test_pred_file_full
-
-        test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
-        return logits, labels, test_dataset
-
-
-    if data_args.test_exists_labels:
-        logits, labels, metrics, test_dataset = predict(trainer, data_args, tokenizer)
+    if not data_args.split_infer:
+        logits, labels, metrics, test_dataset = predict_eae(trainer, tokenizer, data_class, data_args, training_args)
     else:
-        logits, labels, test_dataset = predict_sub(trainer, data_args, tokenizer)
+        logits, labels, test_dataset = predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args)
 
     # pdb.set_trace()
     preds = np.argmax(logits, axis=-1)

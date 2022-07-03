@@ -6,16 +6,16 @@ do_ED_infer: True
 # top-level config #
 paradigm: sequence_labeling
 task_name: ED
-dataset_name: ACE2005
+dataset_name: KBP16-17
 language: English
 test_exists_labels: True
 
 # file path # 
-output_dir: output/ACE2005-EN
-type2id_path: ../data/ace_2005_td_v7/English/label2id.json 
-train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
-validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
-test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
+output_dir: output/KBP16-17
+type2id_path: ../data/KBP16-17/label2id.json
+train_file: ../data/KBP16-17/train.unified.jsonl
+validation_file: ../data/KBP16-17/valid.unified.jsonl
+test_file: ../data/KBP16-17/test.unified.jsonl
 
 # config for data processor #
 return_token_type_ids: True 
@@ -62,5 +62,3 @@ save_steps: 500
 # split inference #
 split_infer: True
 split_infer_size: 500
-
-

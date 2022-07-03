@@ -26,42 +26,6 @@ def get_pred_per_mention(pos_start, pos_end, preds, id2label):
     return list(predictions)[0]
 
 
-def get_sub_files(input_test_file, input_test_pred_file, sub_size=5000):
-    test_data = list(jsonlines.open(input_test_file))
-    pred_data = json.load(open(input_test_pred_file, encoding='utf-8'))
-
-    sub_data_folder = '/'.join(input_test_file.split('/')[:-1]) + '/test_cache/'
-    sub_pred_folder = '/'.join(input_test_pred_file.split('/')[:-1]) + '/test_cache/'
-
-    os.makedirs(sub_pred_folder, exist_ok=True)
-    os.makedirs(sub_data_folder, exist_ok=True)
-
-    output_test_files, output_pred_files = [], []
-
-    pred_start = 0
-    for sub_id, i in enumerate(range(0, len(test_data), sub_size)):
-        test_data_sub = test_data[i: i+sub_size]
-
-        pred_end = pred_start + sum([len(d['candidates']) for d in test_data_sub])
-        test_pred_sub = pred_data[pred_start: pred_end]
-        pred_start = pred_end
-
-        test_file_sub = sub_data_folder + 'sub-{}.json'.format(sub_id)
-        test_pred_file_sub = sub_pred_folder + 'sub-{}.json'.format(sub_id)
-
-        with jsonlines.open(test_file_sub, 'w') as f:
-            for data in test_data_sub:
-                jsonlines.Writer.write(f, data)
-
-        with open(test_pred_file_sub, 'w', encoding='utf-8') as f:
-            json.dump(test_pred_sub, f, ensure_ascii=False)
-
-        output_test_files.append(test_file_sub)
-        output_pred_files.append(test_pred_file_sub)
-
-    return output_test_files, output_pred_files
-
-
 def get_sentence_arguments(input_sentence):
     input_sentence.append({"role": "NA", "word": "<EOS>"})
     arguments = []
@@ -87,34 +51,6 @@ def get_sentence_arguments(input_sentence):
             previous_arg = ""
 
     return arguments
-
-
-'''
-def get_sentence_arguments(input_sentence):
-    input_sentence.append({"role": "NA", "word": "<EOS>"})
-    arguments = []
-
-    current_role = None
-    current_arg = ""
-    for item in input_sentence:
-        if current_role is None and item["role"] != "NA":
-            current_role = item["role"]
-            current_arg += item["word"]
-            continue
-        else:
-            if item["role"] == current_role:
-                current_arg += item["word"]
-            elif current_role:
-                arguments.append({"role": current_role, "argument": current_arg})
-                if item["role"] != "NA":
-                    current_role = item["role"]
-                    current_arg = item["word"]
-                else:
-                    current_role = None
-                    current_arg = ""
-
-    return arguments
-'''
 
 
 def get_maven_submission(preds, instance_ids, result_file):
