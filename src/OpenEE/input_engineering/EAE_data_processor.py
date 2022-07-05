@@ -15,6 +15,7 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 from .input_utils import get_start_poses, check_if_start, get_word_position
 from .mrc_converter import read_query_templates
+from .seq2seq_utils import prepare_output
 
 
 logger = logging.getLogger(__name__)
@@ -469,11 +470,10 @@ class Seq2SeqProcessor(DataProcessor):
     
     def read_examples(self, input_file):
         self.examples = []
-        self.golden_arguments = []
+        self.data_for_evaluation["golden_arguments"] = []
         trigger_idx = 0
-        
-        converter = self.config.seq2seq_converter
-        ontology_dict = converter.ontology_dict
+        templates = json.load(open(self.config.template_file))
+        self.data_for_evaluation["roles"] = []
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
@@ -485,12 +485,16 @@ class Seq2SeqProcessor(DataProcessor):
                             pred_event_type = self.event_preds[trigger_idx] 
                         else:
                             pred_event_type = event["type"]
+                        if pred_event_type == "NA":
+                            continue
                         arguments_per_trigger = defaultdict(list)
                         for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
                                 arguments_per_trigger[argument["role"]].append(mention["mention"])
-                        self.golden_arguments.append(dict(arguments_per_trigger))
-                        input_template, output_template = converter.serialize(trigger["arguments"], ontology_dict[event["type"]])
+                        self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
+                        self.data_for_evaluation["roles"].append(templates[pred_event_type]["roles"])
+                        input_template = templates[pred_event_type]["template"]
+                        output = prepare_output(arguments_per_trigger, input_template)
                         example = InputExample(
                             example_id=trigger["id"],
                             text=item["text"],
@@ -499,7 +503,7 @@ class Seq2SeqProcessor(DataProcessor):
                             input_template=input_template,
                             trigger_left=trigger["position"][0],
                             trigger_right=trigger["position"][1],
-                            labels=output_template
+                            labels=output
                         )
                         if "train" in input_file or self.config.golden_trigger:
                             example.pred_type = event["type"]
@@ -509,10 +513,6 @@ class Seq2SeqProcessor(DataProcessor):
                 for neg in item["negative_triggers"]:
                     trigger_idx += 1
 
-    def get_golden_arguments(self):
-        """Return List of arguments
-        """
-        return self.golden_arguments
 
     def insert_marker(self, text, type, trigger_pos, markers, whitespace=True):
         space = " " if whitespace else ""

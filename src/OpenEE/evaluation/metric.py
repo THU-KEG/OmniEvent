@@ -7,42 +7,53 @@ from sklearn.metrics import f1_score
 from seqeval.metrics import f1_score as span_f1_score
 from seqeval.scheme import IOB2
 from ..input_engineering.mrc_converter import make_preditions, compute_mrc_F1_cls
+from ..input_engineering.seq2seq_utils import decode_arguments, get_final_preds_labels
 
 
-def postprocess_text(labels):
-    parsed_labels = []
-    for label in labels:
-        label_per_instance = dict()
-        for pair in label.split(";"):
-            tt = pair.split(":")
-            if len(tt) != 2:
-                continue
-            type, trigger = tt[0], tt[1]
-            label_per_instance[trigger] = type 
-        parsed_labels.append(label_per_instance)
-    return parsed_labels
+def f1_score_overall(preds, labels):
+    total_true = 0
+    for pred in preds:
+        if pred in labels:
+            total_true += 1
+    precision = total_true / len(preds)
+    recall = total_true / len(labels)
+    f1 = 2 * precision * recall / (precision + recall)
+    return f1
 
 
 def compute_seq_F1(logits, labels, **kwargs):
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
-    decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=True)
-    # convert to structured predictions
-    converter = training_args.seq2seq_converter
-    # Extract structured knowledge from text
-    decoded_preds = converter.extract_from_text(decoded_preds, training_args.true_types)
-    # decoded_labels = converter.extract_from_text(decoded_labels, training_args.true_types)
-    decoded_labels = training_args.golden_arguments
-    assert len(decoded_preds) == len(decoded_labels)
-    # metric 
-    final_labels, final_preds = converter.convert_to_final_list(decoded_labels,
-                                                                decoded_preds, 
-                                                                training_args.data_for_evaluation["true_types"],
-                                                                training_args.data_for_evaluation["pred_types"])
-    pos_labels = list(training_args.id2role.values())
-    pos_labels.remove(training_args.id2role[0])
-    micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0
+    decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
+    pred_arguments = []
+    for i, pred in enumerate(decoded_preds):
+        pred_arguments.append(decode_arguments(pred, training_args.data_for_evaluation["roles"][i], tokenizer))
+    golden_arguments = training_args.data_for_evaluation["golden_arguments"]
+    final_preds, final_labels = get_final_preds_labels(pred_arguments, golden_arguments)
+    micro_f1 = f1_score_overall(final_preds, final_labels)
     return {"micro_f1": micro_f1}
+
+
+# def compute_seq_F1(logits, labels, **kwargs):
+#     tokenizer = kwargs["tokenizer"]
+#     training_args = kwargs["training_args"]
+#     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=True)
+#     # convert to structured predictions
+#     converter = training_args.seq2seq_converter
+#     # Extract structured knowledge from text
+#     decoded_preds = converter.extract_from_text(decoded_preds, training_args.true_types)
+#     # decoded_labels = converter.extract_from_text(decoded_labels, training_args.true_types)
+#     decoded_labels = training_args.golden_arguments
+#     assert len(decoded_preds) == len(decoded_labels)
+#     # metric 
+#     final_labels, final_preds = converter.convert_to_final_list(decoded_labels,
+#                                                                 decoded_preds, 
+#                                                                 training_args.data_for_evaluation["true_types"],
+#                                                                 training_args.data_for_evaluation["pred_types"])
+#     pos_labels = list(training_args.id2role.values())
+#     pos_labels.remove(training_args.id2role[0])
+#     micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro") * 100.0
+#     return {"micro_f1": micro_f1}
 
 
 def select_start_position(preds, labels, merge=True):
