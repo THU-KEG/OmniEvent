@@ -17,12 +17,10 @@ train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
 test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
 # event detection predictions
-golden_trigger: True
+golden_trigger: False
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
 validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
-# config for some specific paradigms
-template_file: ../data/ace_2005_td_v7/English/refined_templates.json  # used for seq2seq paradigm
 
 # config for data processor # 
 truncate_in_batch: False 
@@ -37,7 +35,7 @@ aggregation: none
 
 # training config #
 num_train_epochs: 10
-max_seq_length: 128
+max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2
 
@@ -46,9 +44,9 @@ generation_num_beams: 4
 predict_with_generate: True 
 ignore_pad_token_for_loss: True 
 
-per_device_train_batch_size: 16
-per_device_eval_batch_size: 16
-gradient_accumulation_steps: 1
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 32
+gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
 learning_rate: 5.0e-5
 weight_decay: 1.0e-5
@@ -68,6 +66,6 @@ save_strategy: epoch
 save_steps: 500
 
 # split inference #
-split_infer: True
+split_infer: False
 split_infer_size: 5000
 

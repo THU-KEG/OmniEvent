@@ -5,31 +5,32 @@ import json
 from collections import defaultdict
 
 
-def prepare_output(arguments, template):
+def prepare_output(arguments, roles, template):
     """Prepare seq2seq output for an instance.
     
     Args:
         arguments: Arguments of a trigger. 
+        roles: Roles of arguments
         template: The template of the event. 
     
     Returns:
         output: Output targets
     """
-    re_template = re.compile("<.*?>")
-    argument_markers = re_template.findall(template)
+    re_template = re.compile("<extra_id_(\d+)>")
+    role_ids = re_template.findall(template)
     output = []
-    for marker in argument_markers:
+    for id in role_ids:
+        role = roles[int(id)]
         value = None 
-        role = marker[1:-1]
         if role not in arguments:
-            value = "NA"
+            value = ""
         else:
             value = []
             for mention in arguments[role]:
                 value.append(mention)
             value = " [SEP] ".join(value)
-        output.append(marker + " " + value)
-    return " ".join(output)
+        output.append(f"<extra_id_{id}>" + value)
+    return "".join(output)
 
 
 def decode_arguments(output, roles, tokenizer):
@@ -44,26 +45,23 @@ def decode_arguments(output, roles, tokenizer):
         arguments: Arguments
     """
     arguments = defaultdict(list)
-    if tokenizer.eos_token in output:
-        end_idx = output.index(tokenizer.eos_token)
-    else:
-        print("Warning! No eos token in", output)
-        end_idx = None 
-    output = output[:end_idx]
-    role_template = re.compile("(.*?)>")
+    role_template = re.compile("extra_id_(\d+)>")
     for span in output.split("<"):
         # role 
-        roles = role_template.findall(span)
-        if len(roles) != 1:
-            print("Warning!", span)
-        if len(roles) == 0:
+        role_ids = role_template.findall(span)
+        if len(role_ids) == 0:
             continue
-        role = roles[roles[0].split("_")[-1]]
+        if int(role_ids[0]) >= len(roles):
+            continue
+        role = roles[int(role_ids[0])]
         # value 
         values = span.split(">")[-1]
         for value in values.split("[SEP]"):
-            arguments[role].append(value.strip())
-    return arguments
+            if value.strip() != "":
+                arguments[role].append(value.strip())
+    for key in arguments:
+        arguments[key] = list(set(arguments[key]))
+    return dict(arguments)
 
 
 def get_final_preds_labels(preds, labels):
@@ -78,6 +76,24 @@ def get_final_preds_labels(preds, labels):
                 final_labels.append(f"{i}-{key}-{value}")
     return final_preds, final_labels
 
+# def get_final_preds_labels(preds, labels):
+#     final_preds = []
+#     final_labels = []
+#     for i, (pred, label) in enumerate(zip(preds, labels)):
+#         for key in pred:
+#             for value in pred[key]:
+#                 final_preds.append(key)
+#                 if key in label and value in label[key]:
+#                     final_labels.append(key)
+#                 else:
+#                     final_labels.append("NA")
+#         for key in label:
+#             for value in label[key]:
+#                 if key in pred and value in pred[key]:
+#                     continue
+#                 final_labels.append(key)
+#                 final_preds.append("NA")
+#     return final_preds, final_labels
 
 
 

@@ -471,9 +471,8 @@ class Seq2SeqProcessor(DataProcessor):
     def read_examples(self, input_file):
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
-        trigger_idx = 0
-        templates = json.load(open(self.config.template_file))
         self.data_for_evaluation["roles"] = []
+        trigger_idx = 0
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
@@ -485,28 +484,27 @@ class Seq2SeqProcessor(DataProcessor):
                             pred_event_type = self.event_preds[trigger_idx] 
                         else:
                             pred_event_type = event["type"]
-                        if pred_event_type == "NA":
-                            continue
+                        labels = []
                         arguments_per_trigger = defaultdict(list)
                         for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
                                 arguments_per_trigger[argument["role"]].append(mention["mention"])
+                                labels.append(f"<extra_id_0> {argument['role']} {mention['mention']} <extra_id_1>")
+                        if len(labels) != 0:
+                            labels = "".join(labels)
+                            # labels = "<extra_id_0>" + labels + "<extra_id_1>"
+                        else:       # no arguments for the trigger
+                            labels = ""
                         self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
-                        self.data_for_evaluation["roles"].append(templates[pred_event_type]["roles"])
-                        input_template = templates[pred_event_type]["template"]
-                        output = prepare_output(arguments_per_trigger, input_template)
                         example = InputExample(
                             example_id=trigger["id"],
                             text=item["text"],
                             pred_type=pred_event_type,
                             true_type=event["type"],
-                            input_template=input_template,
                             trigger_left=trigger["position"][0],
                             trigger_right=trigger["position"][1],
-                            labels=output
+                            labels=labels
                         )
-                        if "train" in input_file or self.config.golden_trigger:
-                            example.pred_type = event["type"]
                         trigger_idx += 1
                         self.examples.append(example)
                 # negative triggers 
@@ -533,10 +531,6 @@ class Seq2SeqProcessor(DataProcessor):
         self.input_features = []
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
-            # template 
-            input_template = self.tokenizer(example.input_template, 
-                                            truncation=True,
-                                            max_length=self.config.max_seq_length)
             # context 
             text = self.insert_marker(example.text, 
                                       example.true_type, 
@@ -547,13 +541,6 @@ class Seq2SeqProcessor(DataProcessor):
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length)
-            # concatnate 
-            input_ids = input_template["input_ids"] + input_context["input_ids"]
-            attention_mask = input_template["attention_mask"] + input_context["attention_mask"]
-            # truncation
-            input_ids = input_ids[:self.config.max_seq_length]
-            attention_mask = attention_mask[:self.config.max_seq_length]
-
             # output labels
             label_outputs = self.tokenizer(example.labels,
                                            padding="max_length",
@@ -565,8 +552,8 @@ class Seq2SeqProcessor(DataProcessor):
                     label_outputs["input_ids"][i] = -100
             features = InputFeatures(
                 example_id = example.example_id,
-                input_ids = input_ids,
-                attention_mask = attention_mask,
+                input_ids = input_context["input_ids"],
+                attention_mask = input_context["attention_mask"],
                 labels = label_outputs["input_ids"]
             )
             self.input_features.append(features)
