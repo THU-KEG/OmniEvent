@@ -95,7 +95,7 @@ class DataProcessor(Dataset):
         else:
             logger.warning("Event predictions is none! We use golden triggers.")
             self.event_preds = None 
-        
+        # import pdb; pdb.set_trace()    
     def read_examples(self, input_file):
         raise NotImplementedError
 
@@ -664,7 +664,12 @@ class MRCProcessor(DataProcessor):
             if offset[0] == position:
                 return i 
         return -1
-    
+    def word_offset_to_subword_offset_end(self, position, offsets):
+        for i, offset in enumerate(offsets):
+            # import pdb; pdb.set_trace()
+            if position != None and position >= offset[0] and offset[1] > position:
+                return i 
+        return -1
 
     def subword_offset_to_word_offset(self, offset_mapping, text, base):
         subword_to_word = dict()
@@ -703,8 +708,11 @@ class MRCProcessor(DataProcessor):
             # output labels
             template_offset = len(input_template["input_ids"])
             offsets = input_context["offset_mapping"][1:]
+            # import pdb; pdb.set_trace()
             start_position = self.word_offset_to_subword_offset(example.argu_left, offsets)
-            end_position = self.word_offset_to_subword_offset(example.argu_right, offsets)
+            end_position = self.word_offset_to_subword_offset_end(example.argu_right, offsets)
+            # if start_position != -1:
+            #     import pdb; pdb.set_trace()
             start_position = 0 if start_position == -1 else start_position + template_offset
             end_position = 0 if end_position == -1 else end_position + template_offset
             # data for evaluation

@@ -3,7 +3,7 @@ do_train: True
 do_predict: True
 
 # top-level config #
-paradigm: sequence_labeling
+paradigm: mrc
 task_name: EAE
 dataset_name: ACE2005
 language: English
