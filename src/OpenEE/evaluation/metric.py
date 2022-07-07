@@ -1,6 +1,7 @@
 import pdb
 from typing import Tuple 
 import torch 
+import copy
 import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import f1_score
@@ -8,6 +9,7 @@ from seqeval.metrics import f1_score as span_f1_score
 from seqeval.scheme import IOB2
 from ..input_engineering.mrc_converter import make_preditions, compute_mrc_F1_cls
 from ..input_engineering.seq2seq_utils import decode_arguments, get_final_preds_labels
+from .seq2seq_parser import extract_argument
 
 
 def f1_score_overall(preds, labels):
@@ -17,21 +19,56 @@ def f1_score_overall(preds, labels):
             total_true += 1
     precision = total_true / len(preds)
     recall = total_true / len(labels)
-    f1 = 2 * precision * recall / (precision + recall)
-    return f1
+    f1 = 2 * precision * recall / (precision + recall + 1e-10)
+    return precision, recall, f1
+
+
+# def compute_seq_F1(logits, labels, **kwargs):
+#     tokenizer = kwargs["tokenizer"]
+#     training_args = kwargs["training_args"]
+#     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
+#     assert len(decoded_preds) == len(training_args.data_for_evaluation["roles"])
+#     def clean_str(x_str):
+#         for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
+#             x_str = x_str.replace(to_remove_token, '')
+#         return x_str.strip()
+#     pred_arguments = []
+#     for i, pred in enumerate(decoded_preds):
+#         pred_arguments.append(decode_arguments(clean_str(pred), training_args.data_for_evaluation["roles"][i], tokenizer))
+#     golden_arguments = training_args.data_for_evaluation["golden_arguments"]
+#     final_preds, final_labels = get_final_preds_labels(pred_arguments, golden_arguments)
+#     precision, recall, micro_f1 = f1_score_overall(final_preds, final_labels)
+#     # pdb.set_trace()
+#     # pos_labels = list(set(final_labels))
+#     # pos_labels.remove("NA")
+#     # micro_f1 = f1_score(final_labels, final_preds, labels=pos_labels, average="micro")
+#     pdb.set_trace()
+#     return {"micro_f1": micro_f1*100}
+
 
 
 def compute_seq_F1(logits, labels, **kwargs):
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
+    pred_types = training_args.data_for_evaluation["pred_types"]
+    true_types = training_args.data_for_evaluation["true_types"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
-    pred_arguments = []
-    for i, pred in enumerate(decoded_preds):
-        pred_arguments.append(decode_arguments(pred, training_args.data_for_evaluation["roles"][i], tokenizer))
-    golden_arguments = training_args.data_for_evaluation["golden_arguments"]
-    final_preds, final_labels = get_final_preds_labels(pred_arguments, golden_arguments)
-    micro_f1 = f1_score_overall(final_preds, final_labels)
-    return {"micro_f1": micro_f1}
+    # Replace -100 in the labels as we can't decode them.
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=False)
+    def clean_str(x_str):
+        for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
+            x_str = x_str.replace(to_remove_token, '')
+        return x_str.strip()
+    assert len(true_types) == len(decoded_labels)
+    pred_arguments, golden_arguments = [], []
+    for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
+        pred = clean_str(pred)
+        label = clean_str(label)
+        pred_arguments.extend(extract_argument(pred, i, pred_types[i]))
+        golden_arguments.extend(extract_argument(label, i, true_types[i]))
+    precision, recall, micro_f1 = f1_score_overall(pred_arguments, golden_arguments)
+    return {"micro_f1": micro_f1*100}
 
 
 # def compute_seq_F1(logits, labels, **kwargs):

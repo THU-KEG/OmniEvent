@@ -4,7 +4,7 @@ do_predict: True
 do_ED_infer: True 
 
 # top-level config #
-paradigm: sequence_labeling
+paradigm: token_classification
 task_name: ED
 dataset_name: ACE2005
 language: English
@@ -60,7 +60,7 @@ save_strategy: epoch
 save_steps: 500
 
 # split inference #
-split_infer: True
+split_infer: False 
 split_infer_size: 500
 
 
