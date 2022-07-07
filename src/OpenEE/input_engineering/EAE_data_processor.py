@@ -587,6 +587,8 @@ class MRCProcessor(DataProcessor):
                             pred_event_type = self.event_preds[trigger_idx] 
                         else:
                             pred_event_type = event["type"]
+                        trigger_left = len(item["text"][:trigger["position"][0]].split())
+                        trigger_right = len(item["text"][:trigger["position"][1]].split())
                         for role in query_templates[pred_event_type].keys():
                             query = query_templates[pred_event_type][role][template_id]
                             query = query.replace("[trigger]", trigger["trigger_word"])
@@ -597,16 +599,18 @@ class MRCProcessor(DataProcessor):
                                         continue
                                     no_answer = False
                                     for mention in argument["mentions"]:
+                                        left_pos = len(item["text"][:mention["position"][0]].split())
+                                        right_pos = len(item["text"][:mention["position"][1]].split())
                                         example = InputExample(
                                             example_id=trigger["id"],
                                             text=item["text"],
                                             pred_type=pred_event_type,
                                             true_type=event["type"],
                                             input_template=query,
-                                            trigger_left=trigger["position"][0],
-                                            trigger_right=trigger["position"][1],
-                                            argu_left=mention["position"][0],
-                                            argu_right=mention["position"][1]-1
+                                            trigger_left=trigger_left,
+                                            trigger_right=trigger_right,
+                                            argu_left=left_pos,
+                                            argu_right=right_pos-1
                                         )
                                         self.examples.append(example)
                                 if no_answer:
@@ -616,8 +620,8 @@ class MRCProcessor(DataProcessor):
                                         pred_type=pred_event_type,
                                         true_type=event["type"],
                                         input_template=query,
-                                        trigger_left=trigger["position"][0],
-                                        trigger_right=trigger["position"][1],
+                                        trigger_left=trigger_left,
+                                        trigger_right=trigger_right,
                                         argu_left=-1,
                                         argu_right=-1
                                     )
@@ -630,7 +634,17 @@ class MRCProcessor(DataProcessor):
                                 arguments_per_trigger["true_type"] = event["type"]
                                 for argument in trigger["arguments"]:
                                     if argument["role"] == role:
-                                        arguments_per_trigger["arguments"].append(argument)
+                                        arguments_per_role = {
+                                            "role": role,
+                                            "mentions": []
+                                        }
+                                        for mention in argument["mentions"]:
+                                            left_pos = len(item["text"][:mention["position"][0]].split())
+                                            right_pos = len(item["text"][:mention["position"][1]].split())
+                                            arguments_per_role["mentions"].append({
+                                                "position": [left_pos, right_pos-1]
+                                            })
+                                        arguments_per_trigger["arguments"].append(arguments_per_role)
                                 self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
                                 # one instance per query 
                                 example = InputExample(
@@ -639,8 +653,8 @@ class MRCProcessor(DataProcessor):
                                     pred_type=pred_event_type,
                                     true_type=event["type"],
                                     input_template=query,
-                                    trigger_left=trigger["position"][0],
-                                    trigger_right=trigger["position"][1]
+                                    trigger_left=trigger_left,
+                                    trigger_right=trigger_right
                                 )
                                 self.examples.append(example)
                         trigger_idx += 1
@@ -648,29 +662,26 @@ class MRCProcessor(DataProcessor):
                 for neg in item["negative_triggers"]:
                     trigger_idx += 1  
 
+    def word_offset_to_subword_offset_start(self, position, wordids):
+        if not position:
+            return -1 
+        subword_idx = -1
+        for i, wordid in enumerate(wordids):
+                if position == wordid:
+                    subword_idx = i
+                    return subword_idx
+        return subword_idx
+    
 
-    def word_offset_to_subword_offset(self, position, offsets):
-        for i, offset in enumerate(offsets):
-            if offset[0] == position:
-                return i 
-        return -1
-    def word_offset_to_subword_offset_end(self, position, offsets):
-        for i, offset in enumerate(offsets):
-            # import pdb; pdb.set_trace()
-            if position != None and position >= offset[0] and offset[1] > position:
-                return i 
-        return -1
-
-    def subword_offset_to_word_offset(self, offset_mapping, text, base):
-        subword_to_word = dict()
-        for i, offset in enumerate(offset_mapping):
-            if offset[0] == offset[1]:
-                subword_to_word[i+base] = -1
-            else:
-                word_pos = len(text[:offset[0]].split())
-                subword_to_word[i+base] = word_pos
-        return subword_to_word
-
+    def word_offset_to_subword_offset_end(self, position, wordids):
+        if not position:
+            return -1 
+        subword_idx = -1
+        for i, wordid in enumerate(wordids):
+                if position == wordid:
+                    subword_idx = i
+        return subword_idx
+        
 
     def convert_examples_to_features(self):
         self.input_features = []
@@ -680,40 +691,37 @@ class MRCProcessor(DataProcessor):
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for MRC"):
             # template 
-            input_template = self.tokenizer(example.input_template, 
+            input_template = self.tokenizer(example.input_template.split(), 
                                             truncation=True,
-                                            max_length=self.config.max_seq_length)
+                                            max_length=self.config.max_seq_length,
+                                            is_split_into_words=True)
             # context 
-            input_context = self.tokenizer(example.text,
+            input_context = self.tokenizer(example.text.split(),
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length,
-                                           return_offsets_mapping=True)
+                                           is_split_into_words=True,
+                                           add_special_tokens=False)
             # concatnate 
-            input_ids = input_template["input_ids"] + input_context["input_ids"][1:]
-            attention_mask = input_template["attention_mask"] + input_context["attention_mask"][1:]
+            input_ids = input_template["input_ids"] + input_context["input_ids"]
+            attention_mask = input_template["attention_mask"] + input_context["attention_mask"]
             # truncation
             input_ids = input_ids[:self.config.max_seq_length]
             attention_mask = attention_mask[:self.config.max_seq_length]
             # output labels
             template_offset = len(input_template["input_ids"])
-            offsets = input_context["offset_mapping"][1:]
-            # import pdb; pdb.set_trace()
-            start_position = self.word_offset_to_subword_offset(example.argu_left, offsets)
-            end_position = self.word_offset_to_subword_offset_end(example.argu_right, offsets)
-            # if start_position != -1:
-            #     import pdb; pdb.set_trace()
+            context_wordids = input_context.word_ids()
+            start_position = self.word_offset_to_subword_offset_start(example.argu_left, context_wordids)
+            end_position = self.word_offset_to_subword_offset_end(example.argu_right, context_wordids)
             start_position = 0 if start_position == -1 else start_position + template_offset
             end_position = 0 if end_position == -1 else end_position + template_offset
             # data for evaluation
             text_range = dict()
             text_range["start"] = len(input_template["input_ids"])
-            text_length = len(self.tokenizer.tokenize(example.text))
-            text_range["end"] = text_range["start"] + text_length
-            subword_to_word = self.subword_offset_to_word_offset(offsets, example.text, text_range["start"])
+            text_range["end"] = text_range["start"] + sum(input_context["attention_mask"])
             self.data_for_evaluation["text_range"].append(text_range)
-            self.data_for_evaluation["subword_to_word"].append(subword_to_word)
             self.data_for_evaluation["text"].append(example.text)
+            self.data_for_evaluation["subword_to_word"].append(input_template.word_ids()+context_wordids)
             # features
             features = InputFeatures(
                 example_id = example.example_id,

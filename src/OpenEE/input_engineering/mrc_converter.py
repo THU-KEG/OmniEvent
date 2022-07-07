@@ -69,8 +69,8 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
     final_all_predictions = []
     for i, (start_logits, end_logits) in enumerate(zip(all_start_logits, all_end_logits)):
         event_argument_type = data_for_evaluation["golden_arguments"][i]["pred_type"] + "_" + data_for_evaluation["golden_arguments"][i]["role"]
-        start_indexes = _get_best_indexes(start_logits, 20, False, start_logits[0])
-        end_indexes = _get_best_indexes(end_logits, 20, False, end_logits[0])
+        start_indexes = _get_best_indexes(start_logits, 20, True, start_logits[0])
+        end_indexes = _get_best_indexes(end_logits, 20, True, end_logits[0])
         # add span preds
         prelim_predictions = []
         for start_index in start_indexes:
@@ -79,24 +79,22 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
                     prelim_predictions.append(
                     _PrelimPrediction(start_index=-1, end_index=-1,
                                         start_logit=start_logits[start_index], end_logit=end_logits[end_index]))
-                    continue 
+                    continue
+                if start_index < data_for_evaluation["text_range"][i]["start"] or \
+                    end_index < data_for_evaluation["text_range"][i]["start"]:
+                    continue
                 if start_index >= data_for_evaluation["text_range"][i]["end"] or \
                     end_index >= data_for_evaluation["text_range"][i]["end"]:
                     continue
-                if start_index not in data_for_evaluation["subword_to_word"][i] or \
-                    end_index not in data_for_evaluation["subword_to_word"][i]:
-                    continue
                 if end_index < start_index:
                     continue
-
-
                 word_start_index = data_for_evaluation["subword_to_word"][i][start_index]
                 word_end_index = data_for_evaluation["subword_to_word"][i][end_index]
                 length = word_end_index - word_start_index + 1
-                if length > 6:
+                if length > 3:
                     continue
                 prelim_predictions.append(
-                    _PrelimPrediction(start_index=word_start_index, end_index=word_end_index+1,
+                    _PrelimPrediction(start_index=word_start_index, end_index=word_end_index,
                                         start_logit=start_logits[start_index], end_logit=end_logits[end_index]))
         ## sort
         prelim_predictions = sorted(prelim_predictions, key=lambda x: (x.start_logit + x.end_logit), reverse=True)
@@ -120,9 +118,7 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
         arguments_per_trigger = []
         for argument in arguments["arguments"]:
             for mention in argument["mentions"]:
-                word_start_pos = char_pos_to_word_pos(data_for_evaluation["text"][i], mention["position"][0])
-                word_length = len(mention["mention"].split())
-                arguments_per_trigger.append([event_argument_type, [word_start_pos, word_start_pos+word_length]])
+                arguments_per_trigger.append([event_argument_type, [mention["position"][0], mention["position"][1]]])
         final_all_labels.extend(arguments_per_trigger)
     
     return final_all_predictions, final_all_labels
@@ -205,6 +201,7 @@ def compute_mrc_F1_cls(all_predcitions, all_labels):
         f1_c = 2 * prec_c * recall_c / (prec_c + recall_c)
     else: f1_c = 0
 
+    # pdb.set_trace()
     return f1_c
 
 

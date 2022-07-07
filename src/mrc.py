@@ -87,11 +87,6 @@ logging.basicConfig(
 role2id_path = data_args.role2id_path
 data_args.role2id = json.load(open(role2id_path))
 model_args.num_labels = len(data_args.role2id)
-training_args.label_name = ["labels"]
-
-if model_args.paradigm == "sequence_labeling":
-    data_args.role2id = get_bio_labels(data_args.role2id)
-    model_args.num_labels = len(data_args.role2id)
 
 # used for evaluation
 training_args.role2id = data_args.role2id 
@@ -106,7 +101,6 @@ for label, id in type2id.items():
 markers["argument"] = ["<argument>", "</argument>"]
 data_args.markers = markers
 insert_markers = [m for ms in data_args.markers.values() for m in ms]
-# import pdb; pdb.set_trace()
 print(data_args, model_args, training_args)
 
 # set seed
