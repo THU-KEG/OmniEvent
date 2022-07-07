@@ -61,10 +61,12 @@ def compute_seq_F1(logits, labels, **kwargs):
             x_str = x_str.replace(to_remove_token, '')
         return x_str.strip()
     assert len(true_types) == len(decoded_labels)
+    assert len(decoded_preds) == len(decoded_labels)
     pred_arguments, golden_arguments = [], []
     for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
         pred = clean_str(pred)
         label = clean_str(label)
+        # if pred_types[i] != "NA":
         pred_arguments.extend(extract_argument(pred, i, pred_types[i]))
         golden_arguments.extend(extract_argument(label, i, true_types[i]))
     precision, recall, micro_f1 = f1_score_overall(pred_arguments, golden_arguments)

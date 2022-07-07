@@ -17,7 +17,7 @@ train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
 validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
 test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
 # event detection predictions
-golden_trigger: False
+golden_trigger: True 
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
 validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
@@ -34,7 +34,7 @@ hidden_size: 768
 aggregation: none 
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 5
 max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2
@@ -48,7 +48,7 @@ per_device_train_batch_size: 8
 per_device_eval_batch_size: 32
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
-learning_rate: 5.0e-5
+learning_rate: 1.0e-4
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
 max_grad_norm: 1

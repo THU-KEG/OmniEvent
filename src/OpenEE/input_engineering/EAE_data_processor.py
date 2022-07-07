@@ -484,6 +484,9 @@ class Seq2SeqProcessor(DataProcessor):
                             pred_event_type = self.event_preds[trigger_idx] 
                         else:
                             pred_event_type = event["type"]
+                        if pred_event_type == "NA":
+                            trigger_idx += 1
+                            continue
                         labels = []
                         arguments_per_trigger = defaultdict(list)
                         for argument in trigger["arguments"]:
@@ -492,9 +495,9 @@ class Seq2SeqProcessor(DataProcessor):
                                 labels.append(f"<extra_id_0> {argument['role']} {mention['mention']} <extra_id_1>")
                         if len(labels) != 0:
                             labels = "".join(labels)
-                            # labels = "<extra_id_0>" + labels + "<extra_id_1>"
+                            labels = "<extra_id_0>" + labels + "<extra_id_1>"
                         else:       # no arguments for the trigger
-                            labels = ""
+                            labels = "<extra_id_0><extra_id_1>"
                         self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                         example = InputExample(
                             example_id=trigger["id"],
