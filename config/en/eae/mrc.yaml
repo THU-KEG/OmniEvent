@@ -11,18 +11,18 @@ test_exists_labels: True
 
 # file path #
 output_dir: output/ACE2005-EN
-type2id_path: ../data/ace_2005_td_v7/English/label2id.json
-role2id_path: ../data/ace_2005_td_v7/English/role2id.json 
-train_file: ../data/ace_2005_td_v7/English/train.unified.jsonl
-validation_file: ../data/ace_2005_td_v7/English/valid.unified.jsonl
-test_file: ../data/ace_2005_td_v7/English/test.unified.jsonl
+type2id_path: ../../data/ace_2005_td_v7/English/label2id.json
+role2id_path: ../../data/ace_2005_td_v7/English/role2id.json 
+train_file: ../../data/ace_2005_td_v7/English/train.unified.jsonl
+validation_file: ../../data/ace_2005_td_v7/English/valid.unified.jsonl
+test_file: ../../data/ace_2005_td_v7/English/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
 validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
 # config for some specific paradigms
-prompt_file: ../data/ace_2005_td_v7/English/description_queries.csv # used for MRC paradigm
+prompt_file: ../../data/ace_2005_td_v7/English/description_queries.csv # used for MRC paradigm
 
 # config for data processor # 
 truncate_in_batch: False 

@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import pdb
 import sys
+sys.path.append("../../")
 import json
 import torch
 import logging
@@ -14,10 +15,13 @@ from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.data_processor import (
-    TCProcessor,
-    SLProcessor
+from OpenEE.input_engineering.token_classification_processor import (
+    EDTCProcessor
 )
+from OpenEE.input_engineering.sequence_labeling_processor import (
+    EDSLProcessor
+)
+
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
     compute_F1,
@@ -112,10 +116,10 @@ data_class = None
 metric_fn = None
 
 if model_args.paradigm == "token_classification":
-    data_class = TCProcessor
+    data_class = EDTCProcessor
     metric_fn = compute_F1
 elif model_args.paradigm == "sequence_labeling":
-    data_class = SLProcessor
+    data_class = EDSLProcessor
     metric_fn = compute_span_F1
 else:
     raise ValueError("No such paradigm.")

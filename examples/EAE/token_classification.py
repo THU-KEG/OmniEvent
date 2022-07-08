@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import pdb
 import sys
+sys.path.append("../../")
 import json
 import torch
 import logging
@@ -16,11 +17,8 @@ from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.EAE_data_processor import (
-    TCProcessor,
-    SLProcessor,
-    Seq2SeqProcessor,
-    MRCProcessor
+from OpenEE.input_engineering.token_classification_processor import (
+    EAETCProcessor
 )
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
@@ -87,6 +85,11 @@ logging.basicConfig(
 role2id_path = data_args.role2id_path
 data_args.role2id = json.load(open(role2id_path))
 model_args.num_labels = len(data_args.role2id)
+training_args.label_name = ["labels"]
+
+if model_args.paradigm == "sequence_labeling":
+    data_args.role2id = get_bio_labels(data_args.role2id)
+    model_args.num_labels = len(data_args.role2id)
 
 # used for evaluation
 training_args.role2id = data_args.role2id 
@@ -101,6 +104,7 @@ for label, id in type2id.items():
 markers["argument"] = ["<argument>", "</argument>"]
 data_args.markers = markers
 insert_markers = [m for ms in data_args.markers.values() for m in ms]
+
 print(data_args, model_args, training_args)
 
 # set seed
@@ -115,10 +119,13 @@ backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.mod
                                            model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
 model = get_model(model_args, backbone)
 model.cuda()
+data_class = None
+metric_fn = None
 
-data_class = MRCProcessor
-metric_fn = compute_mrc_F1
-training_args.label_names = ["start_positions", "end_positions"]
+
+data_class = EAETCProcessor
+metric_fn = compute_F1
+
 
 # dataset 
 train_dataset = data_class(data_args, tokenizer, data_args.train_file, data_args.train_pred_file, True)
