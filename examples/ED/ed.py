@@ -181,12 +181,11 @@ if training_args.do_predict:
 
 if training_args.do_ED_infer:
     def dump_preds(data_file, save_path, paradigm):
-        if not data_args.split_infer:
-            logits, labels, metrics, dataset = predict_ed(trainer, tokenizer, data_class, data_args, data_file)
-            print("-" * 50)
-            print(data_file, metrics)
-        else:
-            logits, labels, dataset = predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file)
+        pred_func = predict_sub_ed if data_args.split_infer else predict_ed
+
+        logits, labels, metrics, dataset = pred_func(trainer, tokenizer, data_class, data_args, data_file)
+        print("-"*50)
+        print("Test File: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
 
         preds = np.argmax(logits, axis=-1)
         if paradigm == "token_classification":

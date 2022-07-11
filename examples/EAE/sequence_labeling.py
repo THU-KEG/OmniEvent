@@ -147,10 +147,11 @@ trainer.train()
 
 
 if training_args.do_predict:
-    if not data_args.split_infer:
-        logits, labels, metrics, test_dataset = predict_eae(trainer, tokenizer, data_class, data_args, training_args)
-    else:
-        logits, labels, test_dataset = predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args)
+    pred_func = predict_sub_eae if data_args.split_infer else predict_eae
+
+    logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
+    print("-" * 50)
+    print("Test File: {}, Metrics: {}, Split_Infer: {}".format(data_args.test_file, metrics, data_args.split_infer))
 
     # pdb.set_trace()
     preds = np.argmax(logits, axis=-1)
