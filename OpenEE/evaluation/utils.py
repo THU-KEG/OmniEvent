@@ -70,8 +70,11 @@ def predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file):
     logits = np.concatenate(logits_list, axis=0)
     labels = np.concatenate(labels_list, axis=0)
 
+    metrics = trainer.compute_metrics(logits=logits, labels=labels,
+                                      **{"tokenizer": tokenizer, "training_args": trainer.args})
+
     dataset = data_class(data_args, tokenizer, data_file_full)
-    return logits, labels, dataset
+    return logits, labels, metrics, dataset
 
 
 def predict_eae(trainer, tokenizer, data_class, data_args, training_args):
@@ -100,8 +103,12 @@ def predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args):
     # TODO: concat operation is slow
     logits = np.concatenate(logits_list, axis=0)
     labels = np.concatenate(labels_list, axis=0)
+
+    metrics = trainer.compute_metrics(logits=logits, labels=labels,
+                                      **{"tokenizer": tokenizer, "training_args": trainer.args})
+
     data_args.test_file = test_file_full
     data_args.test_pred_file = test_pred_file_full
 
     test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
-    return logits, labels, test_dataset
+    return logits, labels, metrics, test_dataset
