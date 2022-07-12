@@ -64,9 +64,9 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                         )
                         trigger_idx += 1
                         self.examples.append(example)
-                # negative triggers 
-                for neg in item["negative_triggers"]:
-                    trigger_idx += 1
+                # # negative triggers 
+                # for neg in item["negative_triggers"]:
+                #     trigger_idx += 1
 
 
     def insert_marker(self, text, type, trigger_pos, markers, whitespace=True):

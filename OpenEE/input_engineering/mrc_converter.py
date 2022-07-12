@@ -114,7 +114,7 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
                 word_start_index = start_index - 1
                 word_end_index = end_index - 1
                 length = word_end_index - word_start_index + 1
-                if length > 10:
+                if length > 5:
                     continue
                 prelim_predictions.append(
                     _PrelimPrediction(start_index=word_start_index, end_index=word_end_index,

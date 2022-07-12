@@ -118,9 +118,9 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 )
                                 self.examples.append(example)
                         trigger_idx += 1
-                # negative triggers 
-                for neg in item["negative_triggers"]:
-                    trigger_idx += 1  
+                # # negative triggers 
+                # for neg in item["negative_triggers"]:
+                #     trigger_idx += 1  
 
     def word_offset_to_subword_offset_start(self, position, wordids):
         if not position:
