@@ -1,4 +1,4 @@
-
+import pdb 
 import json
 import logging
 
@@ -43,10 +43,16 @@ class EAEMRCProcessor(EAEDataProcessor):
                         trigger_right = len(item["text"][:trigger["position"][1]].split())
                         for role in query_templates[pred_event_type].keys():
                             query = query_templates[pred_event_type][role][template_id]
-                            query = query.replace("[trigger]", trigger["trigger_word"])
+                            query = query.replace("[trigger]", self.tokenizer.tokenize(trigger["trigger_word"])[0])
                             if self.is_training:
                                 no_answer = True 
                                 for argument in trigger["arguments"]:
+                                    if argument["role"] not in query_templates[pred_event_type]:
+                                        # raise ValueError(
+                                        #     "No template for %s in %s" % (argument["role"], pred_event_type) 
+                                        # )
+                                        # logger.warning("No template for %s in %s" % (argument["role"], pred_event_type) )
+                                        pass
                                     if argument["role"] != role:
                                         continue
                                     no_answer = False
@@ -106,7 +112,9 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     true_type=event["type"],
                                     input_template=query,
                                     trigger_left=trigger_left,
-                                    trigger_right=trigger_right
+                                    trigger_right=trigger_right,
+                                    argu_left=-1,
+                                    argu_right=-1
                                 )
                                 self.examples.append(example)
                         trigger_idx += 1
@@ -133,6 +141,28 @@ class EAEMRCProcessor(EAEDataProcessor):
                 if position == wordid:
                     subword_idx = i
         return subword_idx
+    
+
+    def find_word_positions(self, wordids):
+        legal_positions = [0]
+        curr_idx = -1 
+        for i, idx in enumerate(wordids):
+            if idx is None:
+                continue
+            if idx != curr_idx:
+                legal_positions.append(i)
+                curr_idx = idx 
+        return legal_positions
+    
+
+    def select_word(self, legal_positions, input_ids, attention_mask):
+        new_input_ids = []
+        new_attention_mask = []
+        for i in range(len(input_ids)):
+            if i in legal_positions:
+                new_input_ids.append(input_ids[i])
+                new_attention_mask.append(attention_mask[i])
+        return new_input_ids, new_attention_mask
         
 
     def convert_examples_to_features(self):
@@ -153,6 +183,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             padding="max_length",
                                             max_length=self.config.max_seq_length,
                                             is_split_into_words=True)
+            legal_positions = self.find_word_positions(input_context.word_ids())
+            input_context["input_ids"], input_context["attention_mask"] = self.select_word(legal_positions, input_context["input_ids"], input_context["attention_mask"])
             # concatnate 
             input_ids = input_context["input_ids"] + input_template["input_ids"]
             attention_mask = input_context["attention_mask"] + input_template["attention_mask"]
@@ -160,18 +192,14 @@ class EAEMRCProcessor(EAEDataProcessor):
             input_ids = input_ids[:self.config.max_seq_length]
             attention_mask = attention_mask[:self.config.max_seq_length]
             # output labels
-            context_wordids = input_context.word_ids()
-            start_position = self.word_offset_to_subword_offset_start(example.argu_left, context_wordids)
-            end_position = self.word_offset_to_subword_offset_start(example.argu_right, context_wordids)
-            start_position = 0 if start_position == -1 else start_position
-            end_position = 0 if end_position == -1 else end_position
+            start_position = 0 if example.argu_left == -1 else example.argu_left + 1
+            end_position = 0 if example.argu_right == -1 else example.argu_right + 1
             # data for evaluation
             text_range = dict()
             text_range["start"] = 1
             text_range["end"] = text_range["start"] + sum(input_context["attention_mask"][1:])
             self.data_for_evaluation["text_range"].append(text_range)
             self.data_for_evaluation["text"].append(example.text)
-            self.data_for_evaluation["subword_to_word"].append(context_wordids)
             # features
             features = EAEInputFeatures(
                 example_id = example.example_id,

@@ -6,6 +6,16 @@ import collections
 
 def read_query_templates(prompt_file):
     """Load query templates"""
+    arg_names = {
+        "Time-Ending": "When the event ends?",
+        "Time-Holds": "How long the event holds?",
+        "Time-Starting": "When the event starts?",
+        "Time-Before": "When the event takes place before?",
+        "Time-Within": "When the event takes place?",
+        "Time-At-Beginning": "When the event begins?",
+        "Time-At-End": "When the event ends?",
+        "Time-After": "When the event takes place after?"
+    }
     query_templates = dict()
     with open(prompt_file, "r", encoding='utf-8') as f:
         for line in f:
@@ -25,6 +35,14 @@ def read_query_templates(prompt_file):
             query_templates[event_type][arg_name].append(query)
             # 3 arg_query + trigger (replace [trigger] when forming the instance)
             query_templates[event_type][arg_name].append(query[:-1] + " in [trigger]?")
+    # for event_type in query_templates.keys():
+    #     for arg_name in arg_names:
+    #         if arg_name not in query_templates[event_type]:
+    #             query_templates[event_type][arg_name] = []
+    #             query_templates[event_type][arg_name].append(arg_name)
+    #             query_templates[event_type][arg_name].append(arg_name + " in [trigger]?")
+    #             query_templates[event_type][arg_name].append(arg_names[arg_name])
+    #             query_templates[event_type][arg_name].append(arg_names[arg_name][:-1] + " in [trigger]?")
 
     # with open(des_file, "r", encoding='utf-8') as f:
     #     for line in f:
@@ -63,64 +81,55 @@ def char_pos_to_word_pos(text, position):
 
 def make_preditions(all_start_logits, all_end_logits, training_args):
     data_for_evaluation = training_args.data_for_evaluation
-    assert len(data_for_evaluation["golden_arguments"]) == len(all_start_logits)
+    assert len(all_start_logits) == len(data_for_evaluation["golden_arguments"])
+    # all golden labels
+    final_all_labels = []
+    for example_id, arguments in enumerate(data_for_evaluation["golden_arguments"]):
+        event_argument_type = data_for_evaluation["golden_arguments"][example_id]["true_type"] + "_" + arguments["role"]
+        arguments_per_trigger = []
+        for argument in arguments["arguments"]:
+            for mention in argument["mentions"]:
+                arguments_per_trigger.append((event_argument_type, (mention["position"][0], mention["position"][1]), example_id))
+        final_all_labels.extend(arguments_per_trigger)
+    # predictions 
     _PrelimPrediction = collections.namedtuple("PrelimPrediction",
                                                ["start_index", "end_index", "start_logit", "end_logit"])
     final_all_predictions = []
-    for i, (start_logits, end_logits) in enumerate(zip(all_start_logits, all_end_logits)):
-        event_argument_type = data_for_evaluation["golden_arguments"][i]["pred_type"] + "_" + data_for_evaluation["golden_arguments"][i]["role"]
+    for example_id, (start_logits, end_logits) in enumerate(zip(all_start_logits, all_end_logits)):
+        event_argument_type = data_for_evaluation["golden_arguments"][example_id]["pred_type"] + "_" + data_for_evaluation["golden_arguments"][example_id]["role"]
         start_indexes = _get_best_indexes(start_logits, 20, True, start_logits[0])
         end_indexes = _get_best_indexes(end_logits, 20, True, end_logits[0])
         # add span preds
         prelim_predictions = []
         for start_index in start_indexes:
             for end_index in end_indexes:
-                if start_index == end_index and start_index == 0:
-                    prelim_predictions.append(
-                    _PrelimPrediction(start_index=-1, end_index=-1,
-                                        start_logit=start_logits[start_index], end_logit=end_logits[end_index]))
+                if start_index < data_for_evaluation["text_range"][example_id]["start"] or \
+                    end_index < data_for_evaluation["text_range"][example_id]["start"]:
                     continue
-                if start_index < data_for_evaluation["text_range"][i]["start"] or \
-                    end_index < data_for_evaluation["text_range"][i]["start"]:
-                    continue
-                if start_index >= data_for_evaluation["text_range"][i]["end"] or \
-                    end_index >= data_for_evaluation["text_range"][i]["end"]:
+                if start_index >= data_for_evaluation["text_range"][example_id]["end"] or \
+                    end_index >= data_for_evaluation["text_range"][example_id]["end"]:
                     continue
                 if end_index < start_index:
                     continue
-                word_start_index = data_for_evaluation["subword_to_word"][i][start_index]
-                word_end_index = data_for_evaluation["subword_to_word"][i][end_index]
+                word_start_index = start_index - 1
+                word_end_index = end_index - 1
                 length = word_end_index - word_start_index + 1
-                if length > 3:
+                if length > 10:
                     continue
                 prelim_predictions.append(
                     _PrelimPrediction(start_index=word_start_index, end_index=word_end_index,
                                         start_logit=start_logits[start_index], end_logit=end_logits[end_index]))
         ## sort
         prelim_predictions = sorted(prelim_predictions, key=lambda x: (x.start_logit + x.end_logit), reverse=True)
-
         ## get final pred in format: [event_type_offset_argument_type, [start_offset, end_offset]]
-        max_num_pred_per_arg = 4
+        max_num_pred_per_arg = 1
         predictions_per_query = []
-        for idx, pred in enumerate(prelim_predictions):
-            if (idx + 1) > max_num_pred_per_arg: 
-                break
-            if pred.start_index == -1 and pred.end_index == -1: 
-                break
+        for _, pred in enumerate(prelim_predictions[:max_num_pred_per_arg]):
             na_prob = (start_logits[0] + end_logits[0]) - (pred.start_logit + pred.end_logit)
-            predictions_per_query.append([event_argument_type, [pred.start_index, pred.end_index], na_prob])
+            predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob, example_id))
         final_all_predictions.extend(predictions_per_query)
-
-    # all golden labels
-    final_all_labels = []
-    for i, arguments in enumerate(data_for_evaluation["golden_arguments"]):
-        event_argument_type = data_for_evaluation["golden_arguments"][i]["true_type"] + "_" + arguments["role"]
-        arguments_per_trigger = []
-        for argument in arguments["arguments"]:
-            for mention in argument["mentions"]:
-                arguments_per_trigger.append([event_argument_type, [mention["position"][0], mention["position"][1]]])
-        final_all_labels.extend(arguments_per_trigger)
-    
+    # pdb.set_trace()
+    print("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
     return final_all_predictions, final_all_labels
         
 
@@ -131,7 +140,7 @@ def find_best_thresh(new_preds, new_all_gold):
 
     candidate_preds = []
     for argument in new_preds:
-        candidate_preds.append(argument[:-1])
+        candidate_preds.append(argument[:-2]+argument[-1:])
         pred_arg_n += 1
 
         pred_in_gold_n, gold_in_pred_n = 0, 0
@@ -154,21 +163,22 @@ def find_best_thresh(new_preds, new_all_gold):
 
         if f1_c > best_score:
             best_score = f1_c
-            best_na_thresh = argument[-1]
+            best_na_thresh = argument[-2]
 
     # import ipdb; ipdb.set_trace()
     return best_na_thresh + 1e-10
 
 
 def compute_mrc_F1_cls(all_predcitions, all_labels):
-    all_predcitions = sorted(all_predcitions, key=lambda x: x[-1])
+    all_predcitions = sorted(all_predcitions, key=lambda x: x[-2])
     # best_na_thresh = 0
     best_na_thresh = find_best_thresh(all_predcitions, all_labels)
+    print("Best thresh founded. %.6f" % best_na_thresh)
 
     final_new_preds = []
     for argument in all_predcitions:
-        if argument[-1] < best_na_thresh:
-            final_new_preds.append(argument[:-1]) # no na_prob
+        if argument[-2] < best_na_thresh:
+            final_new_preds.append(argument[:-2]+argument[-1:]) # no na_prob
 
     # pdb.set_trace()
     # get results (classification)
@@ -201,7 +211,7 @@ def compute_mrc_F1_cls(all_predcitions, all_labels):
         f1_c = 2 * prec_c * recall_c / (prec_c + recall_c)
     else: f1_c = 0
 
-    # pdb.set_trace()
+    print("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
     return f1_c
 
 
