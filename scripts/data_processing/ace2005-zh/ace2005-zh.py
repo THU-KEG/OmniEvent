@@ -1,7 +1,8 @@
 import os
 from xml.dom.minidom import parse
 from tqdm import tqdm
-from stanfordcorenlp import StanfordCoreNLP
+# from stanfordcorenlp import StanfordCoreNLP
+import jieba
 import re
 import pdb 
 import random
@@ -12,29 +13,62 @@ import argparse
 from pathlib import Path 
 from collections import defaultdict
 
+class Tokenizer():
+    def __init__(self) -> None:
+        pass
+    
+    def word_tokenize(self, sentence):
+        # sentence = sentence.replace(" ", "").replace("\n", "")
+        seg_list = jieba.cut(sentence)
+        tokens = []
+        offsets = []
+        result = ""
+        left = 0
+        for seg in seg_list:
+            tokens.append(seg)
+            offsets.append((left, left+len(seg)))
+            left += len(seg)
+            result += seg 
+        assert len(result) == len(sentence)
+        return tokens, offsets
+    
+    def sentence_tokenize(self, sentence):
+        resentencesp = re.compile('([﹒﹔﹖﹗．；。！？]["’”」』]{0,2}|：(?=["‘“「『]{1,2}|$))')
+        s = sentence
+        slist = []
+        for i in resentencesp.split(s):
+            if resentencesp.match(i) and slist:
+                slist[-1] += i
+            elif i:
+                slist.append(i)
+        
+        sents = []
+        offsets = []
+        result = ""
+        left = 0
+        for seg in slist:
+            tokens, _offsets = self.word_tokenize(seg)
+            _offsets = [(o[0]+left, o[1]+left) for o in _offsets]
+            offsets.append(_offsets)
+            sents.append(tokens)
+            left += len(seg)
+            result += seg 
+        assert len(result) == len(sentence)
+        return sents, offsets
 
-class StanfordCoreNLPv2(StanfordCoreNLP):
-    def __init__(self,path):
-        super(StanfordCoreNLPv2,self).__init__(path)
-    def sent_tokenize(self,sentence):
-        r_dict = self._request('ssplit,tokenize', sentence)
-        tokens = [[token['originalText'] for token in s['tokens']] for s in r_dict['sentences']]
-        spans = [[(token['characterOffsetBegin'], token['characterOffsetEnd']) for token in s['tokens']] for s in r_dict['sentences'] ]
-        return tokens, spans
+
 
 class Extractor():
     def __init__(self, args):
-        self.dirs = ['bc','bn','cts','nw','un','wl']
-        self.split_tags ={'bc':["</SPEAKER>",'</TURN>','<HEADLINE>','</HEADLINE>'],
-                          'bn':["<TURN>","</TURN>"],
-                          "cts":["</SPEAKER>","</TURN>"],
+        self.dirs = ['bn','nw','wl']
+        self.split_tags ={'bn':["<TURN>","</TURN>"],
                           'nw':['<TEXT>','</TEXT>','<HEADLINE>','</HEADLINE>'],
-                          'un':['</SUBJECT>','<HEADLINE>','</HEADLINE>','<SUBJECT>','</POST>','<QUOTE'],
                           'wl':['</POSTDATE>','</POST>','<HEADLINE>','</HEADLINE>','<TEXT>','</TEXT>']}
         self.Events = []
         self.None_events = []
         self.Entities = []
         self.args = args 
+        self.tokenizer = Tokenizer()
 
     def find_index(self,offsets,offset): #offsets [) offset []
         idx_start = -1
@@ -107,7 +141,7 @@ class Extractor():
         self.source_files = {}
         self.amp_files = []
         for dir in self.dirs:
-            path = self.args.ACE_FILES+'/'+dir+'/timex2norm'
+            path = self.args.ACE_FILES+'/'+dir+'/adj'
             files = os.listdir(path)
             self.event_files[dir] = [file for file in files if file.endswith('.apf.xml')]
             self.source_files[dir] = [file for file in files if file.endswith('.sgm')]
@@ -123,13 +157,13 @@ class Extractor():
             srclen+=len(self.source_files[dir])
             evtlen+=len(self.event_files[dir])
         assert evtlen==srclen
-        assert evtlen==599
+        # assert evtlen==599
 
 
     def Entity_Extract(self):
         all_ents = 0
         for dir in self.dirs:
-            path = self.args.ACE_FILES+'/'+dir+'/timex2norm'
+            path = self.args.ACE_FILES+'/'+dir+'/adj'
             files = self.event_files[dir]
             for file in files:
                 DOMtree = parse(path + "/" + file)
@@ -151,15 +185,14 @@ class Extractor():
                             entity_info = (name,start,end,file,dir,ent_id,mention_id,ent_type)
                             self.Entities.append(entity_info)
         self.Entities = list(set(self.Entities))
-        self.Entities = [{'entity_id':e[5], "mention_id": e[6], "type":e[7], 'name':e[0],'start':e[1],'end':e[2],'file':e[3],'dir':e[4],'role':'None'} for e in self.Entities]
+        self.Entities = [{'entity_id':e[5], "mention_id":e[6], "type":e[7], 'name':e[0],'start':e[1],'end':e[2],'file':e[3],'dir':e[4],'role':'None'} for e in self.Entities]
         print("Total %d mentions, %d entities." % (len(self.Entities), all_ents))
 
-
     def Event_Extract(self):
-        nlp = StanfordCoreNLPv2(self.args.corenlp_path)
+        # nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         offsets2idx = {}
         for dir in self.dirs:
-            path = self.args.ACE_FILES+'/'+dir+'/timex2norm'
+            path = self.args.ACE_FILES+'/'+dir+'/adj'
             files =self.event_files[dir]
             for file in files:
                 DOMtree = parse(path + "/" + file)
@@ -168,6 +201,7 @@ class Extractor():
                 Entities = [e for e in self.Entities if e['dir']==dir and e['file']==file]
                 for event in events:
                     event_id = event.getAttribute("ID")
+                    # event_type =  str(event.getAttribute("SUBTYPE"))
                     event_type =  str(event.getAttribute("TYPE")) + "." + str(event.getAttribute("SUBTYPE"))
                     event_mentions = event.getElementsByTagName("event_mention")
                     for event_mention in event_mentions:
@@ -197,7 +231,10 @@ class Extractor():
                             entity_id = map_entity[(argument_start,argument_end)]
                             assert argument_name==entities[entity_id]['name']
                             entities[entity_id]['role'] = role
-                        tokens,offsets = nlp.word_tokenize(sent,True)
+                        # tokens,offsets = nlp.word_tokenize(sent,True)
+                        tokens, offsets = self.tokenizer.word_tokenize(sent)
+                        # pdb.set_trace()
+
 
                         plus = 0
                         for j,token in enumerate(tokens):
@@ -214,7 +251,10 @@ class Extractor():
                         trigger_tokens = tokens[trigger_s:trigger_e+1]
                         _entities = []
                         for e in entities:
-                            idx_start,idx_end = self.find_index(find_offsets,(e['start'],e['end']))
+                            try:
+                                idx_start, idx_end = self.find_index(find_offsets,(e['start'],e['end']))
+                            except:
+                                print("An entity can't be found.", e)
                             entity_tokens = tokens[idx_start:idx_end+1]
                             entity_offsets = tokens_offsets[idx_start:idx_end+1]
                             entity_start = entity_offsets[0][0]
@@ -250,19 +290,19 @@ class Extractor():
                         offsets_join = str(event_summary['start'])+'_'+str(event_summary['end'])+"_"+event_summary['file']+"_"+event_summary['dir']
                         event_summary["offset_join"] = offsets_join
                         self.Events.append(event_summary)
-        nlp.close()
+        # nlp.close()
 
     def None_event_Extract(self):
-        nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         for dir in self.dirs:
-            path = self.args.ACE_FILES+'/'+dir+'/timex2norm'
+            path = self.args.ACE_FILES+'/'+dir+'/adj'
             files =self.source_files[dir]
             for file in files:
                 event_in_this_file = [(e['start'],e['end']) for e in self.Events if e['file']==file[:-4] and e['dir']==dir]
                 Entities = [(e['start'],e['end']) for e in self.Entities if e['dir']==dir and e['file'][:-7]==file[:-3]]
                 with open(path+'/'+file,'r') as f:
                     text = f.read()
-                sents,offsets = nlp.sent_tokenize(text)
+                # sents,offsets = nlp.sent_tokenize(text)
+                sents, offsets = self.tokenizer.sentence_tokenize(text)
                 sents,offsets = self.correct_offsets(sents,offsets)
                 sents,offsets = self.sentence_distillation(sents,offsets,dir)
 
@@ -326,7 +366,6 @@ class Extractor():
                         'dir':dir
                     }
                     self.None_events.append(none_event_summary)
-        nlp.close()
 
     def process(self):
         Events = []
@@ -343,7 +382,7 @@ class Extractor():
             trigger_position = {i:False for i in range(len(tokens))}
             refined_sen_events = {}
             refined_sen_events["id"] = sen_id
-            refined_sen_events["text"] = " ".join(tokens)
+            refined_sen_events["text"] = "".join(tokens)
             refined_sen_events["file"] = events[0]["file"]
             refined_sen_events["events"] = []
             for event_id, triggers in event_to_triggers.items():
@@ -355,7 +394,7 @@ class Extractor():
                         trigger_position[pos] = True 
                     refined_trigger = {}
                     refined_trigger["id"] = trigger["trigger_id"]
-                    refined_trigger["trigger_word"] = " ".join(trigger["trigger_tokens"])
+                    refined_trigger["trigger_word"] = "".join(trigger["trigger_tokens"])
                     refined_trigger["position"] = token_pos_to_char_pos(trigger["tokens"], [trigger["trigger_start"], trigger["trigger_end"]+1])
                     refined_trigger["arguments"] = []
                     arguments = defaultdict(list)
@@ -364,7 +403,7 @@ class Extractor():
                             continue
                         argu = dict()
                         argu["mention_id"] = entity["mention_id"]
-                        argu["mention"] = " ".join(entity["tokens"])
+                        argu["mention"] = "".join(entity["tokens"])
                         argu["position"] = token_pos_to_char_pos(tokens, [entity["idx_start"], entity["idx_end"]+1])
                         arguments["{}[SEP]{}".format(entity["entity_id"], entity["role"])].append(argu)
                     for key, mentions in arguments.items():
@@ -397,16 +436,15 @@ class Extractor():
                 for mention in mentions:
                     argu["mentions"].append({
                         "mention_id": mention["mention_id"],
-                        "mention": " ".join(mention["tokens"]),
+                        "mention": "".join(mention["tokens"]),
                         "position": token_pos_to_char_pos(tokens, [mention["idx_start"], mention["idx_end"]+1])
                     })
                 refined_sen_events["entities"].append(argu)
             Events.append(refined_sen_events)
-
         # process none events
         for none_event in self.None_events:
             refined_sen_events = dict(id=len(Events))
-            refined_sen_events["text"] = " ".join(none_event['tokens'])
+            refined_sen_events["text"] = "".join(none_event['tokens'])
             refined_sen_events["events"] = []
             refined_sen_events["negative_triggers"] = []
             refined_sen_events["file"] = none_event["file"]
@@ -421,8 +459,14 @@ class Extractor():
                 }
                 refined_sen_events["negative_triggers"].append(_none_event)
             Events.append(refined_sen_events)
+    
+        # filter 
+        for instance in Events:
+            filter_special_token(instance)
+
         # record
         self.Events = Events
+
 
 
     def Extract(self):
@@ -442,20 +486,28 @@ class Extractor():
         print('--Preprocess Data Finish--')
 
         # Random Split
-            # nw = self.source_files['nw']
-            # random.shuffle(nw)
-            # random.shuffle(nw)
-            # other_files = [file for dir in self.dirs for file in self.source_files[dir] if dir!='nw']+nw[40:]
-            # random.shuffle(other_files)
-            # random.shuffle(other_files)
+        if not os.path.exists(os.path.join(self.args.ACE_SPLITS, 'train.txt')):
+            nw = self.source_files['nw']
+            random.shuffle(nw)
+            other_files = [file for dir in self.dirs for file in self.source_files[dir] if dir!='nw']+nw[40:]
+            random.shuffle(other_files)
 
-            # test_files = nw[:40]
-            # dev_files = other_files[:30]
-            # train_files = other_files[30:]
+            test_files = nw[:40]
+            dev_files = other_files[:30]
+            train_files = other_files[30:]
 
-            # test_set = [instance for instance in self.Events if instance['file']+'.sgm' in test_files]+[instance for instance in self.None_events if instance['file']+".sgm" in test_files]
-            # dev_set = [instance for instance in self.Events if instance['file']+'.sgm' in dev_files]+[instance for instance in self.None_events if instance['file']+".sgm" in dev_files]
-            # train_set = [instance for instance in self.Events if instance['file']+'.sgm' in train_files]+[instance for instance in self.None_events if instance['file']+".sgm" in train_files]
+            output_dir = Path(self.args.ACE_SPLITS)
+            output_dir.mkdir(exist_ok=True)
+
+            def write_to_file(files, file_name):
+                with open(os.path.join(self.args.ACE_SPLITS, file_name), "w") as f:
+                    for file in files:
+                        name = "_".join(file.split(".")[:-1]).replace('-','_')
+                        f.write(name+"\n")
+            write_to_file(train_files, "train.txt")
+            write_to_file(dev_files, "dev.txt")
+            write_to_file(test_files, "test.txt")
+            
 
         # Use fix split
         splits = {'train':[],'dev':[],'test':[]}
@@ -476,27 +528,91 @@ class Extractor():
         train_set = [instance for instance in self.Events if instance['file'].replace('.','_').replace('-','_') in train_files]
             
         with open(os.path.join(self.args.ACE_DUMP, 'train.json'),'w') as f:
-            json.dump(train_set, f, indent=4)
+            json.dump(train_set, f, indent=4, ensure_ascii=False)
         with open(os.path.join(self.args.ACE_DUMP, 'valid.json'),'w') as f:
-            json.dump(dev_set, f, indent=4)
+            json.dump(dev_set, f, indent=4, ensure_ascii=False)
         with open(os.path.join(self.args.ACE_DUMP, 'test.json'),'w') as f:
-            json.dump(test_set, f, indent=4)
+            json.dump(test_set, f, indent=4, ensure_ascii=False)
         
 
 def token_pos_to_char_pos(tokens, token_pos):
-    word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
+    word_span = "".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
     curr_pos = 0
     for i, token in enumerate(tokens):
         if i == token_pos[0]:
             char_start = curr_pos
             break 
-        curr_pos += len(token) + 1
+        curr_pos += len(token)
     assert char_start != -1
     char_end = char_start + len(word_span) 
-    sen = " ".join(tokens)
+    sen = "".join(tokens)
     assert sen[char_start:char_end] == word_span
     return [char_start, char_end]
+
+
+
+def filter_special_token(item, special_token="\n"):
+    flag = [0] * len(item["text"])
+    num_special = 0
+    for i, token in enumerate(item["text"]):
+        if token == special_token:
+            num_special += 1
+        flag[i] = num_special
+    text = item["text"].replace(special_token, "")
+    for event in item["events"]:
+        for trigger in event["triggers"]:
+            plus = 0
+            start = True 
+            for token in trigger["trigger_word"]:
+                if start and token == special_token:
+                    plus += 1
+                else:
+                    break 
+            trigger["position"][0] = trigger["position"][0] - flag[trigger["position"][0]] + plus
+            trigger["position"][1] = trigger["position"][1] - flag[trigger["position"][1]-1]
+            trigger["trigger_word"] = trigger["trigger_word"].replace(special_token, "")
+            assert text[trigger["position"][0]:trigger["position"][1]] == trigger["trigger_word"]
+            for argument in trigger["arguments"]:
+                for mention in argument["mentions"]:
+                    plus = 0
+                    start = True 
+                    for token in mention["mention"]:
+                        if start and token == special_token:
+                            plus += 1
+                        else:
+                            break 
+                    mention["position"][0] = mention["position"][0] - flag[mention["position"][0]] + plus
+                    mention["position"][1] = mention["position"][1] - flag[mention["position"][1]-1]
+                    mention["mention"] = mention["mention"].replace(special_token, "")
+                    assert text[mention["position"][0]:mention["position"][1]] == mention["mention"]
+    for trigger in item["negative_triggers"]:
+        plus = 0
+        start = True 
+        for token in trigger["trigger_word"]:
+            if start and token == special_token:
+                plus += 1
+            else:
+                break 
+        trigger["position"][0] = trigger["position"][0] - flag[trigger["position"][0]] + plus
+        trigger["position"][1] = trigger["position"][1] - flag[trigger["position"][1]-1]
+        trigger["trigger_word"] = trigger["trigger_word"].replace(special_token, "")
+        assert text[trigger["position"][0]:trigger["position"][1]] == trigger["trigger_word"]
+    for entity in item["entities"]:
+        for mention in entity["mentions"]:
+            plus = 0
+            start = True 
+            for token in mention["mention"]:
+                if start and token == special_token:
+                    plus += 1
+                else:
+                    break 
+            mention["position"][0] = mention["position"][0] - flag[mention["position"][0]] + plus
+            mention["position"][1] = mention["position"][1] - flag[mention["position"][1]-1]
+            mention["mention"] = mention["mention"].replace(special_token, "")
+            assert text[mention["position"][0]:mention["position"][1]] == mention["mention"]
+    item["text"] = text
+    return item 
 
 
 def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> dict:
@@ -518,21 +634,20 @@ def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> di
     if "train" in file_name:
         json.dump(label2id, open(os.path.join(output_dir, "label2id.json"), "w"))
         json.dump(role2id, open(os.path.join(output_dir, "role2id.json"), "w"))
-
+        
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description="ACE2005")
-    arg_parser.add_argument("--data_dir", type=str, default="../../../data/ace_2005_td_v7")
+    arg_parser.add_argument("--data_dir", type=str, default=None)
     arg_parser.add_argument("--ACE_SPLITS", type=str, default=None)
     arg_parser.add_argument("--ACE_FILES", type=str, default=None)
     arg_parser.add_argument("--ACE_DUMP", type=str, default=None)
     arg_parser.add_argument("--corenlp_path", type=str, default=None)
     args = arg_parser.parse_args()
-    args.ACE_SPLITS = os.path.join(args.data_dir, "splits")
-    args.ACE_FILES = os.path.join(args.data_dir, "data/English")
-    dump_path = Path(os.path.join(args.data_dir, "English"))
-    dump_path.mkdir(exist_ok=True)
-    args.ACE_DUMP = dump_path
+    args.ACE_FILES = os.path.join(args.data_dir, "data/Chinese")
+
+    dump_path = Path(args.ACE_DUMP)
+    dump_path.mkdir(parents=True, exist_ok=True)
 
     # process original files 
     extractor = Extractor(args)

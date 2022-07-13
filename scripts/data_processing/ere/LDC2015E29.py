@@ -1,11 +1,14 @@
 """
-@ File:    LDC2015E68_sent.py
+@ File:    LDC2015E29_sent.py
 @ Author:  Zimu Wang
 # Update:  June 10, 2022
-@ Purpose: Convert the LDC2015E68 dataset in sentence level.
+@ Purpose: Convert the LDC2015E29 dataset in sentence level.
 """
 import copy
 import re
+import pdb 
+import sys 
+sys.path.append("../")
 import jsonlines
 import os
 import json 
@@ -14,7 +17,7 @@ from nltk.tokenize.punkt import PunktSentenceTokenizer
 from xml.dom.minidom import parse
 from tqdm import tqdm 
 
-from utils import generate_negative_trigger
+from utils import token_pos_to_char_pos, generate_negative_trigger
 
 
 class Config(object):
@@ -26,13 +29,13 @@ class Config(object):
         self.PROJECT_FOLDER = "../../../data"
 
         # The configurations for the data.
-        self.DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'LDC2015E78/data/eng')
-        self.GOLD_FOLDER = os.path.join(self.DATA_FOLDER, 'ere')
-        self.SOURCE_FOLDER = os.path.join(self.DATA_FOLDER, 'translation')
+        self.DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'LDC2015E29/data')
+        self.GOLD_FOLDER = os.path.join(self.DATA_FOLDER, 'ere/mpdfxml')
+        self.SOURCE_FOLDER = os.path.join(self.DATA_FOLDER, 'source/mpdfxml')
 
-        # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'LDC2015E78/LDC2015E78')
-        
+        # The configuration for the saving path.
+        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'processed/ere')
+
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
@@ -207,8 +210,16 @@ def read_source(documents, source_folder):
     :return documents:    The list of the constructed documents.
     """
     for document in tqdm(documents):
-        # Extract the sentence of each document.
-        with open(os.path.join(source_folder, (document['id'] + '.mp.txt')), 'r') as source:
+        # Configure the path.
+        if document['id'].startswith('AFP') or document['id'].startswith('APW') \
+                or document['id'].startswith('ENG') or document['id'].startswith('NYT') \
+                or document['id'].startswith('XIN'):
+            source_path = os.path.join(source_folder, (document['id'].rstrip('-kbp') + '.xml'))
+        else:
+            source_path = os.path.join(source_folder, (document['id'] + '.mpdf.xml'))
+
+        # Extract the text of each document.
+        with open(source_path, 'r') as source:
             document['text'] = source.read()
 
         # Find the number of xml characters before each character.
@@ -470,13 +481,9 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
                 or sentence_tokenize[i].endswith('U.K.') or sentence_tokenize[i].endswith('St.') \
                 or sentence_tokenize[i].endswith('Jan.') or sentence_tokenize[i].endswith('Feb.') \
                 or sentence_tokenize[i].endswith('Aug.') or sentence_tokenize[i].endswith('Sept.') \
-                or sentence_tokenize[i].endswith('Oct.') or sentence_tokenize[i].endswith('Nov.') \
-                or sentence_tokenize[i].endswith('Dec.') or sentence_tokenize[i].endswith('$75-80k/yr.') \
-                or sentence_tokenize[i].endswith('Dr.') or sentence_tokenize[i].endswith('B.A.') \
-                or sentence_tokenize[i].endswith('Lt.') or sentence_tokenize[i].endswith('Ft.') \
-                or sentence_tokenize[i].endswith('weed.') or sentence_tokenize[i].endswith('Mr.') \
-                or sentence_tokenize[i].endswith('No.') or sentence_tokenize[i].endswith('p.m.') \
-                or sentence_tokenize[i].endswith('U.S.A.') or sentence_tokenize[i].endswith('sq.'):
+                or sentence_tokenize[i].endswith('Nov.') or sentence_tokenize[i].endswith('Dec.') \
+                or sentence_tokenize[i].endswith('Dr.') or sentence_tokenize[i].endswith('Lt.') \
+                or sentence_tokenize[i].endswith('No.') or sentence_tokenize[i].endswith('p.m.'):
             if i not in del_index:
                 sentence_tokenize[i] = sentence_tokenize[i] + ' ' + sentence_tokenize[i + 1]
                 sentence_pos[i][1] = sentence_pos[i + 1][1]
@@ -540,10 +547,9 @@ if __name__ == '__main__':
     config = Config()
 
     # Construct the documents of the dataset.
-    documents_sent, documents_without_events = \
-        read_xml(config.GOLD_FOLDER, config.SOURCE_FOLDER)
+    documents_sent, documents_without_events = read_xml(config.GOLD_FOLDER, config.SOURCE_FOLDER)
 
     # Save the documents into jsonl file.
     all_data = generate_negative_trigger(documents_sent, documents_without_events)
-    json.dump(all_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'data.json'), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'data.unified.jsonl'), all_data)
+    json.dump(all_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E29.json'), "w"), indent=4)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E29.unified.jsonl'), all_data)

@@ -1,8 +1,3 @@
-"""
-"""
-
-
-
 def token_pos_to_char_pos(tokens, token_pos):
     word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
@@ -17,6 +12,28 @@ def token_pos_to_char_pos(tokens, token_pos):
     sen = " ".join(tokens)
     assert sen[char_start:char_end] == word_span
     return [char_start, char_end]
+
+
+def generate_negative_trigger_per_item(item):
+    tokens = item["text"].split()
+    trigger_position = {i: False for i in range(len(tokens))}
+    for event in item["events"]:
+        for trigger in event["triggers"]:
+            start_pos = len(item["text"][:trigger["position"][0]].split())
+            end_pos = start_pos + len(trigger["trigger_word"].split())
+            for pos in range(start_pos, end_pos):
+                trigger_position[pos] = True 
+    item["negative_triggers"] = []
+    for i, token in enumerate(tokens):
+        if trigger_position[i] or token == "":
+            continue
+        _event = {
+                "id": len(item["negative_triggers"]),
+                "trigger_word": tokens[i],
+                "position": token_pos_to_char_pos(tokens, [i, i+1])
+        }
+        item["negative_triggers"].append(_event)
+    return item 
 
 
 def generate_negative_trigger(data, none_event_instances):
