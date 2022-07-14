@@ -85,8 +85,10 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
             formatted_data.append(instance)
     print("We get {} instances.".format(len(formatted_data)))
     if "train" in data_path:
-        io_dir = "/".join(data_path.split("/")[:-1])
+        io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-1]).split('/data'))
         json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w"), indent=4)
+
+    data_path = '/data/processed'.join(data_path.split('/data'))
     if dump:
         with open(data_path.replace(".jsonl", ".unified.jsonl"), 'w') as f:
             for item in formatted_data:
@@ -95,6 +97,7 @@ def convert_maven_to_unified(data_path: str, dump=True) -> dict:
 
 
 if __name__ == "__main__":
+    os.makedirs("../../../data/processed/MAVEN/", exist_ok=True)
     convert_maven_to_unified("../../../data/MAVEN/train.jsonl")
     convert_maven_to_unified("../../../data/MAVEN/valid.jsonl")
     convert_maven_to_unified("../../../data/MAVEN/test.jsonl")

@@ -40,8 +40,9 @@ class Config(object):
         self.EVAL_NUGGET_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'nugget')
 
         # The configuration for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
-                                                                  '2014-2015/TAC-KBP2015')
+        # self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
+        #                                                           '2014-2015/TAC-KBP2015')
+        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'processed', 'TAC-KBP2015')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 

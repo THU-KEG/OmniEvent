@@ -6,12 +6,12 @@ do_ED_infer: True
 paradigm: sequence_labeling
 
 task_name: ED
-dataset_name: DuEE1.0
-output_dir: output/DuEE1.0
-type2id_path: ../data/DuEE1.0/label2id.json
-train_file: ../data/DuEE1.0/duee_train.unified.json
-validation_file: ../data/DuEE1.0/duee_dev.unified.json
-test_file: ../data/mini/DuEE1.0/duee_test2.unified.json
+dataset_name: LEVEN
+output_dir: output/LEVEN
+type2id_path: ../data/processed/LEVEN/label2id.json
+train_file: ../data/processed/LEVEN/train.unified.jsonl
+validation_file: ../data/processed/LEVEN/valid.unified.jsonl
+test_file: ../data/processed/LEVEN/test.unified.jsonl
 language: Chinese
 test_exists_labels: False
 
@@ -23,9 +23,9 @@ model_name_or_path: bert-base-chinese
 hidden_size: 768
 aggregation: none
 
-num_train_epochs: 10
-max_seq_length: 200
-max_out_length: 200
+num_train_epochs: 5
+max_seq_length: 256
+max_out_length: 256
 dataloader_num_workers: 2
 
 generation_max_length: 128
@@ -33,9 +33,9 @@ generation_num_beams: 4
 predict_with_generate: True
 ignore_pad_token_for_loss: True
 
-per_device_train_batch_size: 4
+per_device_train_batch_size: 8
 per_device_eval_batch_size: 8
-gradient_accumulation_steps: 4
+gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5
 weight_decay: 1.0e-5

@@ -28,8 +28,9 @@ class Config(object):
         self.EVAL_SOURCE_FOLDER_NW = os.path.join(self.DATA_FOLDER, 'tac_kbp_eval_src_2016-2017/data/2017/eng/nw')
 
         # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
-                                                               'TAC-KBP2017')
+        # self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
+        #                                                        'TAC-KBP2017')
+        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'processed', 'TAC-KBP2017')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 

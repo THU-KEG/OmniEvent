@@ -22,7 +22,7 @@ def generate_label2id_role2id(data_path: str):
             if role["role"] not in role2id:
                 role2id[role["role"]] = len(role2id)
 
-    io_dir = "/".join(data_path.split("/")[:-1])
+    io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-2]).split('/data'))
     with open(os.path.join(io_dir, "label2id.json"), "w", encoding="utf-8") as f:
         json.dump(label2id, f, indent=4, ensure_ascii=False)
 
@@ -179,6 +179,7 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(duee_data), data_path))
 
+    data_path = '/data/processed'.join('/'.join(data_path.split('/')[:-1]).split('/data'))
     if dump:
         with jsonlines.open(data_path.replace(".json", ".unified.json"), "w") as f:
             for item in formatted_data:
@@ -188,7 +189,8 @@ def convert_duee_to_unified(data_path: str, dump=True, tokenizer="jieba") -> lis
 
 
 if __name__ == "__main__":
-    generate_label2id_role2id("../../../data/DuEE1.0/duee_event_schema.json")
-    convert_duee_to_unified("../../../data/DuEE1.0/duee_train.json")
-    convert_duee_to_unified("../../../data/DuEE1.0/duee_dev.json")
-    convert_duee_to_unified("../../../data/DuEE1.0/duee_test2.json")
+    os.makedirs('../../../data/processed/DuEE1.0', exist_ok=True)
+    generate_label2id_role2id("../../../data/DuEE1.0/duee_schema/duee_event_schema.json")
+    convert_duee_to_unified("../../../data/DuEE1.0/duee_train.json/duee_train.json")
+    convert_duee_to_unified("../../../data/DuEE1.0/duee_dev.json/duee_dev.json")
+    convert_duee_to_unified("../../../data/DuEE1.0/duee_test2.json/duee_test2.json")
