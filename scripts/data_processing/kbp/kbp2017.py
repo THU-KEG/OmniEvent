@@ -1,9 +1,3 @@
-"""
-@ File:    tac-kbp2017_sent.py
-@ Author:  Zimu Wang
-# Update:  June 10, 2022
-@ Purpose: Convert the TAC KBP 2017 dataset in sentence level.
-"""
 import copy
 import re
 import jsonlines
@@ -23,21 +17,19 @@ class Config(object):
     """
     def __init__(self):
         # The configuration for the project (current) folder.
-        self.PROJECT_FOLDER = "../../../data"
+        self.DATA_FOLDER = "../../../data"
 
         # The configurations for the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
-                                                                  'data/2017/eval/eng')
+        self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
+                                                               'data/2017/eval/eng')
         self.EVAL_GOLD_FOLDER_DF = os.path.join(self.EVAL_DATA_FOLDER, 'df/ere')
         self.EVAL_GOLD_FOLDER_NW = os.path.join(self.EVAL_DATA_FOLDER, 'nw/ere')
-        self.EVAL_SOURCE_FOLDER_DF = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eval_src_2016-2017/data/2017/'
-                                                                       'eng/df')
-        self.EVAL_SOURCE_FOLDER_NW = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eval_src_2016-2017/data/2017/'
-                                                                       'eng/nw')
+        self.EVAL_SOURCE_FOLDER_DF = os.path.join(self.DATA_FOLDER, 'tac_kbp_eval_src_2016-2017/data/2017/eng/df')
+        self.EVAL_SOURCE_FOLDER_NW = os.path.join(self.DATA_FOLDER, 'tac_kbp_eval_src_2016-2017/data/2017/eng/nw')
 
         # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
-                                                                  'TAC-KBP2017')
+        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
+                                                               'TAC-KBP2017')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
@@ -105,13 +97,14 @@ def read_xml(gold_folder, source_folder, mode):
             mentions = entity.getElementsByTagName('entity_mention')
             for mention in mentions:
                 # Delete the url elements from the mention.
-                entity_mention = mention.getElementsByTagName('mention_text')[0].childNodes[0].data.split(' ')
+                mention_text = mention.getElementsByTagName('mention_text')[0].childNodes[0].data.split(' ')
+                entity_mention = ' '.join([word for word in mention_text if
+                                           not (word.startswith('&lt;') or word.endswith('&gt;'))])
                 mention_dict = {
                     'id': mention.getAttribute('id'),
-                    'mention': ' '.join([word for word in entity_mention if
-                                         not (word.startswith('&lt;') or word.endswith('&gt;'))]),
+                    'mention': entity_mention,
                     'position': [int(mention.getAttribute('offset')),
-                                 int(mention.getAttribute('offset')) + len(' '.join(entity_mention))]
+                                 int(mention.getAttribute('offset')) + len(entity_mention)]
                 }
                 entity_dict['mentions'].append(mention_dict)
             document['entities'].append(entity_dict)
@@ -120,16 +113,19 @@ def read_xml(gold_folder, source_folder, mode):
         fillers = dom_tree.documentElement.getElementsByTagName('fillers')[0] \
                                           .getElementsByTagName('filler')
         for filler in fillers:
+            # Delete the url elements from the mention.
+            filler_mention_list = filler.childNodes[0].data.split(' ')
+            filler_mention = ' '.join([word for word in filler_mention_list if
+                                       not (word.startswith('&lt;') or word.endswith('&gt;'))])
             # Initialise a dictionary for each filler.
-            filler_mention = filler.childNodes[0].data.split(' ')
             filler_dict = {
+                'id': filler.getAttribute('id'),
                 'type': filler.getAttribute('type'),
-                'mentions': [
-                    {'id': filler.getAttribute('id'),
-                     'mention': ' '.join([word for word in filler_mention if
-                                          not (word.startswith('&lt;') or word.endswith('&gt;'))]),
-                     'position': [int(filler.getAttribute('offset')),
-                                  int(filler.getAttribute('offset')) + len(' '.join(filler_mention))]}]
+                'mentions': [{
+                    'id': filler.getAttribute('id'),
+                    'mention': filler_mention,
+                    'position': [int(filler.getAttribute('offset')),
+                                 int(filler.getAttribute('offset')) + len(filler_mention)]}]
                 }
             document['entities'].append(filler_dict)
 
@@ -148,16 +144,17 @@ def read_xml(gold_folder, source_folder, mode):
             # Extract the triggers from each mention.
             for mention in mentions:
                 trigger = mention.getElementsByTagName('trigger')[0]
-                trigger_word = trigger.childNodes[0].data.split(' ')
+                trigger_word_list = trigger.childNodes[0].data.split(' ')
+                trigger_word = ' '.join([word for word in trigger_word_list if
+                                         not (word.startswith('&lt;') or word.endswith('&gt;'))])
                 trigger_dict = {
                     'id': mention.getAttribute('id'),
-                    'trigger_word': ' '.join([word for word in trigger_word if
-                                              not (word.startswith('&lt;') or word.endswith('&gt;'))]),
+                    'trigger_word': trigger_word,
                     'position': [int(trigger.getAttribute('offset')),
-                                 int(trigger.getAttribute('offset')) + len(' '.join(trigger_word))],
+                                 int(trigger.getAttribute('offset')) + len(trigger_word)],
                     'arguments': list()
                 }
-                hopper_dict['triggers'].append(trigger_dict)
+
                 # Extract the arguments for each trigger.
                 arguments = mention.getElementsByTagName('em_arg')
                 for argument in arguments:
@@ -166,60 +163,62 @@ def read_xml(gold_folder, source_folder, mode):
                         arg_id = argument.getAttribute('filler_id')
                     else:
                         arg_id = argument.getAttribute('entity_id')
+                    assert arg_id != ''
                     # Initialise a flag for whether the entity id exists.
                     flag = 0
                     # Justify whether the argument being added.
                     for added_argument in trigger_dict['arguments']:
                         if arg_id == added_argument['id'] and argument.getAttribute('role') == added_argument['role']:
-                            argument_mention = argument.childNodes[0].data.split(' ')
-                            argument_dict = {
-                                'mention': ' '.join([word for word in argument_mention if
-                                                     not (word.startswith('&lt;') or word.endswith('&gt;'))]),
-                                'position': -1
-                            }
-                            # Classify the type of the argument (entity/filler).
+                            # Classify the type of the argument and obtain its id.
                             if argument.getAttribute('entity_mention_id') == '':
                                 mention_id = argument.getAttribute('filler_id')
                             else:
                                 mention_id = argument.getAttribute('entity_mention_id')
+                            argument_mention = argument.childNodes[0].data.split(' ')
+                            argument_dict = {
+                                'id': mention_id,
+                                'mention': ' '.join([word for word in argument_mention if
+                                                     not (word.startswith('&lt;') or word.endswith('&gt;'))]),
+                                'position': -1
+                            }
                             # Match the position of the argument.
                             for entity in document['entities']:
                                 for entity_mention in entity['mentions']:
                                     if entity_mention['id'] == mention_id:
                                         argument_dict['position'] = entity_mention['position']
+                            assert argument_dict['position'] != -1
                             added_argument['mentions'].append(argument_dict)
                             flag = 1
                     # Initialise a new dictionary if the entity id not exists.
                     # The id of the argument will be deleted later.
                     if flag == 0:
-                        argument_mention = argument.childNodes[0].data.split(' ')
-                        argument_dict = {
-                            'id': arg_id,
-                            'role': argument.getAttribute('role'),
-                            'mentions': [{'mention': ' '.join([word for word in argument_mention if
-                                                               not (word.startswith('&lt;') or word.endswith('&gt;'))]),
-                                          'position': -1}]
-                        }
-                        # Classify the type of the argument (entity/filler).
+                        # Classify the type of the argument and obtain its id.
                         if argument.getAttribute('entity_mention_id') == '':
                             mention_id = argument.getAttribute('filler_id')
                         else:
                             mention_id = argument.getAttribute('entity_mention_id')
+                        argument_mention = argument.childNodes[0].data.split(' ')
+                        argument_dict = {
+                            'id': arg_id,
+                            'role': argument.getAttribute('role'),
+                            'mentions': [{'id': mention_id,
+                                          'mention': ' '.join([word for word in argument_mention if
+                                                               not (word.startswith('&lt;') or word.endswith('&gt;'))]),
+                                          'position': -1}]
+                        }
                         # Match the position of the argument.
                         for entity in document['entities']:
                             for entity_mention in entity['mentions']:
                                 if entity_mention['id'] == mention_id:
                                     argument_dict['mentions'][0]['position'] = entity_mention['position']
                         trigger_dict['arguments'].append(argument_dict)
+                hopper_dict['triggers'].append(trigger_dict)
+
                 # Delete the id of each argument.
                 for argument in trigger_dict['arguments']:
                     del argument['id']
-                document['events'].append(hopper_dict)
+            document['events'].append(hopper_dict)
 
-        # Delete the id of each entity.
-        for entity in document['entities']:
-            for mention in entity['mentions']:
-                del mention['id']
         documents.append(document)
 
     return read_source(documents, source_folder, mode)
@@ -599,7 +598,7 @@ if __name__ == '__main__':
     # Construct the evaluation documents.
     eval_documents_sent, eval_documents_without_event \
         = read_eval(config.EVAL_GOLD_FOLDER_DF, config.EVAL_GOLD_FOLDER_NW,
-                  config.EVAL_SOURCE_FOLDER_DF, config.EVAL_SOURCE_FOLDER_NW)
+                    config.EVAL_SOURCE_FOLDER_DF, config.EVAL_SOURCE_FOLDER_NW)
 
     # Save the documents into jsonl file.
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
