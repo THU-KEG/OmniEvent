@@ -22,20 +22,10 @@ from OpenEE.input_engineering.token_classification_processor import (
 )
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
-    compute_F1,
-    compute_span_F1,
-    compute_seq_F1,
-    compute_mrc_F1
+    compute_F1
 )
 from OpenEE.evaluation.dump_result import (
-    get_leven_submission,
-    get_leven_submission_sl,
-    get_leven_submission_seq2seq,
-    get_maven_submission,
-    get_maven_submission_sl,
-    get_maven_submission_seq2seq,
-    get_duee_submission,
-    get_duee_submission_sl,
+    get_duee_submission_sl
 )
 from OpenEE.evaluation.convert_format import (
     get_ace2005_argument_extraction_sl
@@ -67,7 +57,7 @@ else:
 model_name_or_path = model_args.model_name_or_path.split("/")[-1]
 output_dir = Path(
     os.path.join(os.path.join(os.path.join(training_args.output_dir, training_args.task_name), model_args.paradigm),
-                 model_name_or_path))
+                 f"{model_name_or_path}-{model_args.aggregation}"))
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
@@ -86,10 +76,6 @@ role2id_path = data_args.role2id_path
 data_args.role2id = json.load(open(role2id_path))
 model_args.num_labels = len(data_args.role2id)
 training_args.label_name = ["labels"]
-
-if model_args.paradigm == "sequence_labeling":
-    data_args.role2id = get_bio_labels(data_args.role2id)
-    model_args.num_labels = len(data_args.role2id)
 
 # used for evaluation
 training_args.role2id = data_args.role2id 
@@ -119,13 +105,8 @@ backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.mod
                                            model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
 model = get_model(model_args, backbone)
 model.cuda()
-data_class = None
-metric_fn = None
-
-
 data_class = EAETCProcessor
 metric_fn = compute_F1
-
 
 # dataset 
 train_dataset = data_class(data_args, tokenizer, data_args.train_file, data_args.train_pred_file, True)

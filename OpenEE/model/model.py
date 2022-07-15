@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from typing import Tuple, Dict, Optional
 
-from OpenEE.aggregation.aggregation import select_cls, select_marker, DynamicPooling
+from OpenEE.aggregation.aggregation import get_aggregation, aggregate
 from OpenEE.head.classification import (
     ClassificationHead,
     MRCHead
@@ -31,9 +31,9 @@ class ModelForTokenClassification(nn.Module):
 
     def __init__(self, config, backbone):
         super(ModelForTokenClassification, self).__init__()
+        self.config = config
         self.backbone = backbone 
-        # self.aggregation = DynamicPooling(config)
-        self.aggregation = select_cls
+        self.aggregation = get_aggregation(config)
         self.cls_head = ClassificationHead(config)
 
     def forward(
@@ -41,10 +41,12 @@ class ModelForTokenClassification(nn.Module):
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor,
         token_type_ids: Optional[torch.Tensor] = None,
-        trigger_left_mask: Optional[torch.Tensor] = None, 
-        trigger_right_mask: Optional[torch.Tensor] = None,
+        trigger_left: Optional[torch.Tensor] = None, 
+        trigger_right: Optional[torch.Tensor] = None, 
+        argument_left: Optional[torch.Tensor] = None, 
+        argument_right: Optional[torch.Tensor] = None, 
         labels: Optional[torch.Tensor] = None
-        ) -> Dict[str, torch.Tensor]:
+    ) -> Dict[str, torch.Tensor]:
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids, \
                                 attention_mask=attention_mask, \
@@ -52,8 +54,13 @@ class ModelForTokenClassification(nn.Module):
                                 return_dict=True)   
         hidden_states = outputs.last_hidden_state
         # aggregation 
-        # hidden_state = self.aggregation.select_cls(hidden_states)
-        hidden_state = self.aggregation(hidden_states)
+        hidden_state = aggregate(self.config, 
+                                 self.aggregation, 
+                                 hidden_states, 
+                                 trigger_left,
+                                 trigger_right,
+                                 argument_left,
+                                 argument_right)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 

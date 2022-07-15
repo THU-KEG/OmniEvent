@@ -85,24 +85,20 @@ class EDTCProcessor(EDDataProcessor):
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
             except:
                 logger.warning("Markers are not in the input tokens.")
-                left = self.config.max_seq_length
+                left, right = 0, 0
                 is_overflow = True
 
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
 
-            # trigger position mask
-            left_mask = [1] * left + [0] * (self.config.max_seq_length - left)
-            right_mask = [0] * left + [1] * (self.config.max_seq_length - left)
-
             features = EDInputFeatures(
                 example_id=example.example_id,
                 input_ids=outputs["input_ids"],
                 attention_mask=outputs["attention_mask"],
                 token_type_ids=outputs["token_type_ids"],
-                trigger_left_mask=left_mask,
-                trigger_right_mask=right_mask
+                trigger_left=left,
+                trigger_right=right 
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
@@ -143,8 +139,8 @@ class EAETCProcessor(EAEDataProcessor):
                                     true_type=event["type"],
                                     trigger_left=trigger["position"][0],
                                     trigger_right=trigger["position"][1],
-                                    argu_left=mention["position"][0],
-                                    argu_right=mention["position"][1],
+                                    argument_left=mention["position"][0],
+                                    argument_right=mention["position"][1],
                                     labels=argument["role"]
                                 )
                                 argu_for_trigger.add(mention['mention_id'])
@@ -167,8 +163,8 @@ class EAETCProcessor(EAEDataProcessor):
                                     true_type=event["type"],
                                     trigger_left=trigger["position"][0],
                                     trigger_right=trigger["position"][1],
-                                    argu_left=mention["position"][0],
-                                    argu_right=mention["position"][1],
+                                    argument_left=mention["position"][0],
+                                    argument_right=mention["position"][1],
                                     labels="NA"
                                 )
                                 if "train" in input_file or self.config.golden_trigger:
@@ -205,7 +201,7 @@ class EAETCProcessor(EAEDataProcessor):
             text = self.insert_marker(example.text, 
                                         example.pred_type,
                                         [example.trigger_left, example.trigger_right], 
-                                        [example.argu_left, example.argu_right], 
+                                        [example.argument_left, example.argument_right], 
                                         self.config.markers, 
                                         whitespace)
             outputs = self.tokenizer(text, 
@@ -213,12 +209,21 @@ class EAETCProcessor(EAEDataProcessor):
                                     truncation=True,
                                     max_length=self.config.max_seq_length)
             is_overflow = False 
+            # argument position 
             try:
-                left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
-                right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
+                argument_left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
+                argument_right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
             except: 
-                logger.warning("Markers are not in the input tokens.")
+                argument_left, argument_right = 0, 0
+                logger.warning("Argument markers are not in the input tokens.")
                 is_overflow = True
+            # trigger position
+            try:
+                trigger_left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][0]))
+                trigger_right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][1]))
+            except: 
+                trigger_left, trigger_right = 0, 0
+                logger.warning("Trigger markers are not in the input tokens.")
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
@@ -227,7 +232,11 @@ class EAETCProcessor(EAEDataProcessor):
                 example_id = example.example_id,
                 input_ids = outputs["input_ids"],
                 attention_mask = outputs["attention_mask"],
-                token_type_ids = outputs["token_type_ids"]
+                token_type_ids = outputs["token_type_ids"],
+                trigger_left=trigger_left,
+                trigger_right=trigger_right,
+                argument_left=argument_left,
+                argument_right=argument_right
             )
             if example.labels is not None:
                 features.labels = self.config.role2id[example.labels]

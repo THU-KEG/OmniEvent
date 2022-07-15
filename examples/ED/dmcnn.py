@@ -94,7 +94,6 @@ data_args.id2type = {id: type for type, id in data_args.type2id.items()}
 
 
 # markers 
-# data_args.markers =  ["[unused0]", "[unused1]"]
 data_args.markers = ["<event>", "</event>"]
 
 print(data_args, model_args, training_args)
@@ -107,9 +106,9 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
-                                           model_args.model_name_or_path, data_args.markers,
-                                           new_tokens=data_args.markers)
+backbone, tokenizer, _ = get_backbone(model_args.model_type, None, None, data_args.markers, 
+                                      model_args, 
+                                      new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
 data_class = None

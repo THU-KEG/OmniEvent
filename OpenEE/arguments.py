@@ -132,6 +132,10 @@ class ModelArguments:
         default=768,
         metadata={"help": "hidden size"}
     )
+    head_scale: int = field(
+        default=1,
+        metadata={"help": "Head scale"}
+    )
     aggregation: str = field(
         default="cls",
         metadata={"help": "aggregation method"}
@@ -165,6 +169,40 @@ class ModelArguments:
             "with private models)."
         },
     )
+    '''
+    For tranditional model.
+    '''
+    word_embedding_dim: int = field(
+        default=300,
+        metadata={
+            "help": "Word embedding dimension for tranditional word vector."
+        }
+    )
+    position_embedding_dim: int = field(
+        default=20,
+        metadata={
+            "help": "Position embedding dimension for tranditional word vector."
+        }
+    )
+    num_position_embeddings: int = field(
+        default=512,
+        metadata={
+            "help": "Number of position embeddings."
+        }
+    )
+    hidden_dropout_prob: float = field(
+        default=0.5,
+        metadata={
+            "help": "dropout rate"
+        }
+    )
+    vocab_file: float = field(
+        default=None,
+        metadata={
+            "help": "Path to vocab file."
+        }
+    )
+
 
 
 @dataclass 

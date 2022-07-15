@@ -32,22 +32,3 @@ def check_if_start(start_poses, char_pos):
 
 def get_word_position(start_poses, char_pos):
     return start_poses.index(char_pos[0])
-
-
-def load_ontology(ontology_file):
-    '''
-    Read ontology file for event to argument mapping.
-    ''' 
-    with open(ontology_file,'r') as f:
-        ontology_dict = json.load(f)
-
-    for evt_name, evt_dict in ontology_dict.items():
-        for i, argname in enumerate(evt_dict['roles']):
-            evt_dict['arg{}'.format(i+1)] = argname
-            # argname -> role is not a one-to-one mapping 
-            if argname in evt_dict:
-                evt_dict[argname].append('arg{}'.format(i+1))
-            else:
-                evt_dict[argname] = ['arg{}'.format(i+1)]
-    
-    return ontology_dict

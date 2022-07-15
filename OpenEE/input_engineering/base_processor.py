@@ -12,7 +12,12 @@ logger = logging.getLogger(__name__)
 class EDInputExample(object):
     """A single training/test example for event extraction."""
 
-    def __init__(self, example_id, text, trigger_left=None, trigger_right=None, labels=None):
+    def __init__(self, 
+                 example_id, 
+                 text, 
+                 trigger_left=None, 
+                 trigger_right=None, 
+                 labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -32,13 +37,20 @@ class EDInputExample(object):
 class EDInputFeatures(object):
     """Input features of an instance."""
     
-    def __init__(self, example_id, input_ids, attention_mask, token_type_ids=None, trigger_left_mask=None, trigger_right_mask=None, labels=None):
+    def __init__(self,
+                 example_id, 
+                 input_ids, 
+                 attention_mask, 
+                 token_type_ids=None, 
+                 trigger_left=None, 
+                 trigger_right=None,
+                 labels=None):
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
-        self.trigger_left_mask = trigger_left_mask
-        self.trigger_right_mask = trigger_right_mask
+        self.trigger_left = trigger_left
+        self.trigger_right = trigger_right
         self.labels = labels
 
 
@@ -49,8 +61,8 @@ class EAEInputExample(object):
                 input_template=None, 
                 trigger_left=None, 
                 trigger_right=None, 
-                argu_left=None, 
-                argu_right=None, 
+                argument_left=None, 
+                argument_right=None, 
                 labels=None):
         """Constructs a InputExample.
 
@@ -68,8 +80,8 @@ class EAEInputExample(object):
         self.input_template = input_template
         self.trigger_left = trigger_left 
         self.trigger_right = trigger_right
-        self.argu_left = argu_left
-        self.argu_right = argu_right
+        self.argument_left = argument_left
+        self.argument_right = argument_right
         self.labels = labels
 
 
@@ -81,17 +93,21 @@ class EAEInputFeatures(object):
                  input_ids,
                  attention_mask,
                  token_type_ids=None,
+                 trigger_left=None, 
+                 trigger_right=None, 
+                 argument_left=None, 
+                 argument_right=None, 
                  labels=None,
-                 start_positions=None,
-                 end_positions=None
         ):
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
+        self.trigger_left = trigger_left 
+        self.trigger_right = trigger_right
+        self.argument_left = argument_left
+        self.argument_right = argument_right
         self.labels = labels
-        self.start_positions = start_positions
-        self.end_positions = end_positions
 
 
 class EDDataProcessor(Dataset):
@@ -137,10 +153,10 @@ class EDDataProcessor(Dataset):
         )
         if features.token_type_ids is not None and self.config.return_token_type_ids:
             data_dict["token_type_ids"] = torch.tensor(features.token_type_ids, dtype=torch.long)
-        if features.trigger_left_mask is not None:
-            data_dict["trigger_left_mask"] = torch.tensor(features.trigger_left_mask, dtype=torch.float32)
-        if features.trigger_right_mask is not None:
-            data_dict["trigger_right_mask"] = torch.tensor(features.trigger_right_mask, dtype=torch.float32)
+        if features.trigger_left is not None:
+            data_dict["trigger_left"] = torch.tensor(features.trigger_left, dtype=torch.float32)
+        if features.trigger_right is not None:
+            data_dict["trigger_right"] = torch.tensor(features.trigger_right, dtype=torch.float32)
         if features.labels is not None:
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
         return data_dict
@@ -151,7 +167,7 @@ class EDDataProcessor(Dataset):
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
         if self.config.truncate_in_batch:
             input_length = int(output_batch["attention_mask"].sum(-1).max())
-            for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
+            for key in ["input_ids", "attention_mask", "token_type_ids"]:
                 if key not in output_batch:
                     continue
                 output_batch[key] = output_batch[key][:, :input_length]
@@ -162,6 +178,7 @@ class EDDataProcessor(Dataset):
                 else:
                     output_batch["labels"] = output_batch["labels"][:, :input_length]
         return output_batch
+
 
 class EAEDataProcessor(Dataset):
     """Base class of data processor."""
@@ -237,12 +254,16 @@ class EAEDataProcessor(Dataset):
         )
         if features.token_type_ids is not None and self.config.return_token_type_ids:
             data_dict["token_type_ids"] = torch.tensor(features.token_type_ids, dtype=torch.long)
+        if features.trigger_left is not None: 
+            data_dict["trigger_left"] = torch.tensor(features.trigger_left, dtype=torch.long)
+        if features.trigger_right is not None: 
+            data_dict["trigger_right"] = torch.tensor(features.trigger_right, dtype=torch.long)
+        if features.argument_left is not None: 
+            data_dict["argument_left"] = torch.tensor(features.argument_left, dtype=torch.long)
+        if features.argument_right is not None: 
+            data_dict["argument_right"] = torch.tensor(features.argument_right, dtype=torch.long)
         if features.labels is not None:
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
-        if features.start_positions is not None: 
-            data_dict["start_positions"] = torch.tensor(features.start_positions, dtype=torch.long)
-        if features.end_positions is not None:
-            data_dict["end_positions"] = torch.tensor(features.end_positions, dtype=torch.long)
         return data_dict
         
     def collate_fn(self, batch):
@@ -251,7 +272,7 @@ class EAEDataProcessor(Dataset):
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
         if self.config.truncate_in_batch:
             input_length = int(output_batch["attention_mask"].sum(-1).max())
-            for key in ["input_ids", "attention_mask", "token_type_ids", "trigger_left_mask", "trigger_right_mask"]:
+            for key in ["input_ids", "attention_mask", "token_type_ids"]:
                 if key not in output_batch:
                     continue
                 output_batch[key] = output_batch[key][:, :input_length]

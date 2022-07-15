@@ -21,7 +21,6 @@ golden_trigger: True
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
 validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
-# config for some specific paradigms
 
 # config for data processor # 
 truncate_in_batch: False 

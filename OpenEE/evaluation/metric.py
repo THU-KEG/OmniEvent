@@ -8,7 +8,6 @@ from sklearn.metrics import f1_score
 from seqeval.metrics import f1_score as span_f1_score
 from seqeval.scheme import IOB2
 from ..input_engineering.mrc_converter import make_preditions, compute_mrc_F1_cls
-from ..input_engineering.seq2seq_utils import decode_arguments, get_final_preds_labels
 from .seq2seq_parser import extract_argument
 
 

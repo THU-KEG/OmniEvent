@@ -1,32 +1,38 @@
 seed: 42
 do_train: True
-do_predict: True 
-do_ED_infer: True 
+do_predict: True
 
 # top-level config #
 paradigm: token_classification
-task_name: ED
+task_name: EAE
 dataset_name: ACE2005
 language: English
 test_exists_labels: True
 
-# file path # 
+# file path #
 output_dir: output/ACE2005-EN
-type2id_path: ../../data/processed/ace2005/label2id.json 
+type2id_path: ../../data/processed/ace2005/label2id.json
+role2id_path: ../../data/processed/ace2005/role2id.json 
 train_file: ../../data/processed/ace2005/train.unified.jsonl
 validation_file: ../../data/processed/ace2005/valid.unified.jsonl
 test_file: ../../data/processed/ace2005/test.unified.jsonl
+# event detection predictions
+golden_trigger: True
+train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
+validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
+test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
 
-# config for data processor #
-return_token_type_ids: True 
-truncate_seq2seq_output: False
+# config for data processor # 
+truncate_in_batch: False 
+return_token_type_ids: False 
+truncate_seq2seq_output: True
 
 # model config #
 model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: marker
-head_scale: 2
+aggregation: cls 
+head_scale: 1
 
 # training config #
 num_train_epochs: 5
@@ -34,11 +40,16 @@ max_seq_length: 128
 max_out_length: 128
 dataloader_num_workers: 2
 
+generation_max_length: 128
+generation_num_beams: 4
+predict_with_generate: True 
+ignore_pad_token_for_loss: True 
+
 per_device_train_batch_size: 32
 per_device_eval_batch_size: 64
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
-learning_rate: 3.0e-5
+learning_rate: 5.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
 max_grad_norm: 1
@@ -57,6 +68,5 @@ save_steps: 500
 
 # split inference #
 split_infer: False 
-split_infer_size: 500
-
+split_infer_size: 5000
 
