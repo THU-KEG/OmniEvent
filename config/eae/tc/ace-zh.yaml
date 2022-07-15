@@ -2,22 +2,22 @@ seed: 42
 do_train: True
 do_predict: True
 
-paradigm: sequence_labeling
+paradigm: token_classification
 
 task_name: EAE
 golden_trigger: True
-dataset_name: DuEE-fin
-output_dir: output/DuEE-fin
-type2id_path: ../data/DuEE-fin/label2id.json
+dataset_name: ACE2005
+output_dir: output/ACE2005-ZH
+type2id_path: ../data/ace_2005_td_v7/Chinese/label2id.json
 role2id_path: ../data/ace_2005_td_v7/Chinese/role2id.json
-train_file: ../data/DuEE-fin/duee_fin_train.unified.json
-validation_file: ../data/DuEE-fin/duee_fin_dev.unified.json
-test_file: ../data/DuEE-fin/duee_fin_test2.unified.json
-train_pred_file: output/DuEE-fin/ED/sequence_labeling/bert-base-chinese/train_preds.json
-validation_pred_file: output/DuEE-fin/ED/sequence_labeling/bert-base-chinese/valid_preds.json
-test_pred_file: output/DuEE-fin/ED/sequence_labeling/bert-base-chinese/test_preds.json
+train_file: ../data/ace_2005_td_v7/Chinese/train.unified.jsonl
+validation_file: ../data/ace_2005_td_v7/Chinese/valid.unified.jsonl
+test_file: ../data/ace_2005_td_v7/Chinese/test.unified.jsonl
+train_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese/train_preds.json
+validation_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese/valid_preds.json
+test_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese/test_preds.json
 language: Chinese
-test_exists_labels: False
+test_exists_labels: True
 
 return_token_type_ids: True
 truncate_seq2seq_output: False
@@ -28,8 +28,8 @@ hidden_size: 768
 aggregation: none
 
 num_train_epochs: 10
-max_seq_length: 512
-max_out_length: 512
+max_seq_length: 256
+max_out_length: 256
 dataloader_num_workers: 2
 
 generation_max_length: 128
@@ -57,4 +57,5 @@ evaluation_strategy: epoch
 eval_steps: 500
 save_strategy: epoch
 save_steps: 500
+
 

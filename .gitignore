@@ -148,6 +148,9 @@ runs
 !/data/format.json
 serialization_dir
 
+# scripts
+/scripts/data_processing/ace2005/stanford-corenlp-4.4.0
+
 # emacs
 *.*~
 debug.env

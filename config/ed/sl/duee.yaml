@@ -6,14 +6,14 @@ do_ED_infer: True
 paradigm: sequence_labeling
 
 task_name: ED
-dataset_name: ACE2005
-output_dir: output/ACE2005-ZH
-type2id_path: ../data/ace_2005_td_v7/Chinese/label2id.json
-train_file: ../data/ace_2005_td_v7/Chinese/train.unified.jsonl
-validation_file: ../data/ace_2005_td_v7/Chinese/valid.unified.jsonl
-test_file: ../data/ace_2005_td_v7/Chinese/test.unified.jsonl
+dataset_name: DuEE1.0
+output_dir: output/DuEE1.0
+type2id_path: ../data/processed/DuEE1.0/label2id.json
+train_file: ../data/processed/DuEE1.0/duee_train.unified.json
+validation_file: ../data/processed/DuEE1.0/duee_dev.unified.json
+test_file: ../data/processed/DuEE1.0/duee_test2.unified.json
 language: Chinese
-test_exists_labels: True
+test_exists_labels: False
 
 return_token_type_ids: True
 truncate_seq2seq_output: False
@@ -23,11 +23,9 @@ model_name_or_path: bert-base-chinese
 hidden_size: 768
 aggregation: none
 
-truncate_in_batch: False
-
-num_train_epochs: 1
-max_seq_length: 256
-max_out_length: 256
+num_train_epochs: 10
+max_seq_length: 200
+max_out_length: 200
 dataloader_num_workers: 2
 
 generation_max_length: 128
@@ -35,9 +33,9 @@ generation_num_beams: 4
 predict_with_generate: True
 ignore_pad_token_for_loss: True
 
-per_device_train_batch_size: 16
+per_device_train_batch_size: 4
 per_device_eval_batch_size: 8
-gradient_accumulation_steps: 1
+gradient_accumulation_steps: 4
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5
 weight_decay: 1.0e-5
@@ -55,8 +53,4 @@ evaluation_strategy: epoch
 eval_steps: 500
 save_strategy: epoch
 save_steps: 500
-
-# split inference #
-split_infer: True
-split_infer_size: 500
 

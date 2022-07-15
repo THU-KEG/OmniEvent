@@ -138,25 +138,23 @@ if __name__ == "__main__":
         Our setting is:
             kbp2017 as test set, and the rest data as train and valid sets.
     """
-    output_dir = '../../data/TAC-KBP/'
+    input_dir = "../../../data/processed/"
+    output_dir = "../../../data/processed/TAC-KBP/"
+    os.makedirs(output_dir, exist_ok=True)
     is_eae_14_15 = False  # kbp2014 and kbp2015 do not have EAE data currently.
     dump = True
 
-    kbp2014 = list(jsonlines.open(
-        '../../data/tac_kbp_eng_event_nugget_detect_coref_2014-2015/TAC-KBP2014/train.unified.jsonl')) + list(
-        jsonlines.open('../../data/tac_kbp_eng_event_nugget_detect_coref_2014-2015/TAC-KBP2014/test.unified.jsonl'))
-    kbp2015 = list(jsonlines.open(
-        '../../data/tac_kbp_eng_event_nugget_detect_coref_2014-2015/TAC-KBP2015/train.unified.jsonl')) + list(
-        jsonlines.open('../../../data/tac_kbp_eng_event_nugget_detect_coref_2014-2015/TAC-KBP2015/test.unified.jsonl'))
-    kbp2016 = list(jsonlines.open(
-        '../../data/tac_kbp_event_arg_comp_train_eval_2016-2017/TAC-KBP2016/pilot.unified.jsonl')) + list(
-        jsonlines.open('../../data/tac_kbp_event_arg_comp_train_eval_2016-2017/TAC-KBP2016/test.unified.jsonl'))
-    kbp2017 = list(
-        jsonlines.open('../../data/tac_kbp_event_arg_comp_train_eval_2016-2017/TAC-KBP2017/test.unified.jsonl'))
+    kbp2014 = list(jsonlines.open(input_dir + 'TAC-KBP2014/train.unified.jsonl')) + list(
+        jsonlines.open(input_dir + '/TAC-KBP2014/test.unified.jsonl'))
+    kbp2015 = list(jsonlines.open(input_dir + 'TAC-KBP2015/train.unified.jsonl')) + list(
+        jsonlines.open(input_dir + '/TAC-KBP2015/test.unified.jsonl'))
+    kbp2016 = list(jsonlines.open(input_dir + 'TAC-KBP2016/pilot.unified.jsonl')) + list(
+        jsonlines.open(input_dir + '/TAC-KBP2016/test.unified.jsonl'))
+    kbp2017 = list(jsonlines.open(input_dir + 'TAC-KBP2017/test.unified.jsonl'))
 
-    ldc2015e29 = list(jsonlines.open('../../data/LDC2015E29/LDC2015E29/data.unified.jsonl'))
-    ldc2015e68 = list(jsonlines.open('../../data/LDC2015E68/LDC2015E68/data.unified.jsonl'))
-    ldc2015e78 = list(jsonlines.open('../../data/LDC2015E78/LDC2015E78/data.unified.jsonl'))
+    ldc2015e29 = list(jsonlines.open(input_dir + 'ere/LDC2015E29.unified.jsonl'))
+    ldc2015e68 = list(jsonlines.open(input_dir + 'ere/LDC2015E68.unified.jsonl'))
+    ldc2015e78 = list(jsonlines.open(input_dir + 'ere/LDC2015E78.unified.jsonl'))
 
     if is_eae_14_15:
         train_and_valid = ldc2015e29 + ldc2015e68 + ldc2015e78 + kbp2016 + kbp2014 + kbp2015

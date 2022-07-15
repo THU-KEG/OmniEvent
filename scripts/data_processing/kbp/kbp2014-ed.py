@@ -1,9 +1,3 @@
-"""
-@ File:    tac-kbp2014.py
-@ Author:  Zimu Wang
-# Update:  June 10, 2022
-@ Purpose: Convert the TAC KBP 2014 dataset in document level.
-"""
 import copy
 import jsonlines
 import os
@@ -22,25 +16,26 @@ class Config(object):
     """
     def __init__(self):
         # The configuration for the current folder.
-        self.PROJECT_FOLDER = "../../../data"
+        self.DATA_FOLDER = "../../../data"
 
         # The configurations for the training data.
-        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                   '2015/data/2014/training')
+        self.TRAIN_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-2015/data'
+                                                                '/2014/training')
         self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'source')
         self.TRAIN_TOKEN_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'token_offset')
         self.TRAIN_ANNOTATION_TBF = os.path.join(self.TRAIN_DATA_FOLDER, 'annotation/annotation.tbf')
 
         # The configurations for the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                  '2015/data/2014/eval')
+        self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-2015/data'
+                                                               '/2014/eval')
         self.EVAL_SOURCE_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'source')
         self.EVAL_TOKEN_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'token_offset')
         self.EVAL_ANNOTATION_TBF = os.path.join(self.EVAL_DATA_FOLDER, 'annotation/annotation.tbf')
 
         # The configuration for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
-                                                                  '2015/TAC-KBP2014')
+        # self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-'
+        #                                                           '2015/TAC-KBP2014')
+        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'processed', 'TAC-KBP2014')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
@@ -105,27 +100,27 @@ def read_source(documents, source_folder, token_folder):
                   'r') as source:
             document['text'] = source.read()
 
-            # Find the number of xml characters before each character.
-            xml_char = list()
-            for i in range(len(document['text'])):
-                # Retrieve the top i characters.
-                text = document['text'][:i]
-                # Find the length of the text after deleting the
-                # xml elements and line breaks before the current index.
-                # Delete the <DATETIME> elements from the text.
-                text_del = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', text)
-                # Delete the xml characters from the text.
-                text_del = re.sub('<.*?>', ' ', text_del)
-                # Delete the unpaired '< / DOC' element.
-                text_del = re.sub('< / DOC', ' ', text_del)
-                # Delete the url elements from the text.
-                text_del = re.sub('http(.*?) ', ' ', text_del)
-                # Replace the line breaks using spaces.
-                text_del = re.sub('\n', ' ', text_del)
-                # Delete extra spaces.
-                text_del = re.sub(' +', ' ', text_del)
-                # Delete the spaces before the text.
-                xml_char.append(len(text_del.lstrip()))
+        # Find the number of xml characters before each character.
+        xml_char = list()
+        for i in range(len(document['text'])):
+            # Retrieve the top i characters.
+            text = document['text'][:i]
+            # Find the length of the text after deleting the
+            # xml elements and line breaks before the current index.
+            # Delete the <DATETIME> elements from the text.
+            text_del = re.sub('<DATETIME>(.*?)< / DATETIME>', ' ', text)
+            # Delete the xml characters from the text.
+            text_del = re.sub('<.*?>', ' ', text_del)
+            # Delete the unpaired '< / DOC' element.
+            text_del = re.sub('< / DOC', ' ', text_del)
+            # Delete the url elements from the text.
+            text_del = re.sub('http(.*?) ', ' ', text_del)
+            # Replace the line breaks using spaces.
+            text_del = re.sub('\n', ' ', text_del)
+            # Delete extra spaces.
+            text_del = re.sub(' +', ' ', text_del)
+            # Delete the spaces before the text.
+            xml_char.append(len(text_del.lstrip()))
 
         # Replace the character position of each event.
         for event in document['events']:
@@ -134,10 +129,11 @@ def read_source(documents, source_folder, token_folder):
                 if len(trigger['position'].split(',')) == 1:
                     with open(os.path.join(token_folder, str(document['id'] + '.txt.tab'))) as offset:
                         for line in offset:
-                            token_id, _, start_line, end_line = line.split('\t')
+                            token_id, _, token_begin, token_end = line.split('\t')
                             if token_id == trigger['position']:
-                                trigger['position'] = [xml_char[int(start_line)],
-                                                       xml_char[int(start_line)] + len(trigger['trigger_word'])]
+                                trigger['position'] = [xml_char[int(token_begin)],
+                                                       xml_char[int(token_begin)] + len(trigger['trigger_word'])]
+                        assert type(trigger['position']) != str
                 # Case 2: The event covers multiple tokens.
                 else:
                     # Obtain the start and end token of the trigger.
@@ -147,11 +143,12 @@ def read_source(documents, source_folder, token_folder):
                     with open(os.path.join(token_folder, str(document['id'] + '.txt.tab'))) as offset:
                         start_pos, end_pos = 0, 0
                         for line in offset:
-                            token_id, _, start_line, end_line = line.split('\t')
+                            token_id, _, token_begin, token_end = line.split('\t')
                             if token_id == start_token:
-                                start_pos = int(start_line)
+                                start_pos = int(token_begin)
                             elif token_id == end_token:
-                                end_pos = int(end_line.strip('\n'))
+                                end_pos = int(token_end.strip('\n'))
+                        assert type(start_pos) != str and type(end_pos) != str
                         # Slice the trigger word for multiple spans.
                         trigger['trigger_word'] = document['text'][start_pos:end_pos + 1]
                         # Delete the line break within the trigger.
@@ -332,9 +329,7 @@ if __name__ == '__main__':
     all_train_data = generate_negative_trigger(train_documents_sent, train_documents_without_event)
     json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'train.json'), "w"), indent=4)
     to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'train.unified.jsonl'), all_train_data)
-    
+
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
     json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'test.json'), "w"), indent=4)
     to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'test.unified.jsonl'), all_test_data)
-
-

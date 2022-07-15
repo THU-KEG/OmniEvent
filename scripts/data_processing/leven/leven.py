@@ -81,11 +81,12 @@ def convert_leven_to_unified(data_path: str, dump=True) -> list:
 
     print("We get {} instances for [{}].".format(len(formatted_data), data_path))
     if "train" in data_path:
-        io_dir = "/".join(data_path.split("/")[:-1])
+        io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-1]).split('/data'))
         label2id = dict(sorted(list(label2id.items()), key=lambda x: x[1]))
         json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w", encoding='utf-8'),
                   indent=4, ensure_ascii=False)
 
+    data_path = '/data/processed'.join(data_path.split('/data'))
     if dump:
         with jsonlines.open(data_path.replace(".jsonl", ".unified.jsonl"), "w") as f:
             for item in formatted_data:
@@ -95,6 +96,7 @@ def convert_leven_to_unified(data_path: str, dump=True) -> list:
 
 
 if __name__ == "__main__":
+    os.makedirs("../../../data/processed/LEVEN/", exist_ok=True)
     convert_leven_to_unified("../../../data/LEVEN/train.jsonl")
     convert_leven_to_unified("../../../data/LEVEN/valid.jsonl")
     convert_leven_to_unified("../../../data/LEVEN/test.jsonl")
