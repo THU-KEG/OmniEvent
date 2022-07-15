@@ -1,9 +1,3 @@
-"""
-@ File:    tac-kbp2015_sent.py
-@ Author:  Zimu Wang
-# Update:  June 10, 2022
-@ Purpose: Convert the TAC KBP 2015 dataset in sentence level.
-"""
 import copy
 import re
 import jsonlines
@@ -23,18 +17,18 @@ class Config(object):
     """
     def __init__(self):
         # The configuration for the current folder.
-        self.PROJECT_FOLDER = "../../../data"
+        self.DATA_FOLDER = "../../../data"
 
         # The configurations for the training data.
-        self.TRAIN_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
-                                                                   '2014-2015/data/2015/training')
+        self.TRAIN_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-2015/data'
+                                                                '/2015/training')
         self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'source')
         self.TRAIN_HOPPER_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'event_hopper')
         self.TRAIN_NUGGET_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, 'event_nugget')
 
         # The configurations for the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
-                                                                  '2014-2015/data/2015/eval')
+        self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_2014-2015/data'
+                                                               '/2015/eval')
         self.EVAL_SOURCE_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'source')
         self.EVAL_HOPPER_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'hopper')
         self.EVAL_NUGGET_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, 'nugget')
@@ -42,7 +36,7 @@ class Config(object):
         # The configuration for the saving path.
         # self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'tac_kbp_eng_event_nugget_detect_coref_'
         #                                                           '2014-2015/TAC-KBP2015')
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'processed', 'TAC-KBP2015')
+        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'processed', 'TAC-KBP2015')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
@@ -66,7 +60,8 @@ def read_xml(hopper_folder, source_folder):
             'id': str(),
             'text': str(),
             'events': list(),
-            'negative_triggers': list()
+            'negative_triggers': list(),
+            'entities': list()
         }
 
         # Parse the data from the xml file.
@@ -209,14 +204,14 @@ def sentence_tokenize(documents):
                 'id': document['id'] + '-' + str(i),
                 'text': sentence_tokenize[i],
                 'events': list(),
-                'negative_triggers': list()
+                'negative_triggers': list(),
+                'entities': list()
             }
             # Filter the events belong to the sentence.
             for event in document['events']:
                 event_sent = {
                     'type': event['type'],
-                    'triggers': list(),
-                    'arguments': list()
+                    'triggers': list()
                 }
                 for trigger in event['triggers']:
                     if sentence_pos[i][0] <= trigger['position'][0] < sentence_pos[i][1]:
@@ -340,7 +335,7 @@ if __name__ == '__main__':
     all_train_data = generate_negative_trigger(train_documents_sent, train_documents_without_event)
     json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'train.json'), "w"), indent=4)
     to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'train.unified.jsonl'), all_train_data)
-    
+
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
     json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'test.json'), "w"), indent=4)
     to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'test.unified.jsonl'), all_test_data)
