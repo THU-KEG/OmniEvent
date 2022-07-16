@@ -3,8 +3,8 @@ import logging
 
 from tqdm import tqdm
 from .base_processor import (
-    EDDataProcessor, 
-    EDInputExample, 
+    EDDataProcessor,
+    EDInputExample,
     EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
@@ -12,7 +12,6 @@ from .base_processor import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 
 class EDSLProcessor(EDDataProcessor):
@@ -131,12 +130,12 @@ class EAESLProcessor(EAEDataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.event_preds is not None \
-                                and not self.config.golden_trigger \
-                                and not self.is_training:    
-                                pred_event_type = self.event_preds[trigger_idx] 
+                            true_type = event["type"]
+                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
+                                pred_event_type = true_type
                             else:
-                                pred_event_type = event["type"]
+                                pred_event_type = self.event_preds[trigger_idx]
+
                             if self.config.language == "English":
                                 trigger_left = len(item["text"][:trigger["position"][0]].split())
                                 trigger_right = len(item["text"][:trigger["position"][1]].split())
@@ -172,9 +171,39 @@ class EAESLProcessor(EAEDataProcessor):
                                 labels=labels,
                             )
                             trigger_idx += 1
+
+                            if self.eval_mode in ['default', 'loose']:
+                                if pred_event_type == "NA":
+                                    continue
                             self.examples.append(example)
+
                     # negative triggers
-                    for neg in item["negative_triggers"]:
+                    for trigger in item["negative_triggers"]:
+                        true_type = "NA"
+                        if self.eval_mode in ['default', 'strict'] and not self.is_training:  # loose mode has no neg
+                            pred_event_type = self.event_preds[trigger_idx]
+                            if pred_event_type != "NA":
+                                if self.config.language == "English":
+                                    trigger_left = len(item["text"][:trigger["position"][0]].split())
+                                    trigger_right = len(item["text"][:trigger["position"][1]].split())
+                                elif self.config.language == "Chinese":
+                                    trigger_left = trigger["position"][0]
+                                    trigger_right = trigger["position"][1]
+                                else:
+                                    raise NotImplementedError
+                                labels = ["O"] * len(words)
+
+                                example = EAEInputExample(
+                                    example_id=item["id"],
+                                    text=words,
+                                    pred_type=pred_event_type,
+                                    true_type=true_type,
+                                    trigger_left=trigger_left,
+                                    trigger_right=trigger_right,
+                                    labels=labels,
+                                )
+                                self.examples.append(example)
+
                         trigger_idx += 1
                 else:
                     for candi in item["candidates"]:
@@ -194,7 +223,7 @@ class EAESLProcessor(EAEDataProcessor):
                                 example_id=item["id"],
                                 text=words,
                                 pred_type=pred_event_type,
-                                true_type="NA",   # true type not given, set to NA.
+                                true_type="NA",  # true type not given, set to NA.
                                 trigger_left=trigger_left,
                                 trigger_right=trigger_right,
                                 labels=labels,
@@ -222,7 +251,8 @@ class EAESLProcessor(EAEDataProcessor):
     def insert_marker(text, event_type, labels, trigger_pos, markers):
         left, right = trigger_pos
 
-        marked_text = text[:left] + [markers[event_type][0]] + text[left:right] + [markers[event_type][1]] + text[right:]
+        marked_text = text[:left] + [markers[event_type][0]] + text[left:right] + [markers[event_type][1]] + text[
+                                                                                                             right:]
         marked_labels = labels[:left] + ["X"] + labels[left:right] + ["X"] + labels[right:]
 
         assert len(marked_text) == len(marked_labels)
