@@ -15,17 +15,17 @@ def load_vocab(vocab_file, return_embeddings=False):
     vocab["[PAD]"] = 0
     with open(vocab_file, "r", encoding="utf-8") as reader:
         lines = reader.readlines()
+    num_embeddings = len(lines) + 1
+    embedding_dim = len(lines[0].split()) - 1
     for index, line in enumerate(lines):
-        token = " ".join(line.split()[:-300])
+        token = " ".join(line.split()[:-embedding_dim])
         if token in vocab:
             token = f"{token}_{index+1}"
         vocab[token] = index + 1
     if return_embeddings:
-        num_embeddings = len(lines) + 1
-        embedding_dim = len(lines[0].split()) - 1
         word_embeddings = np.zeros((num_embeddings, embedding_dim), dtype=np.float32)
         for index, line in enumerate(lines):
-            embedding = [float(value) for value in line.strip().split()[-300:]]
+            embedding = [float(value) for value in line.strip().split()[-embedding_dim:]]
             word_embeddings[index+1] = embedding
         return word_embeddings
     return vocab

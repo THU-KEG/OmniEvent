@@ -6,16 +6,16 @@ do_ED_infer: True
 # top-level config #
 paradigm: token_classification
 task_name: ED
-dataset_name: ACE2005
+dataset_name: MAVEN
 language: English
-test_exists_labels: True
+test_exists_labels: False
 
 # file path # 
-output_dir: output/ACE2005-EN
-type2id_path: ../../data/processed/ace2005/label2id.json 
-train_file: ../../data/processed/ace2005/train.unified.jsonl
-validation_file: ../../data/processed/ace2005/valid.unified.jsonl
-test_file: ../../data/processed/ace2005/test.unified.jsonl
+output_dir: output/MAVEN
+type2id_path: ../../data/processed/MAVEN/label2id.json 
+train_file: ../../data/processed/MAVEN/train.unified.jsonl
+validation_file: ../../data/processed/MAVEN/valid.unified.jsonl
+test_file: ../../data/processed/MAVEN/test.unified.jsonl
 
 # config for data processor #
 return_token_type_ids: True 
@@ -24,12 +24,12 @@ truncate_seq2seq_output: False
 # model config #
 model_type: cnn
 model_name_or_path: cnn 
-vocab_file: ../../data/wordvec/glove
-word_embedding_dim: 300
-position_embedding_dim: 20 
-hidden_dropout_prob: 0.0
+vocab_file: ../../data/wordvec/glove-100d
+word_embedding_dim: 100
+position_embedding_dim: 50 
+hidden_dropout_prob: 0.5
 hidden_size: 256
-aggregation: marker
+aggregation: dynamic_pooling
 head_scale: 2
 
 # training config #

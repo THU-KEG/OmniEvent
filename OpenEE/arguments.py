@@ -115,6 +115,12 @@ class DataArguments:
             "help": "sub-batch size for split inference."
         }
     )
+    eae_eval_mode: str = field(
+        default="default",
+        metadata={
+            "help": "Evaluation mode for EAE."
+        }
+    )
 
 
 @dataclass
