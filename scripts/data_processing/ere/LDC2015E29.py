@@ -1,15 +1,16 @@
 import copy
-import re
-import pdb 
-import sys 
-sys.path.append("../")
+import json
 import jsonlines
 import os
-import json 
+import pdb
+import re
+
+import sys
+sys.path.append("../")
 
 from nltk.tokenize.punkt import PunktSentenceTokenizer
+from tqdm import tqdm
 from xml.dom.minidom import parse
-from tqdm import tqdm 
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
 
@@ -20,16 +21,15 @@ class Config(object):
     """
     def __init__(self):
         # The configuration for the project (current) folder.
-        self.PROJECT_FOLDER = "../../../data"
+        self.ALL_DATA_FOLDER = "../../../data"
 
         # The configurations for the data.
-        self.DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'LDC2015E29/data')
+        self.DATA_FOLDER = os.path.join(self.ALL_DATA_FOLDER, 'LDC2015E29/data')
         self.GOLD_FOLDER = os.path.join(self.DATA_FOLDER, 'ere/mpdfxml')
         self.SOURCE_FOLDER = os.path.join(self.DATA_FOLDER, 'source/mpdfxml')
 
         # The configuration for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.PROJECT_FOLDER, 'processed/ere')
-
+        self.SAVE_DATA_FOLDER = os.path.join(self.ALL_DATA_FOLDER, 'processed/ere')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
@@ -97,7 +97,6 @@ def read_xml(gold_folder, source_folder):
                                        not (word.startswith('&lt;') or word.endswith('&gt;'))])
             # Initialise a dictionary for each filler.
             filler_dict = {
-                'id': filler.getAttribute('id'),
                 'type': filler.getAttribute('type'),
                 'mentions': [{
                     'id': filler.getAttribute('id'),
@@ -146,14 +145,15 @@ def read_xml(gold_folder, source_folder):
                     flag = 0
                     # Justify whether the argument being added.
                     for added_argument in trigger_dict['arguments']:
-                        if arg_id == added_argument['id'] and argument.getAttribute('role') == added_argument['role']:
+                        if argument.getAttribute('role') == added_argument['role'] \
+                                and arg_id == added_argument['id']:
                             # Classify the type of the argument and obtain its id.
                             if argument.getAttribute('entity_mention_id') == '':
                                 mention_id = argument.getAttribute('filler_id')
                             else:
                                 mention_id = argument.getAttribute('entity_mention_id')
                             argument_mention = argument.childNodes[0].data.split(' ')
-                            argument_dict = {
+                            mention_dict = {
                                 'id': mention_id,
                                 'mention': ' '.join([word for word in argument_mention if
                                                      not (word.startswith('&lt;') or word.endswith('&gt;'))]),
@@ -163,9 +163,9 @@ def read_xml(gold_folder, source_folder):
                             for entity in document['entities']:
                                 for entity_mention in entity['mentions']:
                                     if entity_mention['id'] == mention_id:
-                                        argument_dict['position'] = entity_mention['position']
-                            assert argument_dict['position'] != -1
-                            added_argument['mentions'].append(argument_dict)
+                                        mention_dict['position'] = entity_mention['position']
+                            assert mention_dict['position'] != -1
+                            added_argument['mentions'].append(mention_dict)
                             flag = 1
                     # Initialise a new dictionary if the entity id not exists.
                     # The id of the argument will be deleted later.
@@ -189,14 +189,14 @@ def read_xml(gold_folder, source_folder):
                             for entity_mention in entity['mentions']:
                                 if entity_mention['id'] == mention_id:
                                     argument_dict['mentions'][0]['position'] = entity_mention['position']
+                        assert argument_dict['mentions'][0]['position'] != -1
                         trigger_dict['arguments'].append(argument_dict)
-                hopper_dict['triggers'].append(trigger_dict)
 
                 # Delete the id of each argument.
                 for argument in trigger_dict['arguments']:
                     del argument['id']
+                hopper_dict['triggers'].append(trigger_dict)
             document['events'].append(hopper_dict)
-
         documents.append(document)
 
     return read_source(documents, source_folder)
@@ -352,8 +352,8 @@ def clean_documents(documents):
                         if document_clean['text'][mention['position'][0]:mention['position'][1]] \
                                 == mention['mention']:
                             argument_clean['mentions'].append(mention)
-                        if len(argument_clean['mentions']) != 0:
-                            trigger_clean['arguments'].append(argument_clean)
+                    if len(argument_clean['mentions']) != 0:
+                        trigger_clean['arguments'].append(argument_clean)
                 event_clean['triggers'].append(trigger_clean)
             document_clean['events'].append(event_clean)
         documents_clean.append(document_clean)
@@ -397,6 +397,7 @@ def sentence_tokenize(documents):
                 'negative_triggers': list(),
                 'entities': list()
             }
+
             # Filter the events belong to the sentence.
             for event in document['events']:
                 event_sent = {
@@ -436,6 +437,7 @@ def sentence_tokenize(documents):
                                     mention['position'][0] -= sentence_pos[i][0]
                                     mention['position'][1] -= sentence_pos[i][0]
                     sentence['events'].append(event_sent)
+
             # Filter the entities belong to the sentence.
             for entity in document['entities']:
                 entity_sent = {
@@ -447,12 +449,14 @@ def sentence_tokenize(documents):
                         entity_sent['mentions'].append(copy.deepcopy(mention))
                 if not len(entity_sent['mentions']) == 0:
                     for mention in entity_sent['mentions']:
-                        mention['position'][0] -= sentence_pos[i][0]
-                        mention['position'][1] -= sentence_pos[i][0]
+                        if not sentence['text'][mention['position'][0]:mention['position'][1]] \
+                               == mention['mention']:
+                            mention['position'][0] -= sentence_pos[i][0]
+                            mention['position'][1] -= sentence_pos[i][0]
                     sentence['entities'].append(entity_sent)
 
             # Append the manipulated sentence into the list of documents.
-            if not (len(sentence['events']) == 0 or len(sentence['entities']) == 0):
+            if not (len(sentence['events']) == 0 and len(sentence['entities']) == 0):
                 documents_split.append(sentence)
             else:
                 document_without_event['sentences'].append(sentence['text'])
@@ -478,12 +482,14 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
     # Fix the errors in tokenization.
     for i in range(len(sentence_tokenize) - 1, -1, -1):
         if sentence_tokenize[i].endswith('U.S.') or sentence_tokenize[i].endswith('U.N.') \
-                or sentence_tokenize[i].endswith('U.K.') or sentence_tokenize[i].endswith('St.') \
+                or sentence_tokenize[i].endswith('U.K.') or sentence_tokenize[i].endswith('W.C.') \
+                or sentence_tokenize[i].endswith('H.W.') or sentence_tokenize[i].endswith('C.?S.') \
                 or sentence_tokenize[i].endswith('Jan.') or sentence_tokenize[i].endswith('Feb.') \
                 or sentence_tokenize[i].endswith('Aug.') or sentence_tokenize[i].endswith('Sept.') \
                 or sentence_tokenize[i].endswith('Nov.') or sentence_tokenize[i].endswith('Dec.') \
                 or sentence_tokenize[i].endswith('Dr.') or sentence_tokenize[i].endswith('Lt.') \
-                or sentence_tokenize[i].endswith('No.') or sentence_tokenize[i].endswith('p.m.'):
+                or sentence_tokenize[i].endswith('No.') or sentence_tokenize[i].endswith('St.') \
+                or sentence_tokenize[i].endswith('p.m.'):
             if i not in del_index:
                 sentence_tokenize[i] = sentence_tokenize[i] + ' ' + sentence_tokenize[i + 1]
                 sentence_pos[i][1] = sentence_pos[i + 1][1]

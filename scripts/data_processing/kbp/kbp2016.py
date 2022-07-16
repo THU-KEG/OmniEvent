@@ -1,12 +1,12 @@
 import copy
 import re
+import json
 import jsonlines
 import os
-import json 
 
 from nltk.tokenize.punkt import PunktSentenceTokenizer
+from tqdm import tqdm
 from xml.dom.minidom import parse
-from tqdm import tqdm 
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
 
@@ -34,8 +34,6 @@ class Config(object):
         self.EVAL_SOURCE_FOLDER_NW = os.path.join(self.DATA_FOLDER, 'tac_kbp_eval_src_2016-2017/data/2016/eng/nw')
 
         # The configuration of the saving path.
-        # self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'tac_kbp_event_arg_comp_train_eval_2016-2017/'
-        #                                                        'TAC-KBP2016')
         self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, 'processed', 'TAC-KBP2016')
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
@@ -126,7 +124,6 @@ def read_xml(gold_folder, source_folder, mode):
                                        not (word.startswith('&lt;') or word.endswith('&gt;'))])
             # Initialise a dictionary for each filler.
             filler_dict = {
-                'id': filler.getAttribute('id'),
                 'type': filler.getAttribute('type'),
                 'mentions': [{
                     'id': filler.getAttribute('id'),
@@ -175,14 +172,15 @@ def read_xml(gold_folder, source_folder, mode):
                     flag = 0
                     # Justify whether the argument being added.
                     for added_argument in trigger_dict['arguments']:
-                        if arg_id == added_argument['id'] and argument.getAttribute('role') == added_argument['role']:
-                            # Classify the type of the argument and obtain its id.
+                        if argument.getAttribute('role') == added_argument['role'] \
+                                and arg_id == added_argument['id']:
+                            # Classify the type of the argument and obtain its mention id.
                             if argument.getAttribute('entity_mention_id') == '':
                                 mention_id = argument.getAttribute('filler_id')
                             else:
                                 mention_id = argument.getAttribute('entity_mention_id')
                             argument_mention = argument.childNodes[0].data.split(' ')
-                            argument_dict = {
+                            mention_dict = {
                                 'id': mention_id,
                                 'mention': ' '.join([word for word in argument_mention if
                                                      not (word.startswith('&lt;') or word.endswith('&gt;'))]),
@@ -192,9 +190,9 @@ def read_xml(gold_folder, source_folder, mode):
                             for entity in document['entities']:
                                 for entity_mention in entity['mentions']:
                                     if entity_mention['id'] == mention_id:
-                                        argument_dict['position'] = entity_mention['position']
-                            assert argument_dict['position'] != -1
-                            added_argument['mentions'].append(argument_dict)
+                                        mention_dict['position'] = entity_mention['position']
+                            assert mention_dict['position'] != -1
+                            added_argument['mentions'].append(mention_dict)
                             flag = 1
                     # Initialise a new dictionary if the entity id not exists.
                     # The id of the argument will be deleted later.
@@ -218,14 +216,14 @@ def read_xml(gold_folder, source_folder, mode):
                             for entity_mention in entity['mentions']:
                                 if entity_mention['id'] == mention_id:
                                     argument_dict['mentions'][0]['position'] = entity_mention['position']
+                        assert argument_dict['mentions'][0]['position'] != -1
                         trigger_dict['arguments'].append(argument_dict)
-                hopper_dict['triggers'].append(trigger_dict)
 
                 # Delete the id of each argument.
                 for argument in trigger_dict['arguments']:
                     del argument['id']
+                hopper_dict['triggers'].append(trigger_dict)
             document['events'].append(hopper_dict)
-
         documents.append(document)
 
     return read_source(documents, source_folder, mode)
@@ -390,15 +388,14 @@ def clean_documents(documents):
                         if document_clean['text'][mention['position'][0]:mention['position'][1]] \
                                 == mention['mention']:
                             argument_clean['mentions'].append(mention)
-                        if len(argument_clean['mentions']) != 0:
-                            trigger_clean['arguments'].append(argument_clean)
+                    if len(argument_clean['mentions']) != 0:
+                        trigger_clean['arguments'].append(argument_clean)
                 event_clean['triggers'].append(trigger_clean)
             document_clean['events'].append(event_clean)
         documents_clean.append(document_clean)
 
     assert check_position(documents_clean)
     return sentence_tokenize(documents_clean)
-
 
 def sentence_tokenize(documents):
     """
@@ -460,6 +457,7 @@ def sentence_tokenize(documents):
                             if not len(argument_sent['mentions']) == 0:
                                 trigger_sent['arguments'].append(argument_sent)
                         event_sent['triggers'].append(trigger_sent)
+
                 # Modify the start and end positions.
                 if not len(event_sent['triggers']) == 0:
                     for trigger in event_sent['triggers']:
@@ -474,6 +472,7 @@ def sentence_tokenize(documents):
                                     mention['position'][0] -= sentence_pos[i][0]
                                     mention['position'][1] -= sentence_pos[i][0]
                     sentence['events'].append(event_sent)
+
             # Filter the entities belong to the sentence.
             for entity in document['entities']:
                 entity_sent = {
@@ -490,7 +489,7 @@ def sentence_tokenize(documents):
                     sentence['entities'].append(entity_sent)
 
             # Append the manipulated sentence into the list of documents.
-            if not (len(sentence['events']) == 0 or len(sentence['entities']) == 0):
+            if not (len(sentence['events']) == 0 and len(sentence['entities']) == 0):
                 documents_split.append(sentence)
             else:
                 document_without_event['sentences'].append(sentence['text'])
