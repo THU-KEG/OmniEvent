@@ -17,7 +17,7 @@ train_file: ../../data/processed/ace2005/train.unified.jsonl
 validation_file: ../../data/processed/ace2005/valid.unified.jsonl
 test_file: ../../data/processed/ace2005/test.unified.jsonl
 # event detection predictions
-golden_trigger: True
+golden_trigger: False
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/train_preds.json
 validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
