@@ -4,15 +4,12 @@ import pdb
 import sys
 sys.path.append("../../")
 import json
-import torch
 import logging
 
 import numpy as np
-from tqdm import tqdm
 from collections import defaultdict
 
 from transformers import set_seed
-from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
@@ -24,23 +21,13 @@ from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
     compute_F1
 )
-from OpenEE.evaluation.dump_result import (
-    get_duee_submission_sl
-)
-from OpenEE.evaluation.convert_format import (
-    get_ace2005_argument_extraction_sl
-)
 
 from OpenEE.evaluation.utils import (
     predict_eae,
     predict_sub_eae,
 )
 
-from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
-from OpenEE.trainer_seq2seq import Seq2SeqTrainer
-
-# from torch.utils.tensorboard import SummaryWriter
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -97,11 +84,11 @@ print(data_args, model_args, training_args)
 set_seed(training_args.seed)
 
 # writter 
-earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience, \
+earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience,
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
                                            model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
 model = get_model(model_args, backbone)
 model.cuda()
@@ -133,26 +120,11 @@ if training_args.do_predict:
     pred_func = predict_sub_eae if data_args.split_infer else predict_eae
 
     logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
-    print("-" * 50)
-    print("Test File: {}, Metrics: {}, Split_Infer: {}".format(data_args.test_file, metrics, data_args.split_infer))
+    print("\n"+"-" * 50+'\n')
+    print("Test File: {}, \nMetrics: {}, \nSplit_Infer: {}".format(data_args.test_file, metrics, data_args.split_infer))
 
     # pdb.set_trace()
     preds = np.argmax(logits, axis=-1)
     if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
-        print(metrics)
-        if model_args.paradigm == "sequence_labeling":
-            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-        else:
-            pass
-    else:
-        # save name
-        aggregation = model_args.aggregation
-        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
-        if model_args.paradigm == "token_classification":
-            pass
-
-        elif model_args.paradigm == "sequence_labeling":
-            if data_args.dataset_name == "DuEE1.0":
-                print("Start get duee submission++++++++++++++++++")
-                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+        assert model_args.paradigm == "token_classification"
+        print("Above is the test performance for Token-Classification Paradigm.")

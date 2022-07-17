@@ -132,9 +132,9 @@ class EAESLProcessor(EAEDataProcessor):
                         for trigger in event["triggers"]:
                             true_type = event["type"]
                             if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_event_type = true_type
+                                pred_type = true_type
                             else:
-                                pred_event_type = self.event_preds[trigger_idx]
+                                pred_type = self.event_preds[trigger_idx]
 
                             if self.config.language == "English":
                                 trigger_left = len(item["text"][:trigger["position"][0]].split())
@@ -164,7 +164,7 @@ class EAESLProcessor(EAEDataProcessor):
                             example = EAEInputExample(
                                 example_id=item["id"],
                                 text=words,
-                                pred_type=pred_event_type,
+                                pred_type=pred_type,
                                 true_type=event["type"],
                                 trigger_left=trigger_left,
                                 trigger_right=trigger_right,
@@ -173,7 +173,7 @@ class EAESLProcessor(EAEDataProcessor):
                             trigger_idx += 1
 
                             if self.eval_mode in ['default', 'loose']:
-                                if pred_event_type == "NA":
+                                if pred_type == "NA":
                                     continue
                             self.examples.append(example)
 
@@ -181,8 +181,8 @@ class EAESLProcessor(EAEDataProcessor):
                     for trigger in item["negative_triggers"]:
                         true_type = "NA"
                         if self.eval_mode in ['default', 'strict'] and not self.is_training:  # loose mode has no neg
-                            pred_event_type = self.event_preds[trigger_idx]
-                            if pred_event_type != "NA":
+                            pred_type = self.event_preds[trigger_idx]
+                            if pred_type != "NA":
                                 if self.config.language == "English":
                                     trigger_left = len(item["text"][:trigger["position"][0]].split())
                                     trigger_right = len(item["text"][:trigger["position"][1]].split())
@@ -196,7 +196,7 @@ class EAESLProcessor(EAEDataProcessor):
                                 example = EAEInputExample(
                                     example_id=item["id"],
                                     text=words,
-                                    pred_type=pred_event_type,
+                                    pred_type=pred_type,
                                     true_type=true_type,
                                     trigger_left=trigger_left,
                                     trigger_right=trigger_right,
@@ -217,12 +217,12 @@ class EAESLProcessor(EAEDataProcessor):
                             raise NotImplementedError
                         labels = ["O"] * len(words)
 
-                        pred_event_type = self.event_preds[trigger_idx]
-                        if pred_event_type != "NA":
+                        pred_type = self.event_preds[trigger_idx]
+                        if pred_type != "NA":
                             example = EAEInputExample(
                                 example_id=item["id"],
                                 text=words,
-                                pred_type=pred_event_type,
+                                pred_type=pred_type,
                                 true_type="NA",  # true type not given, set to NA.
                                 trigger_left=trigger_left,
                                 trigger_right=trigger_right,
