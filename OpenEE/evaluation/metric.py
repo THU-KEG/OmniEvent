@@ -49,8 +49,6 @@ def f1_score_overall(preds, labels):
 def compute_seq_F1(logits, labels, **kwargs):
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
-    pred_types = training_args.data_for_evaluation["pred_types"]
-    true_types = training_args.data_for_evaluation["true_types"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
     # Replace -100 in the labels as we can't decode them.
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
@@ -59,16 +57,28 @@ def compute_seq_F1(logits, labels, **kwargs):
         for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
             x_str = x_str.replace(to_remove_token, '')
         return x_str.strip()
-    assert len(true_types) == len(decoded_labels)
-    assert len(decoded_preds) == len(decoded_labels)
-    pred_arguments, golden_arguments = [], []
-    for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
-        pred = clean_str(pred)
-        label = clean_str(label)
-        # if pred_types[i] != "NA":
-        pred_arguments.extend(extract_argument(pred, i, pred_types[i]))
-        golden_arguments.extend(extract_argument(label, i, true_types[i]))
-    precision, recall, micro_f1 = f1_score_overall(pred_arguments, golden_arguments)
+    if training_args.task_name == "EAE":
+        pred_types = training_args.data_for_evaluation["pred_types"]
+        true_types = training_args.data_for_evaluation["true_types"]
+        assert len(true_types) == len(decoded_labels)
+        assert len(decoded_preds) == len(decoded_labels)
+        pred_arguments, golden_arguments = [], []
+        for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
+            pred = clean_str(pred)
+            label = clean_str(label)
+            # if pred_types[i] != "NA":
+            pred_arguments.extend(extract_argument(pred, i, pred_types[i]))
+            golden_arguments.extend(extract_argument(label, i, true_types[i]))
+        precision, recall, micro_f1 = f1_score_overall(pred_arguments, golden_arguments)
+    else:
+        assert len(decoded_preds) == len(decoded_labels)
+        pred_triggers, golden_triggers = [], []
+        for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
+            pred = clean_str(pred)
+            label = clean_str(label)
+            pred_triggers.extend(extract_argument(pred, i, "NA"))
+            golden_triggers.extend(extract_argument(label, i, "NA"))
+        precision, recall, micro_f1 = f1_score_overall(pred_triggers, golden_triggers)
     return {"micro_f1": micro_f1*100}
 
 

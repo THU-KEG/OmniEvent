@@ -5,6 +5,9 @@ import logging
 from tqdm import tqdm 
 from collections import defaultdict
 from .base_processor import (
+    EDInputExample,
+    EDDataProcessor,
+    EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
     EAEInputFeatures
@@ -12,6 +15,65 @@ from .base_processor import (
 
 
 logger = logging.getLogger(__name__)
+
+
+class EDSeq2SeqProcessor(EDDataProcessor):
+    "Data processor for sequence to sequence."
+
+    def __init__(self, config, tokenizer, input_file):
+        super().__init__(config, tokenizer)
+        self.read_examples(input_file)
+        self.convert_examples_to_features()
+    
+    def read_examples(self, input_file):
+        self.examples = []
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+                # training and valid set
+                if "events" in item:
+                    labels = []
+                    for event in item["events"]:
+                        for trigger in event["triggers"]:
+                            labels.append(f"<extra_id_0> {event['type']} {trigger['trigger_word']} <extra_id_1>")
+                    if len(labels) != 0:
+                        labels = "".join(labels)
+                        labels = "<extra_id_0>" + labels + "<extra_id_1>"
+                    else:       # no arguments for the trigger
+                        labels = "<extra_id_0><extra_id_1>"
+                    example = EDInputExample(
+                        example_id=item["id"],
+                        text=item["text"],
+                        labels=labels
+                    )
+                    self.examples.append(example)
+
+    def convert_examples_to_features(self):
+        self.input_features = []
+        whitespace = True if self.config.language == "English" else False 
+        for example in tqdm(self.examples, desc="Processing features for SL"):
+            # context 
+            input_context = self.tokenizer(example.text,
+                                           truncation=True,
+                                           padding="max_length",
+                                           max_length=self.config.max_seq_length)
+            # output labels
+            label_outputs = self.tokenizer(example.labels,
+                                           padding="max_length",
+                                           truncation=True,
+                                           max_length=self.config.max_out_length)
+            # set -100 to unused token 
+            for i, flag in enumerate(label_outputs["attention_mask"]):
+                if flag == 0:
+                    label_outputs["input_ids"][i] = -100
+            features = EDInputFeatures(
+                example_id = example.example_id,
+                input_ids = input_context["input_ids"],
+                attention_mask = input_context["attention_mask"],
+                labels = label_outputs["input_ids"]
+            )
+            self.input_features.append(features)
+
 
 
 class EAESeq2SeqProcessor(EAEDataProcessor):
