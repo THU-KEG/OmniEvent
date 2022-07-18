@@ -119,12 +119,17 @@ trainer.train()
 if training_args.do_predict:
     pred_func = predict_sub_eae if data_args.split_infer else predict_eae
 
-    logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
-    print("\n"+"-" * 50+'\n')
-    print("Test File: {}, \nMetrics: {}, \nSplit_Infer: {}".format(data_args.test_file, metrics, data_args.split_infer))
+    for eval_mode in ['default', 'loose', 'strict']:
+        print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
+        data_args.eae_eval_mode = eval_mode
 
-    # pdb.set_trace()
-    preds = np.argmax(logits, axis=-1)
-    if data_args.test_exists_labels:
-        assert model_args.paradigm == "token_classification"
-        print("Above is the test performance for Token-Classification Paradigm.")
+        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
+        print("\n" + "-" * 50 + '\n')
+        print("Test File: {}, \nMetrics: {}, \nSplit_Infer: {}".format(data_args.test_file, metrics,
+                                                                       data_args.split_infer))
+
+        # pdb.set_trace()
+        preds = np.argmax(logits, axis=-1)
+        if data_args.test_exists_labels:
+            assert model_args.paradigm == "token_classification"
+            print("Above is the [{}]test performance for Token-Classification Paradigm.".format(eval_mode))
