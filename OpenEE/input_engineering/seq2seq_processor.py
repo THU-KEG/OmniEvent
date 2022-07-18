@@ -113,7 +113,8 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 labels=labels,
                             )
                             self.examples.append(example)
-            assert trigger_idx == len(self.event_preds)
+            if self.event_preds is not None:
+                assert trigger_idx == len(self.event_preds)
 
 
     def insert_marker(self, text, type, trigger_pos, markers, whitespace=True):
