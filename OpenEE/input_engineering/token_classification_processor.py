@@ -3,14 +3,13 @@ import logging
 
 from tqdm import tqdm
 from .base_processor import (
-    EDDataProcessor, 
-    EDInputExample, 
+    EDDataProcessor,
+    EDInputExample,
     EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
     EAEInputFeatures
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +97,7 @@ class EDTCProcessor(EDDataProcessor):
                 attention_mask=outputs["attention_mask"],
                 token_type_ids=outputs["token_type_ids"],
                 trigger_left=left,
-                trigger_right=right 
+                trigger_right=right
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
@@ -120,6 +119,7 @@ class EAETCProcessor(EAEDataProcessor):
             all_lines = f.readlines()
             for line in tqdm(all_lines, desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
+<<<<<<< HEAD
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
@@ -226,6 +226,64 @@ class EAETCProcessor(EAEDataProcessor):
                                     self.examples.append(example)
             assert trigger_idx == len(self.event_preds)
                     
+=======
+                # training and valid set
+                for event in item["events"]:
+                    for trigger in event["triggers"]:
+                        true_type = event["type"]
+                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
+                            pred_type = true_type
+                        else:
+                            pred_type = self.event_preds[trigger_idx]
+
+                        # TODO: add different eval modes below
+
+                        args_for_trigger = set()
+                        for argument in trigger["arguments"]:
+                            for mention in argument["mentions"]:
+                                example = EAEInputExample(
+                                    example_id=trigger["id"],
+                                    text=item["text"],
+                                    pred_type=pred_type,
+                                    true_type=event["type"],
+                                    trigger_left=trigger["position"][0],
+                                    trigger_right=trigger["position"][1],
+                                    argument_left=mention["position"][0],
+                                    argument_right=mention["position"][1],
+                                    labels=argument["role"]
+                                )
+                                args_for_trigger.add(mention['mention_id'])
+                                self.examples.append(example)
+                        for entity in item["entities"]:
+                            # check whether the entity is an argument 
+                            is_argument = False
+                            for mention in entity["mentions"]:
+                                if mention["mention_id"] in args_for_trigger:
+                                    is_argument = True
+                                    break
+                            if is_argument:
+                                continue
+                            # negative arguments 
+                            for mention in entity["mentions"]:
+                                example = EAEInputExample(
+                                    example_id=trigger["id"],
+                                    text=item["text"],
+                                    pred_type=pred_type,
+                                    true_type=event["type"],
+                                    trigger_left=trigger["position"][0],
+                                    trigger_right=trigger["position"][1],
+                                    argument_left=mention["position"][0],
+                                    argument_right=mention["position"][1],
+                                    labels="NA"
+                                )
+                                if "train" in input_file or self.config.golden_trigger:
+                                    example.pred_type = event["type"]
+                                self.examples.append(example)
+                        trigger_idx += 1
+                # negative triggers 
+                for neg in item["negative_triggers"]:
+                    trigger_idx += 1
+>>>>>>> de8f6dddf25eead292f4b796ec143c1bd5f1aa46
 
     def insert_marker(self, text, type, trigger_position, argument_position, markers, whitespace=True):
         markered_text = ""
@@ -236,55 +294,59 @@ class EAETCProcessor(EAEDataProcessor):
             if i == argument_position[0]:
                 markered_text += markers["argument"][0]
                 markered_text += " " if whitespace else ""
-            markered_text += char 
-            if i == trigger_position[1]-1:
+            markered_text += char
+            if i == trigger_position[1] - 1:
                 markered_text += " " if whitespace else ""
                 markered_text += markers[type][1]
-            if i ==argument_position[1]-1:
+            if i == argument_position[1] - 1:
                 markered_text += " " if whitespace else ""
                 markered_text += markers["argument"][1]
         return markered_text
 
-    def convert_examples_to_features(self): 
+    def convert_examples_to_features(self):
         # merge and then tokenize
         self.input_features = []
-        whitespace = True if self.config.language == "English" else False 
+        whitespace = True if self.config.language == "English" else False
         for example in tqdm(self.examples, desc="Processing features for TC"):
-            text = self.insert_marker(example.text, 
-                                        example.pred_type,
-                                        [example.trigger_left, example.trigger_right], 
-                                        [example.argument_left, example.argument_right], 
-                                        self.config.markers, 
-                                        whitespace)
-            outputs = self.tokenizer(text, 
-                                    padding="max_length",
-                                    truncation=True,
-                                    max_length=self.config.max_seq_length)
-            is_overflow = False 
+            text = self.insert_marker(example.text,
+                                      example.pred_type,
+                                      [example.trigger_left, example.trigger_right],
+                                      [example.argument_left, example.argument_right],
+                                      self.config.markers,
+                                      whitespace)
+            outputs = self.tokenizer(text,
+                                     padding="max_length",
+                                     truncation=True,
+                                     max_length=self.config.max_seq_length)
+            is_overflow = False
             # argument position 
             try:
-                argument_left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
-                argument_right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
-            except: 
+                argument_left = outputs["input_ids"].index(
+                    self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
+                argument_right = outputs["input_ids"].index(
+                    self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
+            except:
                 argument_left, argument_right = 0, 0
                 logger.warning("Argument markers are not in the input tokens.")
                 is_overflow = True
             # trigger position
             try:
-                trigger_left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][0]))
-                trigger_right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][1]))
-            except: 
+                trigger_left = outputs["input_ids"].index(
+                    self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][0]))
+                trigger_right = outputs["input_ids"].index(
+                    self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][1]))
+            except:
                 trigger_left, trigger_right = 0, 0
                 logger.warning("Trigger markers are not in the input tokens.")
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
-                
+
             features = EAEInputFeatures(
-                example_id = example.example_id,
-                input_ids = outputs["input_ids"],
-                attention_mask = outputs["attention_mask"],
-                token_type_ids = outputs["token_type_ids"],
+                example_id=example.example_id,
+                input_ids=outputs["input_ids"],
+                attention_mask=outputs["attention_mask"],
+                token_type_ids=outputs["token_type_ids"],
                 trigger_left=trigger_left,
                 trigger_right=trigger_right,
                 argument_left=argument_left,
