@@ -1,5 +1,7 @@
+from audioop import bias
 import os 
 import pdb
+from unicodedata import bidirectional
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -29,6 +31,9 @@ def get_backbone(model_type, model_name_or_path, tokenizer_name, markers,
     elif model_type == "cnn":
         tokenizer = WordLevelTokenizer.from_pretrained(model_args.vocab_file)
         model = CNN(model_args, len(tokenizer))
+    elif model_type == 'lstm':
+        tokenizer = WordLevelTokenizer.from_pretrained(model_args.vocab_file)
+        model = LSTM(model_args, len(tokenizer))        
     else:
         raise ValueError("No such model. %s" % model_type)
     
@@ -119,6 +124,44 @@ class CNN(nn.Module):
         x = self.embedding(input_ids) # (B, L, H)
         x = x.transpose(1, 2)          # (B, H, L)
         x = F.relu(self.conv(x).transpose(1, 2))       # (B, H, L)
+        x = self.dropout(x)
+        if return_dict:
+            return Output(
+                    last_hidden_state = x
+                )
+        else:
+            return (x) 
+
+class LSTM(nn.Module):
+    def __init__(self, 
+                 config, 
+                 vocab_size
+        ) -> None:
+        super(LSTM, self).__init__()
+        self.config = config
+        self.embedding = WordEmbedding(config, vocab_size)
+        self.rnn = nn.LSTM(config.word_embedding_dim, config.hidden_size, num_layers = config.num_layers, bidirectional=True, batch_first=True, dropout=config.hidden_dropout_prob)
+        self.dropout = nn.Dropout(config.hidden_dropout_prob)
+
+    def prepare_pack_padded_sequence(input_ids, input_lengths, descending=True):
+        sorted_input_lengths, indices = torch.sort(input_lengths, descending=descending)
+        _, desorted_indices = torch.sort(indices, descending=False)
+        sorted_input_ids = input_ids[indices]
+        return sorted_input_ids, sorted_input_lengths, desorted_indices
+    def forward(self, 
+                input_ids,
+                attention_mask,
+                token_type_ids,
+                return_dict=True
+        ):
+        input_length = torch.sum(attention_mask, dim=-1)
+        sorted_input_ids, sorted_seq_length, desorted_indices = self.prepare_pack_padded_sequence(input_ids, input_length)
+        x = self.embedding(sorted_input_ids) # (B, L, H)
+        packed_embedded = nn.utils.rnn.pack_padded_sequence(x, sorted_seq_length.cpu(), batch_first=True)
+        self.rnn.flatten_parameters()
+        packed_output, (hidden, cell) = self.rnn(packed_embedded)
+        output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
+        x = output[desorted_indices]
         x = self.dropout(x)
         if return_dict:
             return Output(
