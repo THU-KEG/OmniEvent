@@ -130,7 +130,7 @@ class EAETCProcessor(EAEDataProcessor):
 
                             trigger_idx += 1
 
-                            if self.eval_mode in ['default', 'loose']:
+                            if self.config.eae_eval_mode in ['default', 'loose']:
                                 if pred_type == "NA":
                                     continue
 
@@ -178,10 +178,9 @@ class EAETCProcessor(EAEDataProcessor):
 
                     # negative triggers
                     for trigger in item["negative_triggers"]:
-                        true_type = "NA"
-                        if self.eval_mode in ['default', 'strict'] and not self.is_training:
-                            if self.config.golden_trigger or self.event_preds is None:
-                                pred_type = true_type
+                        if self.config.eae_eval_mode in ['default', 'strict']:
+                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
+                                pred_type = "NA"
                             else:
                                 pred_type = self.event_preds[trigger_idx]
 

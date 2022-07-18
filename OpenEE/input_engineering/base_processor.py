@@ -201,7 +201,6 @@ class EAEDataProcessor(Dataset):
         else:
             logger.warning("Event predictions is none! We use golden triggers.")
             self.event_preds = None
-        self.eval_mode = config.eae_eval_mode if not is_training else None  # eval_mode: [default, loose, strict]
 
     def read_examples(self, input_file):
         raise NotImplementedError
