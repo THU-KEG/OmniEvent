@@ -200,7 +200,6 @@ class EAETCProcessor(EAEDataProcessor):
                                             labels="NA"
                                         )
                                         self.examples.append(example)
-
                         trigger_idx += 1
                 else:
                     for candi in item["candidates"]:
@@ -220,6 +219,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         labels="NA"
                                     )
                                     self.examples.append(example)
+                        trigger_idx += 1
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
