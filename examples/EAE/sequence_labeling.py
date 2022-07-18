@@ -138,7 +138,7 @@ trainer.train()
 if training_args.do_predict:
     pred_func = predict_sub_eae if data_args.split_infer else predict_eae
 
-    for eval_mode in ['loose', 'strict', 'default']:
+    for eval_mode in ['default', 'loose', 'strict']:
         print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
         data_args.eae_eval_mode = eval_mode
         logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
@@ -151,6 +151,7 @@ if training_args.do_predict:
         if data_args.test_exists_labels:
             # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
             get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+            print("Above is the [{}]test performance for Sequence-Labeling Paradigm.".format(eval_mode))
 
         else:
             # save name

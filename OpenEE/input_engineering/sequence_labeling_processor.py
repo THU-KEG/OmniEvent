@@ -134,18 +134,8 @@ class EAESLProcessor(EAEDataProcessor):
                             if self.is_training or self.config.golden_trigger or self.event_preds is None:
                                 pred_type = true_type
                             else:
-<<<<<<< HEAD
-                                pred_event_type = event["type"]
-                            trigger_idx += 1
-                            # Evaluation mode for EAE
-                            # If the predicted event type is NA, We don't consider the trigger
-                            if self.config.eae_eval_mode in ["default", "loose"]\
-                                and pred_event_type == "NA":
-                                continue
-=======
                                 pred_type = self.event_preds[trigger_idx]
 
->>>>>>> de8f6dddf25eead292f4b796ec143c1bd5f1aa46
                             if self.config.language == "English":
                                 trigger_left = len(item["text"][:trigger["position"][0]].split())
                                 trigger_right = len(item["text"][:trigger["position"][1]].split())
@@ -180,55 +170,21 @@ class EAESLProcessor(EAEDataProcessor):
                                 trigger_right=trigger_right,
                                 labels=labels,
                             )
-<<<<<<< HEAD
-=======
                             trigger_idx += 1
 
                             if self.eval_mode in ['default', 'loose']:
                                 if pred_type == "NA":
                                     continue
->>>>>>> de8f6dddf25eead292f4b796ec143c1bd5f1aa46
                             self.examples.append(example)
 
                     # negative triggers
-<<<<<<< HEAD
-                    for neg_trigger in item["negative_triggers"]:
-                        if self.event_preds is not None \
-                            and not self.config.golden_trigger \
-                            and not self.is_training:    
-                            pred_event_type = self.event_preds[trigger_idx]
-                        else:
-                            pred_event_type = "NA"
-                        trigger_idx += 1         
-                        if self.config.eae_eval_mode == "loose":
-                            continue
-                        elif self.config.eae_eval_mode in ["default", "strict"]:
-                            if pred_event_type != "NA":
-                                if self.config.language == "English":
-                                    trigger_left = len(item["text"][:neg_trigger["position"][0]].split())
-                                    trigger_right = len(item["text"][:neg_trigger["position"][1]].split())
-                                elif self.config.language == "Chinese":
-                                    trigger_left = neg_trigger["position"][0]
-                                    trigger_right = neg_trigger["position"][1]
-                                else:
-                                    raise NotImplementedError
-                                example = EAEInputExample(
-                                    example_id=item["id"],
-                                    text=words,
-                                    pred_type=pred_event_type,
-                                    true_type="NA",
-                                    trigger_left=trigger_left,
-                                    trigger_right=trigger_right,
-                                    labels=["O"] * len(words),
-                                )
-                                self.examples.append(example)
-                        else:
-                            raise ValueError("Invaild eac_eval_mode: %s" % self.config.eae_eval_mode)
-=======
                     for trigger in item["negative_triggers"]:
                         true_type = "NA"
                         if self.eval_mode in ['default', 'strict'] and not self.is_training:  # loose mode has no neg
-                            pred_type = self.event_preds[trigger_idx]
+                            if self.config.golden_trigger or self.event_preds is None:
+                                pred_type = true_type
+                            else:
+                                pred_type = self.event_preds[trigger_idx]
                             if pred_type != "NA":
                                 if self.config.language == "English":
                                     trigger_left = len(item["text"][:trigger["position"][0]].split())
@@ -252,7 +208,6 @@ class EAESLProcessor(EAEDataProcessor):
                                 self.examples.append(example)
 
                         trigger_idx += 1
->>>>>>> de8f6dddf25eead292f4b796ec143c1bd5f1aa46
                 else:
                     for candi in item["candidates"]:
                         if self.config.language == "English":
@@ -264,15 +219,9 @@ class EAESLProcessor(EAEDataProcessor):
                         else:
                             raise NotImplementedError
                         labels = ["O"] * len(words)
-<<<<<<< HEAD
-                        pred_event_type = self.event_preds[trigger_idx]
-                        trigger_idx += 1
-                        if pred_event_type != "NA":
-=======
 
                         pred_type = self.event_preds[trigger_idx]
                         if pred_type != "NA":
->>>>>>> de8f6dddf25eead292f4b796ec143c1bd5f1aa46
                             example = EAEInputExample(
                                 example_id=item["id"],
                                 text=words,
@@ -283,8 +232,9 @@ class EAESLProcessor(EAEDataProcessor):
                                 labels=labels,
                             )
                             self.examples.append(example)
-                            self.positive_candidate_indices.append(trigger_idx-1)
-            assert trigger_idx == len(self.event_preds)
+                            self.positive_candidate_indices.append(trigger_idx)
+
+                        trigger_idx += 1
 
     def get_final_labels(self, labels, word_ids_of_each_token, label_all_tokens=False):
         final_labels = []
