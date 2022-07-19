@@ -53,10 +53,11 @@ def read_annotation(ann_file_tbf, source_folder, token_folder):
         "id": str(),
         "text": str(),
         "events": list(),
-        "negative_triggers": list()
+        "negative_triggers": list(),
+        "entities": list()
     }
 
-    # Extract the annotation.tbf information.
+    # Extract the annotations from annotation.tbf.
     with open(ann_file_tbf) as ann_file:
         for line in tqdm(ann_file, desc="Reading annotation..."):
             # Set the id of the document.
@@ -78,15 +79,18 @@ def read_annotation(ann_file_tbf, source_folder, token_folder):
                     "id": str(),
                     "text": str(),
                     "events": list(),
-                    "negative_triggers": list()
+                    "negative_triggers": list(),
+                    "entities": list()
                 }
+            else:
+                print("The regulation of %s has not been set." % line)
 
     return read_source(documents, source_folder, token_folder)
 
 
 def read_source(documents, source_folder, token_folder):
     """
-    Extract the source texts and replace the tokens" character positions.
+    Extract the source texts and replace the tokens' character positions.
     :param documents:     The structured documents list.
     :param source_folder: Path of the source folder.
     :param token_folder:  Path of the token_offset folder.
@@ -101,10 +105,8 @@ def read_source(documents, source_folder, token_folder):
         # Find the number of xml characters before each character.
         xml_char = list()
         for i in range(len(document["text"])):
-            # Retrieve the top i characters.
+            # Retrieve the first i characters of the source text.
             text = document["text"][:i]
-            # Find the length of the text after deleting the
-            # xml elements and line breaks before the current index.
             # Delete the <DATETIME> elements from the text.
             text_del = re.sub("<DATETIME>(.*?)< / DATETIME>", " ", text)
             # Delete the xml characters from the text.
@@ -115,15 +117,15 @@ def read_source(documents, source_folder, token_folder):
             text_del = re.sub("http(.*?) ", " ", text_del)
             # Replace the line breaks using spaces.
             text_del = re.sub("\n", " ", text_del)
-            # Delete extra spaces.
+            # Delete extra spaces within the text.
             text_del = re.sub(" +", " ", text_del)
             # Delete the spaces before the text.
             xml_char.append(len(text_del.lstrip()))
 
-        # Replace the character position of each event.
+        # Replace the character position of each trigger.
         for event in document["events"]:
             for trigger in event["triggers"]:
-                # Case 1: The event only covers one token.
+                # Case 1: The event trigger only covers one token.
                 if len(trigger["position"].split(",")) == 1:
                     with open(os.path.join(token_folder, str(document["id"] + ".txt.tab"))) as offset:
                         for line in offset:
@@ -131,11 +133,12 @@ def read_source(documents, source_folder, token_folder):
                             if token_id == trigger["position"]:
                                 trigger["position"] = [xml_char[int(token_begin)],
                                                        xml_char[int(token_begin)] + len(trigger["trigger_word"])]
+                                # Manually fix an annotation that covers xml elements.
                                 if document["id"] == "bolt-eng-DF-170-181122-8808533" and token_id == "t2649":
                                     trigger["position"] \
                                         = [xml_char[13250], xml_char[13250] + len(trigger["trigger_word"])]
                         assert type(trigger["position"]) != str
-                # Case 2: The event covers multiple tokens.
+                # Case 2: The event trigger covers multiple tokens.
                 else:
                     # Obtain the start and end token of the trigger.
                     positions = trigger["position"].split(",")
@@ -149,14 +152,14 @@ def read_source(documents, source_folder, token_folder):
                                 start_pos = int(token_begin)
                             elif token_id == end_token:
                                 end_pos = int(token_end.strip("\n"))
-                        assert type(start_pos) != str and type(end_pos) != str
+                        assert start_pos != 0 and end_pos != 0
                         # Slice the trigger word for multiple spans.
                         trigger["trigger_word"] = document["text"][start_pos:end_pos + 1]
                         # Delete the line break within the trigger.
                         trigger["trigger_word"] = re.sub("\n", " ", trigger["trigger_word"])
                         trigger["trigger_word"] = re.sub(" +", " ", trigger["trigger_word"])
                         # Obtain the start and end position of the trigger.
-                        trigger["position"] = copy.deepcopy([xml_char[start_pos], xml_char[start_pos] + len(trigger["trigger_word"])])
+                        trigger["position"] = [xml_char[start_pos], xml_char[start_pos] + len(trigger["trigger_word"])]
 
         # Delete the <DATETIME> elements from the text.
         document["text"] = re.sub("<DATETIME>(.*?)< / DATETIME>", " ", document["text"])
@@ -173,12 +176,12 @@ def read_source(documents, source_folder, token_folder):
         # Delete the spaces before the text.
         document["text"] = document["text"].strip()
 
-    # Fix some annotation errors within the dataset.
-    for document in documents:
+        # Fix some annotation errors within the dataset.
         for event in document["events"]:
             for trigger in event["triggers"]:
                 if document["text"][trigger["position"][0]:trigger["position"][1]] \
                         != trigger["trigger_word"]:
+                    # Manually fix some annotation errors within the dataset.
                     if document["text"][trigger["position"][0]:trigger["position"][1]] == "ant":
                         trigger["trigger_word"] = "anti-war"
                         trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("anti-war")]
@@ -223,9 +226,19 @@ def read_source(documents, source_folder, token_folder):
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "post-ele":
                         trigger["trigger_word"] = "post-election"
                         trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("post-election")]
+                    elif document["text"][trigger["position"][0]:trigger["position"][1]] == "r":
+                        trigger["trigger_word"] = "resignation"
+                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("resignation")]
+                    # Delete the annotations that belong to the xml characters.
                     else:
-                        event['triggers'].remove(trigger)
+                        event["triggers"].remove(trigger)
                         continue
+
+        # Delete the event if there's no triggers within.
+        for event in document["events"]:
+            if len(event["triggers"]) == 0:
+                document["events"].remove(event)
+                continue
 
     assert check_position(documents)
     return sentence_tokenize(documents)
@@ -235,7 +248,7 @@ def sentence_tokenize(documents):
     """
     Tokenize the document into multiple sentences.
     :param documents:         The structured documents list.
-    :return: documents_split: The split sentences" document.
+    :return: documents_split: The split sentences' document.
     """
     # Initialise a list of the splitted documents.
     documents_split = list()
@@ -263,7 +276,8 @@ def sentence_tokenize(documents):
                 "id": document["id"] + "-" + str(i),
                 "text": sentence_tokenize[i],
                 "events": list(),
-                "negative_triggers": list()
+                "negative_triggers": list(),
+                "entities": list()
             }
             # Filter the events belong to the sentence.
             for event in document["events"]:
@@ -277,10 +291,8 @@ def sentence_tokenize(documents):
                 # Modify the start and end positions.
                 if not len(event_sent["triggers"]) == 0:
                     for triggers in event_sent["triggers"]:
-                        if not sentence["text"][triggers["position"][0]:triggers["position"][1]] \
-                                == triggers["trigger_word"]:
-                            triggers["position"][0] -= sentence_pos[i][0]
-                            triggers["position"][1] -= sentence_pos[i][0]
+                        triggers["position"][0] -= sentence_pos[i][0]
+                        triggers["position"][1] -= sentence_pos[i][0]
                     sentence["events"].append(event_sent)
 
             # Append the manipulated sentence into documents.
@@ -339,6 +351,7 @@ def check_position(documents):
     """
     for document in documents:
         for event in document["events"]:
+            assert len(document["events"]) != 0
             for trigger in event["triggers"]:
                 if document["text"][trigger["position"][0]:trigger["position"][1]] \
                         != trigger["trigger_word"]:
