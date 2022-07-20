@@ -262,8 +262,6 @@ def read_source(documents, source_folder, mode):
         for i in range(len(document["text"])):
             # Retrieve the top i characters.
             text = document["text"][:i]
-            # Find the length of the text after deleting the
-            # xml elements and line breaks before the current index.
             # Delete the <DATETIME> elements from the text.
             text_del = re.sub("<DATETIME>(.*?)< / DATETIME>", " ", text)
             # Delete the xml characters from the text.
@@ -338,7 +336,7 @@ def clean_documents(documents):
     documents_clean = list()
 
     # Clean the documents with correct elements.
-    for document in documents:
+    for document in tqdm(documents, desc="Cleaning document..."):
         # Initialise the structure for the cleaned document.
         document_clean = {
             "id": document["id"],
@@ -402,7 +400,7 @@ def sentence_tokenize(documents):
     documents_split = list()
     documents_without_event = list()
 
-    for document in documents:
+    for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
         document_without_event = {
             "id": document["id"],
@@ -456,16 +454,12 @@ def sentence_tokenize(documents):
                 # Modify the start and end positions.
                 if not len(event_sent["triggers"]) == 0:
                     for trigger in event_sent["triggers"]:
-                        if not sentence["text"][trigger["position"][0]:trigger["position"][1]] \
-                                == trigger["trigger_word"]:
-                            trigger["position"][0] -= sentence_pos[i][0]
-                            trigger["position"][1] -= sentence_pos[i][0]
+                        trigger["position"][0] -= sentence_pos[i][0]
+                        trigger["position"][1] -= sentence_pos[i][0]
                         for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
-                                if not sentence["text"][mention["position"][0]:mention["position"][1]] \
-                                       == mention["mention"]:
-                                    mention["position"][0] -= sentence_pos[i][0]
-                                    mention["position"][1] -= sentence_pos[i][0]
+                                mention["position"][0] -= sentence_pos[i][0]
+                                mention["position"][1] -= sentence_pos[i][0]
                     sentence["events"].append(event_sent)
 
             # Filter the entities belong to the sentence.

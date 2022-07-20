@@ -181,7 +181,7 @@ def sentence_tokenize(documents):
     documents_split = list()
     documents_without_event = list()
 
-    for document in documents:
+    for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
         document_without_event = {
             "id": document["id"],
@@ -217,10 +217,8 @@ def sentence_tokenize(documents):
                 # Modify the start and end positions.
                 if not len(event_sent["triggers"]) == 0:
                     for triggers in event_sent["triggers"]:
-                        if not sentence["text"][triggers["position"][0]:triggers["position"][1]] \
-                                == triggers["trigger_word"]:
-                            triggers["position"][0] -= sentence_pos[i][0]
-                            triggers["position"][1] -= sentence_pos[i][0]
+                        triggers["position"][0] -= sentence_pos[i][0]
+                        triggers["position"][1] -= sentence_pos[i][0]
                     sentence["events"].append(event_sent)
 
             # Append the manipulated sentence into documents.

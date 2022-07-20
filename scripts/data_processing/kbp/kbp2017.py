@@ -235,7 +235,7 @@ def read_source(documents, source_folder, mode):
     :param mode:          The mode of the data, pilot/eval.
     :return documents:    The list of the constructed documents.
     """
-    for document in tqdm(documents):
+    for document in tqdm(documents, desc="Reading source..."):
         # Configure the different file paths for df"s and nw"s.
         if mode == "pilot":
             if document["id"].startswith("AFP") or document["id"].startswith("APW") \
@@ -337,7 +337,7 @@ def clean_documents(documents):
     documents_clean = list()
 
     # Clean the documents with correct elements.
-    for document in documents:
+    for document in tqdm(documents, desc="Cleaning document..."):
         # Initialise the structure for the cleaned document.
         document_clean = {
             "id": document["id"],
@@ -402,7 +402,7 @@ def sentence_tokenize(documents):
     documents_split = list()
     documents_without_event = list()
 
-    for document in documents:
+    for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
         document_without_event = {
             "id": document["id"],
@@ -457,16 +457,12 @@ def sentence_tokenize(documents):
                 # Modify the start and end positions.
                 if not len(event_sent["triggers"]) == 0:
                     for trigger in event_sent["triggers"]:
-                        if not sentence["text"][trigger["position"][0]:trigger["position"][1]] \
-                                == trigger["trigger_word"]:
-                            trigger["position"][0] -= sentence_pos[i][0]
-                            trigger["position"][1] -= sentence_pos[i][0]
+                        trigger["position"][0] -= sentence_pos[i][0]
+                        trigger["position"][1] -= sentence_pos[i][0]
                         for argument in trigger["arguments"]:
                             for mention in argument["mentions"]:
-                                if not sentence["text"][mention["position"][0]:mention["position"][1]] \
-                                       == mention["mention"]:
-                                    mention["position"][0] -= sentence_pos[i][0]
-                                    mention["position"][1] -= sentence_pos[i][0]
+                                mention["position"][0] -= sentence_pos[i][0]
+                                mention["position"][1] -= sentence_pos[i][0]
                     sentence["events"].append(event_sent)
             # Filter the entities belong to the sentence.
             for entity in document["entities"]:

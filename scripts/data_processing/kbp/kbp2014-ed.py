@@ -254,7 +254,7 @@ def sentence_tokenize(documents):
     documents_split = list()
     documents_without_event = list()
 
-    for document in documents:
+    for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
         document_without_event = {
             "id": document["id"],
