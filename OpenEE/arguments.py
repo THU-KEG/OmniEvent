@@ -115,16 +115,10 @@ class DataArguments:
             "help": "sub-batch size for split inference"
         }
     )
-    eae_eval_mode: int = field(
-        default='default',
-        metadata={
-            "help": "evaluate mode for EAE task, one of [default, loose, strict]"
-        }
-    )
     eae_eval_mode: str = field(
         default="default",
         metadata={
-            "help": "Evaluation mode for EAE."
+            "help": "Evaluation mode for EAE, one of [default, loose, strict]"
         }
     )
 

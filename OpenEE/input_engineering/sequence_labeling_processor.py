@@ -130,16 +130,14 @@ class EAESLProcessor(EAEDataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            true_type = event["type"]
                             if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_type = true_type
+                                pred_type = event["type"]
                             else:
-                                pred_event_type = event["type"]
+                                pred_type = self.event_preds[trigger_idx]
                             trigger_idx += 1
                             # Evaluation mode for EAE
                             # If the predicted event type is NA, We don't consider the trigger
-                            if self.config.eae_eval_mode in ["default", "loose"]\
-                                and pred_event_type == "NA":
+                            if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
                             if self.config.language == "English":
                                 trigger_left = len(item["text"][:trigger["position"][0]].split())
@@ -179,17 +177,15 @@ class EAESLProcessor(EAEDataProcessor):
 
                     # negative triggers
                     for neg_trigger in item["negative_triggers"]:
-                        if self.event_preds is not None \
-                            and not self.config.golden_trigger \
-                            and not self.is_training:    
-                            pred_event_type = self.event_preds[trigger_idx]
+                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
+                            pred_type = "NA"
                         else:
-                            pred_event_type = "NA"
+                            pred_type = self.event_preds[trigger_idx]
                         trigger_idx += 1         
                         if self.config.eae_eval_mode == "loose":
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
-                            if pred_event_type != "NA":
+                            if pred_type != "NA":
                                 if self.config.language == "English":
                                     trigger_left = len(item["text"][:neg_trigger["position"][0]].split())
                                     trigger_right = len(item["text"][:neg_trigger["position"][1]].split())
@@ -201,7 +197,7 @@ class EAESLProcessor(EAEDataProcessor):
                                 example = EAEInputExample(
                                     example_id=item["id"],
                                     text=words,
-                                    pred_type=pred_event_type,
+                                    pred_type=pred_type,
                                     true_type="NA",
                                     trigger_left=trigger_left,
                                     trigger_right=trigger_right,
@@ -221,9 +217,9 @@ class EAESLProcessor(EAEDataProcessor):
                         else:
                             raise NotImplementedError
                         labels = ["O"] * len(words)
-                        pred_event_type = self.event_preds[trigger_idx]
+                        pred_type = self.event_preds[trigger_idx]
                         trigger_idx += 1
-                        if pred_event_type != "NA":
+                        if pred_type != "NA":
                             example = EAEInputExample(
                                 example_id=item["id"],
                                 text=words,
@@ -237,7 +233,6 @@ class EAESLProcessor(EAEDataProcessor):
                             self.positive_candidate_indices.append(trigger_idx-1)
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
-
 
     def get_final_labels(self, labels, word_ids_of_each_token, label_all_tokens=False):
         final_labels = []
