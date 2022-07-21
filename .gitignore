@@ -144,8 +144,15 @@ runs
 /examples/rag/sweep
 
 # data
-/data
+/data/**/
+!/data/format.json
 serialization_dir
+
+# scripts
+/scripts/data_processing/ace2005/stanford-corenlp-4.4.0
+/scripts/data_processing/ace2005/stanford-corenlp-4.4.0.zip 
+/scripts/data_processing/ace2005-dygie/raw_data 
+/scripts/data_processing/ace2005-dygie/default-settings
 
 # emacs
 *.*~
@@ -168,3 +175,7 @@ tags
 
 # output
 output 
+
+# pycharm
+.idea
+__pycache__

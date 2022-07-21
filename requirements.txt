@@ -19,6 +19,5 @@ threadpoolctl==3.1.0
 tokenizers==0.12.1
 torch==1.11.0+cu113
 tqdm==4.64.0
-transformers @ file:///data/ph/OpenEE/transformers-4.18.0
 typing_extensions==4.1.1
 urllib3==1.26.9
