@@ -125,6 +125,7 @@ def read_source(documents, source_folder):
             text_del = re.sub("</DOC", " ", text_del)
             # Delete the url elements from the text.
             text_del = re.sub("http(.*?) ", " ", text_del)
+            text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces.
@@ -140,6 +141,7 @@ def read_source(documents, source_folder):
         document["text"] = re.sub("</DOC", " ", document["text"])
         # Delete the url elements from the text.
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
+        document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces.

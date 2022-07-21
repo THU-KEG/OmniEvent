@@ -15,24 +15,24 @@ class Config(object):
     The configurations of this project.
     """
     def __init__(self):
-        # The configuration for the current folder.
+        # The configuration of the data folder.
         self.DATA_FOLDER = "../../../data"
 
-        # The configurations for the training data.
+        # The configurations of the training data.
         self.TRAIN_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_eng_event_nugget_detect_coref_2014-2015/data"
                                                                 "/2014/training")
         self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, "source")
         self.TRAIN_TOKEN_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, "token_offset")
         self.TRAIN_ANNOTATION_TBF = os.path.join(self.TRAIN_DATA_FOLDER, "annotation/annotation.tbf")
 
-        # The configurations for the evaluation data.
+        # The configurations of the evaluation data.
         self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_eng_event_nugget_detect_coref_2014-2015/data"
                                                                "/2014/eval")
         self.EVAL_SOURCE_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, "source")
         self.EVAL_TOKEN_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, "token_offset")
         self.EVAL_ANNOTATION_TBF = os.path.join(self.EVAL_DATA_FOLDER, "annotation/annotation.tbf")
 
-        # The configuration for the saving path.
+        # The configuration of the saving path.
         self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "processed", "TAC-KBP2014")
         if not os.path.exists(self.SAVE_DATA_FOLDER):
             os.mkdir(self.SAVE_DATA_FOLDER)
@@ -115,6 +115,7 @@ def read_source(documents, source_folder, token_folder):
             text_del = re.sub("< / DOC", " ", text_del)
             # Delete the url elements from the text.
             text_del = re.sub("http(.*?) ", " ", text_del)
+            text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces within the text.
@@ -145,14 +146,14 @@ def read_source(documents, source_folder, token_folder):
                     start_token, end_token = positions[0], positions[-1]
                     # Replace the token positions to character positions.
                     with open(os.path.join(token_folder, str(document["id"] + ".txt.tab"))) as offset:
-                        start_pos, end_pos = 0, 0
+                        start_pos, end_pos = -1, -1
                         for line in offset:
                             token_id, _, token_begin, token_end = line.split("\t")
                             if token_id == start_token:
                                 start_pos = int(token_begin)
                             elif token_id == end_token:
                                 end_pos = int(token_end.strip("\n"))
-                        assert start_pos != 0 and end_pos != 0
+                        assert start_pos != -1 and end_pos != -1
                         # Slice the trigger word for multiple spans.
                         trigger["trigger_word"] = document["text"][start_pos:end_pos + 1]
                         # Delete the line break within the trigger.
@@ -169,6 +170,7 @@ def read_source(documents, source_folder, token_folder):
         document["text"] = re.sub("< / DOC", " ", document["text"])
         # Delete the url elements from the text.
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
+        document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces.
@@ -251,8 +253,7 @@ def sentence_tokenize(documents):
     :return: documents_split: The split sentences' document.
     """
     # Initialise a list of the splitted documents.
-    documents_split = list()
-    documents_without_event = list()
+    documents_split, documents_without_event = list(), list()
 
     for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
@@ -262,8 +263,7 @@ def sentence_tokenize(documents):
         }
 
         # Tokenize the sentence of the document.
-        sentence_pos = list()
-        sentence_tokenize = list()
+        sentence_pos, sentence_tokenize = list(), list()
         for start_pos, end_pos in PunktSentenceTokenizer().span_tokenize(document["text"]):
             sentence_pos.append([start_pos, end_pos])
             sentence_tokenize.append(document["text"][start_pos:end_pos])
@@ -322,17 +322,12 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
     # Fix the errors in tokenization.
     for i in range(len(sentence_tokenize) - 1, -1, -1):
         if sentence_tokenize[i].endswith("U.S."):
-            if i not in del_index:
-                sentence_tokenize[i] = sentence_tokenize[i] + " " + sentence_tokenize[i + 1]
-                sentence_pos[i][1] = sentence_pos[i + 1][1]
-            else:
-                sentence_tokenize[i - 1] = sentence_tokenize[i - 1] + " " + sentence_tokenize[i]
-                sentence_pos[i - 1][1] = sentence_pos[i][1]
-            del_index.append(i)
+            sentence_tokenize[i] = sentence_tokenize[i] + " " + sentence_tokenize[i + 1]
+            sentence_pos[i][1] = sentence_pos[i + 1][1]
+            del_index.append(i + 1)
 
     # Store the undeleted elements into new lists.
-    new_sentence_tokenize = list()
-    new_sentence_pos = list()
+    new_sentence_tokenize, new_sentence_pos = list(), list()
     assert len(sentence_tokenize) == len(sentence_pos)
     for i in range(len(sentence_tokenize)):
         if i not in del_index:

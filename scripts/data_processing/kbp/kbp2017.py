@@ -261,17 +261,15 @@ def read_source(documents, source_folder, mode):
         for i in range(len(document["text"])):
             # Retrieve the top i characters.
             text = document["text"][:i]
-            # Find the length of the text after deleting the
-            # xml elements and line breaks before the current index.
             # Delete the <DATETIME> elements from the text.
             text_del = re.sub("<DATETIME>(.*?)< / DATETIME>", " ", text)
             # Delete the xml characters from the text.
             text_del = re.sub("<.*?>", " ", text_del)
-            text_del = re.sub("&amp;", "&", text_del)
             # Delete the unpaired "</DOC" element.
             text_del = re.sub("</DOC", " ", text_del)
             # Delete the url elements from the text.
             text_del = re.sub("http(.*?) ", " ", text_del)
+            text_del = re.sub("amp;", "", text_del)
             # Replace the line breaks using spaces.
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces before the text.
@@ -283,11 +281,11 @@ def read_source(documents, source_folder, mode):
         document["text"] = re.sub("<DATETIME>(.*?)< / DATETIME>", " ", document["text"])
         # Delete the xml characters from the text.
         document["text"] = re.sub("<.*?>", " ", document["text"])
-        document["text"] = re.sub("&amp;", "&", document["text"])
         # Delete the unpaired "</DOC" element.
         document["text"] = re.sub("</DOC", " ", document["text"])
         # Delete the url elements from the text.
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
+        document["text"] = re.sub("amp;", "", document["text"])
         # Replace the line breaks using spaces.
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces within the text.
@@ -305,7 +303,7 @@ def read_source(documents, source_folder, mode):
                 entity_mention["position"][0] = xml_char[entity_mention["position"][0]]
                 entity_mention["position"][1] = xml_char[entity_mention["position"][1]]
 
-        # Manually fix some annotation errors within the dataset.
+        # Manually fix some errors in entity position.
         for entity in document["entities"]:
             for mention in entity["mentions"]:
                 if not document["text"][mention["position"][0]:mention["position"][1]] \
@@ -399,8 +397,7 @@ def sentence_tokenize(documents):
     :return: documents_split: The split sentences" document.
     """
     # Initialise a list of the splitted documents.
-    documents_split = list()
-    documents_without_event = list()
+    documents_split, documents_without_event = list(), list()
 
     for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
@@ -464,6 +461,7 @@ def sentence_tokenize(documents):
                                 mention["position"][0] -= sentence_pos[i][0]
                                 mention["position"][1] -= sentence_pos[i][0]
                     sentence["events"].append(event_sent)
+
             # Filter the entities belong to the sentence.
             for entity in document["entities"]:
                 entity_sent = {
@@ -515,17 +513,13 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
                 or sentence_tokenize[i].endswith("St.") or sentence_tokenize[i].endswith("Co.") \
                 or sentence_tokenize[i].endswith("Ft.") or sentence_tokenize[i].endswith("W.E.B.") \
                 or sentence_tokenize[i].endswith("T.D.S."):
-            if i not in del_index:
+            if i != len(sentence_tokenize) - 1:
                 sentence_tokenize[i] = sentence_tokenize[i] + " " + sentence_tokenize[i + 1]
                 sentence_pos[i][1] = sentence_pos[i + 1][1]
-            else:
-                sentence_tokenize[i - 1] = sentence_tokenize[i - 1] + " " + sentence_tokenize[i]
-                sentence_pos[i - 1][1] = sentence_pos[i][1]
-            del_index.append(i)
+                del_index.append(i + 1)
 
     # Store the undeleted elements into new lists.
-    new_sentence_tokenize = list()
-    new_sentence_pos = list()
+    new_sentence_tokenize, new_sentence_pos = list(), list()
     assert len(sentence_tokenize) == len(sentence_pos)
     for i in range(len(sentence_tokenize)):
         if i not in del_index:

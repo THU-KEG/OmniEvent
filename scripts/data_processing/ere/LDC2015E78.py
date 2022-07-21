@@ -76,6 +76,7 @@ def read_xml(gold_folder, source_folder):
                 # Delete the url elements from the mention.
                 entity_mention = mention.getElementsByTagName("mention_text")[0].childNodes[0].data
                 entity_mention = re.sub("<.*?>", "", entity_mention)
+                entity_mention = re.sub("amp;", "", entity_mention)
                 mention_dict = {
                     "id": mention.getAttribute("id"),
                     "mention": entity_mention,
@@ -92,6 +93,7 @@ def read_xml(gold_folder, source_folder):
             # Delete the url elements from the mention.
             filler_mention = filler.childNodes[0].data
             filler_mention = re.sub("<.*?>", "", filler_mention)
+            filler_mention = re.sub("amp;", "", filler_mention)
             # Initialise a dictionary for each filler.
             filler_dict = {
                 "type": filler.getAttribute("type"),
@@ -120,6 +122,7 @@ def read_xml(gold_folder, source_folder):
                 trigger = mention.getElementsByTagName("trigger")[0]
                 assert len(mention.getElementsByTagName("trigger")) == 1
                 trigger_word = re.sub("<.*?>", "", trigger.childNodes[0].data)
+                trigger_word = re.sub("amp;", "", trigger_word)
                 trigger_dict = {
                     "id": mention.getAttribute("id"),
                     "trigger_word": trigger_word,
@@ -149,6 +152,7 @@ def read_xml(gold_folder, source_folder):
                                 mention_id = argument.getAttribute("entity_mention_id")
                             argument_mention = argument.childNodes[0].data
                             argument_mention = re.sub("<.*?>", "", argument_mention)
+                            argument_mention = re.sub("amp;", "", argument_mention)
                             mention_dict = {
                                 "id": mention_id,
                                 "mention": argument_mention,
@@ -173,6 +177,7 @@ def read_xml(gold_folder, source_folder):
                             mention_id = argument.getAttribute("entity_mention_id")
                         argument_mention = argument.childNodes[0].data
                         argument_mention = re.sub("<.*?>", "", argument_mention)
+                        argument_mention = re.sub("amp;", "", argument_mention)
                         argument_dict = {
                             "id": arg_id,
                             "role": argument.getAttribute("role"),
@@ -225,6 +230,7 @@ def read_source(documents, source_folder):
             text_del = re.sub("</DOC", " ", text_del)
             # Delete the url elements from the text.
             text_del = re.sub("http(.*?) ", " ", text_del)
+            text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces within the text.
@@ -240,6 +246,7 @@ def read_source(documents, source_folder):
         document["text"] = re.sub("</DOC", " ", document["text"])
         # Delete the url elements from the text.
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
+        document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces within the text.
@@ -332,8 +339,7 @@ def sentence_tokenize(documents):
     :return: documents_split: The split sentences" document.
     """
     # Initialise a list of the splitted documents.
-    documents_split = list()
-    documents_without_event = list()
+    documents_split, documents_without_event = list(), list()
 
     for document in tqdm(documents, desc="Tokenizing sentence..."):
         # Initialise the structure for the sentence without event.
@@ -386,6 +392,7 @@ def sentence_tokenize(documents):
                             if not len(argument_sent["mentions"]) == 0:
                                 trigger_sent["arguments"].append(argument_sent)
                         event_sent["triggers"].append(trigger_sent)
+
                 # Modify the start and end positions.
                 if not len(event_sent["triggers"]) == 0:
                     for trigger in event_sent["triggers"]:
@@ -449,18 +456,15 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
                 or sentence_tokenize[i].endswith("weed.") or sentence_tokenize[i].endswith("Mr.") \
                 or sentence_tokenize[i].endswith("No.") or sentence_tokenize[i].endswith("p.m.") \
                 or sentence_tokenize[i].endswith("US.") or sentence_tokenize[i].endswith("U.S.A.") \
-                or sentence_tokenize[i].endswith("sq.") or sentence_tokenize[i].endswith("ruling."):
-            if i not in del_index:
+                or sentence_tokenize[i].endswith("sq.") or sentence_tokenize[i].endswith("ruling.") \
+                or sentence_tokenize[i].endswith("class."):
+            if i != len(sentence_tokenize) - 1:
                 sentence_tokenize[i] = sentence_tokenize[i] + " " + sentence_tokenize[i + 1]
                 sentence_pos[i][1] = sentence_pos[i + 1][1]
-            else:
-                sentence_tokenize[i - 1] = sentence_tokenize[i - 1] + " " + sentence_tokenize[i]
-                sentence_pos[i - 1][1] = sentence_pos[i][1]
-            del_index.append(i)
+                del_index.append(i + 1)
 
     # Store the undeleted elements into new lists.
-    new_sentence_tokenize = list()
-    new_sentence_pos = list()
+    new_sentence_tokenize, new_sentence_pos = list(), list()
     assert len(sentence_tokenize) == len(sentence_pos)
     for i in range(len(sentence_tokenize)):
         if i not in del_index:
@@ -528,8 +532,7 @@ if __name__ == "__main__":
     config = Config()
 
     # Construct the documents of the dataset.
-    documents_sent, documents_without_events = \
-        read_xml(config.GOLD_FOLDER, config.SOURCE_FOLDER)
+    documents_sent, documents_without_events = read_xml(config.GOLD_FOLDER, config.SOURCE_FOLDER)
 
     # Save the documents into jsonl file.
     all_data = generate_negative_trigger(documents_sent, documents_without_events)
