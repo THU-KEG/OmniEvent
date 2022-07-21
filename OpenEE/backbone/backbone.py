@@ -144,21 +144,33 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
         self.config = config
         self.embedding = WordEmbedding(config, vocab_size)
-        self.rnn = nn.LSTM(config.word_embedding_dim, config.hidden_size, num_layers = config.num_layers, bidirectional=True, batch_first=True, dropout=config.hidden_dropout_prob)
+        self.rnn = nn.LSTM(config.word_embedding_dim+config.position_embedding_dim, 
+                            config.hidden_size, 
+                            num_layers=2, 
+                            bidirectional=True, 
+                            batch_first=True, 
+                            dropout=config.hidden_dropout_prob)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-    def prepare_pack_padded_sequence(input_ids, input_lengths, descending=True):
+
+    def resize_token_embeddings(self, vocab_size):
+        self.embedding.resize_token_embeddings(vocab_size)
+
+
+    def prepare_pack_padded_sequence(self, input_ids, input_lengths, descending=True):
         sorted_input_lengths, indices = torch.sort(input_lengths, descending=descending)
         _, desorted_indices = torch.sort(indices, descending=False)
         sorted_input_ids = input_ids[indices]
         return sorted_input_ids, sorted_input_lengths, desorted_indices
+
+
     def forward(self, 
                 input_ids,
                 attention_mask,
                 token_type_ids,
                 return_dict=True
         ):
-        input_length = torch.sum(attention_mask, dim=-1)
+        input_length = torch.sum(attention_mask, dim=-1).to(torch.long)
         sorted_input_ids, sorted_seq_length, desorted_indices = self.prepare_pack_padded_sequence(input_ids, input_length)
         x = self.embedding(sorted_input_ids) # (B, L, H)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(x, sorted_seq_length.cpu(), batch_first=True)
@@ -167,6 +179,7 @@ class LSTM(nn.Module):
         output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
         x = output[desorted_indices]
         x = self.dropout(x)
+        # pdb.set_trace()
         if return_dict:
             return Output(
                     last_hidden_state = x
