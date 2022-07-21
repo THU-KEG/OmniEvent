@@ -1,4 +1,5 @@
 
+import pdb 
 import json
 import logging
 
@@ -13,6 +14,8 @@ from .base_processor import (
     EAEInputFeatures
 )
 
+type_start = "<extra_id_0>"
+type_end = "<extra_id_1>"
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +38,12 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                     labels = []
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            labels.append(f"<extra_id_0> {event['type']} {trigger['trigger_word']} <extra_id_1>")
+                            labels.append(f"{type_start} {event['type'].split('.')[-1]} {trigger['trigger_word']} {type_end}")
                     if len(labels) != 0:
                         labels = "".join(labels)
-                        labels = "<extra_id_0>" + labels + "<extra_id_1>"
+                        labels = type_start + labels + type_end 
                     else:       # no arguments for the trigger
-                        labels = "<extra_id_0><extra_id_1>"
+                        labels = f"{type_start}{type_end}"
                     example = EDInputExample(
                         example_id=item["id"],
                         text=item["text"],
@@ -53,15 +56,17 @@ class EDSeq2SeqProcessor(EDDataProcessor):
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
             # context 
-            input_context = self.tokenizer(example.text,
+            input_context = self.tokenizer(example.text.split(),
                                            truncation=True,
                                            padding="max_length",
-                                           max_length=self.config.max_seq_length)
+                                           max_length=self.config.max_seq_length,
+                                           is_split_into_words=True)
             # output labels
-            label_outputs = self.tokenizer(example.labels,
+            label_outputs = self.tokenizer(example.labels.split(),
                                            padding="max_length",
                                            truncation=True,
-                                           max_length=self.config.max_out_length)
+                                           max_length=self.config.max_out_length,
+                                           is_split_into_words=True)
             # set -100 to unused token 
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:
@@ -112,12 +117,12 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             for argument in trigger["arguments"]:
                                 for mention in argument["mentions"]:
                                     arguments_per_trigger[argument["role"]].append(mention["mention"])
-                                    labels.append(f"<extra_id_0> {argument['role']} {mention['mention']} <extra_id_1>")
+                                    labels.append(f"{type_start} {argument['role']} {mention['mention']} {type_end}")
                             if len(labels) != 0:
                                 labels = "".join(labels)
-                                labels = "<extra_id_0>" + labels + "<extra_id_1>"
+                                labels = type_start + labels + type_end
                             else:       # no arguments for the trigger
-                                labels = "<extra_id_0><extra_id_1>"
+                                labels = f"{type_start}{type_end}"
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=trigger["id"],
@@ -142,7 +147,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
                             if pred_event_type != "NA":
-                                labels = "<extra_id_0><extra_id_1>"
+                                labels = f"{type_start}{type_end}"
                                 arguments_per_trigger = {}
                                 self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                                 example = EAEInputExample(
@@ -162,7 +167,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                         pred_event_type = self.event_preds[trigger_idx]
                         trigger_idx += 1
                         if pred_event_type != "NA":
-                            labels = "<extra_id_0><extra_id_1>"
+                            labels = f"{type_start}{type_end}"
                             arguments_per_trigger = {}
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
@@ -204,15 +209,17 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                       [example.trigger_left, example.trigger_right],
                                       self.config.markers,
                                       whitespace)
-            input_context = self.tokenizer(text,
+            input_context = self.tokenizer(text.split(),
                                            truncation=True,
                                            padding="max_length",
-                                           max_length=self.config.max_seq_length)
+                                           max_length=self.config.max_seq_length,
+                                           is_split_into_words=True)
             # output labels
-            label_outputs = self.tokenizer(example.labels,
+            label_outputs = self.tokenizer(example.labels.split(),
                                            padding="max_length",
                                            truncation=True,
-                                           max_length=self.config.max_out_length)
+                                           max_length=self.config.max_out_length,
+                                           is_split_into_words=True)
             # set -100 to unused token 
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:

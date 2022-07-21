@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=2 python prompt_tuning.py ../../config/ed/s2s/pt.yaml 

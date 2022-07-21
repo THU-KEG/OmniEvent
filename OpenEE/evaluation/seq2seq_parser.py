@@ -4,7 +4,7 @@ import pdb
 import json 
 
 
-def extract_argument(raw_text, instance_id, event_type, template=re.compile(r"<extra_id_\d>")):
+def extract_argument(raw_text, instance_id, event_type, template=re.compile(r"[<>]")):
     arguments = []
     for span in template.split(raw_text):
         if span.strip() == "":

@@ -16,7 +16,7 @@ def f1_score_overall(preds, labels):
     for pred in preds:
         if pred in labels:
             total_true += 1
-    precision = total_true / len(preds)
+    precision = total_true / (len(preds)+1e-10)
     recall = total_true / len(labels)
     f1 = 2 * precision * recall / (precision + recall + 1e-10)
     return precision, recall, f1

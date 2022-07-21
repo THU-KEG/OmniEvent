@@ -15,8 +15,7 @@ from collections import defaultdict
 
 class StanfordCoreNLPv2(StanfordCoreNLP):
     def __init__(self, path):
-        super(StanfordCoreNLPv2, self).__init__(path,
-                                                port=10086)  # assign port and comment line84-85 in corenlp.py on MacOS
+        super(StanfordCoreNLPv2, self).__init__(path)  # assign port and comment line84-85 in corenlp.py on MacOS
 
     def sent_tokenize(self, sentence):
         r_dict = self._request('ssplit,tokenize', sentence)

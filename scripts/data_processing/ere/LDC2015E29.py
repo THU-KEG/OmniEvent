@@ -538,13 +538,28 @@ def check_position(documents):
     return True
 
 
-def to_jsonl(filename, documents):
+def to_jsonl(filename, save_dir, documents):
     """
     Write the manipulated dataset into jsonl file.
     :param filename:  Name of the saved file.
     :param documents: The manipulated dataset.
     :return:
     """
+    label2id = dict(NA=0)
+    role2id = dict(NA=0)
+    print("We got %d instances" % len(documents))
+    for instance in documents:
+        for event in instance["events"]:
+            event["type"] = ".".join(event["type"].split("_"))
+            if event["type"] not in label2id:
+                label2id[event["type"]] = len(label2id)
+            for trigger in event["triggers"]:
+                for argument in trigger["arguments"]:
+                    if argument["role"] not in role2id:
+                        role2id[argument["role"]] = len(role2id)
+    # if "train" in filename:
+    json.dump(label2id, open(os.path.join(save_dir, "label2id.json"), "w"))
+    json.dump(role2id, open(os.path.join(save_dir, "role2id.json"), "w"))
     with jsonlines.open(filename, 'w') as w:
         w.write_all(documents)
 
@@ -558,4 +573,4 @@ if __name__ == '__main__':
     # Save the documents into jsonl file.
     all_data = generate_negative_trigger(documents_sent, documents_without_events)
     json.dump(all_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E29.json'), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E29.unified.jsonl'), all_data)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E29.unified.jsonl'), config.SAVE_DATA_FOLDER, all_data)

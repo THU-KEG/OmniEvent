@@ -3,15 +3,16 @@
 from typing import List, Dict
 import os
 import re 
-import pdb 
+import sys 
+sys.path.append("../")
+import pdb
 
 # debug = True if 'DEBUG' in os.environ else False
 # debug_step = True if 'DEBUG_STEP' in os.environ else False
 debug = False
 debug_step = False 
 
-type_start = "<extra_id_0>"
-type_end = "<extra_id_1>"
+from ..input_engineering.seq2seq_processor import type_start, type_end
 
 
 def get_label_name_tree(label_name_list, tokenizer, end_symbol='<end>'):

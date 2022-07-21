@@ -8,6 +8,7 @@ import numpy as np
 from transformers import BertModel, BertTokenizerFast 
 from transformers import RobertaModel, RobertaTokenizerFast
 from transformers import T5ForConditionalGeneration, T5TokenizerFast
+from transformers import MT5ForConditionalGeneration
 from transformers.utils import ModelOutput 
 
 from ..input_engineering.tokenizer import WordLevelTokenizer, load_vocab, VOCAB_FILES_NAMES
@@ -25,6 +26,9 @@ def get_backbone(model_type, model_name_or_path, tokenizer_name, markers,
         tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer_name, never_split=markers)
     elif model_type == "t5":
         model = T5ForConditionalGeneration.from_pretrained(model_name_or_path)
+        tokenizer = T5TokenizerFast.from_pretrained(tokenizer_name, never_split=markers)
+    elif model_type == "mt5":
+        model = MT5ForConditionalGeneration.from_pretrained(model_name_or_path)
         tokenizer = T5TokenizerFast.from_pretrained(tokenizer_name, never_split=markers)
     elif model_type == "cnn":
         tokenizer = WordLevelTokenizer.from_pretrained(model_args.vocab_file)
