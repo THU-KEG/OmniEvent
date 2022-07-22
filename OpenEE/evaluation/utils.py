@@ -104,8 +104,12 @@ def predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args):
     logits = np.concatenate(logits_list, axis=0)
     labels = np.concatenate(labels_list, axis=0)
 
+    test_dataset_full = data_class(data_args, tokenizer, test_file_full, test_pred_file_full)
+    training_args.data_for_evaluation = test_dataset_full.get_data_for_evaluation()
+
     metrics = trainer.compute_metrics(logits=logits, labels=labels,
-                                      **{"tokenizer": tokenizer, "training_args": trainer.args})
+                                      **{"tokenizer": tokenizer, "training_args": training_args})
+
 
     data_args.test_file = test_file_full
     data_args.test_pred_file = test_pred_file_full
