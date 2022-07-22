@@ -6,16 +6,6 @@ import collections
 
 def read_query_templates(prompt_file):
     """Load query templates"""
-    arg_names = {
-        "Time-Ending": "When the event ends?",
-        "Time-Holds": "How long the event holds?",
-        "Time-Starting": "When the event starts?",
-        "Time-Before": "When the event takes place before?",
-        "Time-Within": "When the event takes place?",
-        "Time-At-Beginning": "When the event begins?",
-        "Time-At-End": "When the event ends?",
-        "Time-After": "When the event takes place after?"
-    }
     query_templates = dict()
     with open(prompt_file, "r", encoding='utf-8') as f:
         for line in f:

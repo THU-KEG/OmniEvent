@@ -114,7 +114,7 @@ train_dataset = data_class(data_args, tokenizer, data_args.train_file)
 eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
 
 # Trainer 
-trainer = ConstrainedSeq2SeqTrainer(
+trainer = Seq2SeqTrainer(
     args=training_args,
     model=model,
     train_dataset=train_dataset,
@@ -123,7 +123,7 @@ trainer = ConstrainedSeq2SeqTrainer(
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
     callbacks=[earlystoppingCallBack],
-    decoding_type_schema={"role_list": all_types_except_na}
+    # decoding_type_schema={"role_list": all_types_except_na}
 )
 trainer.train()
 

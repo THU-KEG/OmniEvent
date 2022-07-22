@@ -568,13 +568,28 @@ def check_position(documents):
     return True
 
 
-def to_jsonl(filename, documents):
+def to_jsonl(filename, save_dir, documents):
     """
     Write the manipulated dataset into jsonl file.
     :param filename:  Name of the saved file.
     :param documents: The manipulated dataset.
     :return:
     """
+    label2id = dict(NA=0)
+    role2id = dict(NA=0)
+    print("We got %d instances" % len(documents))
+    for instance in documents:
+        for event in instance["events"]:
+            event["type"] = ".".join(event["type"].split("_"))
+            if event["type"] not in label2id:
+                label2id[event["type"]] = len(label2id)
+            for trigger in event["triggers"]:
+                for argument in trigger["arguments"]:
+                    if argument["role"] not in role2id:
+                        role2id[argument["role"]] = len(role2id)
+    if "pilot" in filename:
+        json.dump(label2id, open(os.path.join(save_dir, "label2id.json"), "w"))
+        json.dump(role2id, open(os.path.join(save_dir, "role2id.json"), "w"))
     with jsonlines.open(filename, "w") as w:
         w.write_all(documents)
 
@@ -592,8 +607,8 @@ if __name__ == "__main__":
     # Save the documents into jsonl files.
     all_train_data = generate_negative_trigger(pilot_documents_sent, pilot_documents_without_event)
     json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, "pilot.json"), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "pilot.unified.jsonl"), all_train_data)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "pilot.unified.jsonl"), config.SAVE_DATA_FOLDER, all_train_data)
 
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
     json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, "test.json"), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "test.unified.jsonl"), all_test_data)
+    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "test.unified.jsonl"), config.SAVE_DATA_FOLDER, all_test_data)

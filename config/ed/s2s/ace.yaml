@@ -8,14 +8,14 @@ paradigm: seq2seq
 task_name: ED
 dataset_name: ACE2005
 language: English
-test_exists_labels: True
+test_exists_labels: False 
 
 # file path # 
-output_dir: output/ACE2005-EN
-type2id_path: ../../data/processed/ace2005/label2id.json 
-train_file: ../../data/processed/ace2005/train.unified.jsonl
-validation_file: ../../data/processed/ace2005/valid.unified.jsonl
-test_file: ../../data/processed/ace2005/test.unified.jsonl
+output_dir: output/MAVEN
+type2id_path: ../../data/processed/MAVEN/label2id.json 
+train_file: ../../data/processed/MAVEN/train.unified.jsonl
+validation_file: ../../data/processed/MAVEN/valid.unified.jsonl
+test_file: ../../data/processed/MAVEN/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 
