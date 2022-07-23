@@ -186,7 +186,8 @@ class EAEDataProcessor(Dataset):
         self.config = config
         self.tokenizer = tokenizer
         self.is_training = is_training
-        self.config.role2id["X"] = -100
+        if hasattr(config, "role2id"):
+            self.config.role2id["X"] = -100
         self.examples = []
         self.input_features = []
         # data for trainer evaluation 

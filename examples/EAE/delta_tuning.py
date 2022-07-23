@@ -19,7 +19,7 @@ from opendelta import SoftPromptModel
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.seq2seq_processor import (
+from OpenEE.input_engineering.seq2seq_processor_hybrid import (
     EAESeq2SeqProcessor
 )
 from OpenEE.model.model import get_model
@@ -66,23 +66,9 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-# prepare labels
-role2id_path = data_args.role2id_path
-data_args.role2id = json.load(open(role2id_path))
-all_roles_except_na = copy.deepcopy(list(data_args.role2id.keys()))
-all_roles_except_na.remove("NA")
-
 # markers 
-type2id = json.load(open(data_args.type2id_path))
-markers = defaultdict(list)
-for label, id in type2id.items():
-    markers[label].append(f"<event>")
-    markers[label].append(f"</event>")
+markers = ["<event>", "</event>"]
 data_args.markers = markers
-insert_markers = [m for ms in data_args.markers.values() for m in ms]
-insert_markers.append("[SEP]")
-for i in range(10):
-    insert_markers.append(f"<extra_id_{i}>")
 print(data_args, model_args, training_args)
 
 # set seed
@@ -94,9 +80,9 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
 
 # model 
 backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
-                                           model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
-delta_model = SoftPromptModel(backbone_model=backbone)
-delta_model.freeze_module(set_state_dict=True)
+                                           model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
+# delta_model = SoftPromptModel(backbone_model=backbone)
+# delta_model.freeze_module(set_state_dict=True)
 model = get_model(model_args, backbone)
 model.cuda()
 
@@ -111,7 +97,7 @@ eval_dataset = data_class(data_args, tokenizer, data_args.validation_file, data_
 training_args.data_for_evaluation = eval_dataset.get_data_for_evaluation()
 
 # Trainer 
-trainer = ConstrainedSeq2SeqTrainer(
+trainer = Seq2SeqTrainer(
     args=training_args,
     model=model,
     train_dataset=train_dataset,
@@ -119,8 +105,7 @@ trainer = ConstrainedSeq2SeqTrainer(
     compute_metrics=metric_fn,
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
-    callbacks=[earlystoppingCallBack],
-    decoding_type_schema={"role_list": all_roles_except_na}
+    callbacks=[earlystoppingCallBack]
 )
 trainer.train()
 
@@ -134,7 +119,6 @@ if training_args.do_predict:
     # pdb.set_trace()
     preds = np.argmax(logits, axis=-1)
     if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
         print(metrics)
     else:
         pass 

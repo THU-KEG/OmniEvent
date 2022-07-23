@@ -99,6 +99,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
+                prefix = item["source"]
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
@@ -117,9 +118,10 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             labels = []
                             arguments_per_trigger = defaultdict(list)
                             for argument in trigger["arguments"]:
+                                role = argument["role"].lower()
                                 for mention in argument["mentions"]:
-                                    arguments_per_trigger[argument["role"]].append(mention["mention"])
-                                    labels.append(f"{type_start} {argument['role']} {mention['mention']} {type_end}")
+                                    arguments_per_trigger[role].append(mention["mention"])
+                                    labels.append(f"{type_start} {role} {mention['mention']} {type_end}")
                             if len(labels) != 0:
                                 labels = "".join(labels)
                                 labels = type_start + labels + type_end
@@ -128,7 +130,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=trigger["id"],
-                                text=item["text"],
+                                text=prefix+item["text"],
                                 pred_type=pred_event_type,
                                 true_type=event["type"],
                                 trigger_left=trigger["position"][0],
@@ -154,7 +156,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                                 example = EAEInputExample(
                                     example_id=trigger_idx-1,
-                                    text=item["text"],
+                                    text=prefix+item["text"],
                                     pred_type=pred_event_type,
                                     true_type="NA",
                                     trigger_left=neg_trigger["position"][0],
@@ -174,7 +176,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=item["id"],
-                                text=item["text"],
+                                text=prefix+item["text"],
                                 pred_type=pred_event_type,
                                 true_type="NA",   # true type not given, set to NA.
                                 trigger_left=candi["position"][0],
@@ -186,18 +188,18 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 assert trigger_idx == len(self.event_preds)
 
 
-    def insert_marker(self, text, type, trigger_pos, markers, whitespace=True):
+    def insert_marker(self, text, trigger_pos, markers, whitespace=True):
         space = " " if whitespace else ""
         markered_text = ""
         tokens = text.split()
         char_pos = 0
         for i, token in enumerate(tokens):
             if char_pos == trigger_pos[0]:
-                markered_text += markers[type][0] + space
+                markered_text += markers[0] + space
             char_pos += len(token) + len(space)
             markered_text += token + space
             if char_pos == trigger_pos[1] + len(space):
-                markered_text += markers[type][1] + space
+                markered_text += markers[1] + space
         markered_text = markered_text.strip()
         return markered_text
         
@@ -207,7 +209,6 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         for example in tqdm(self.examples, desc="Processing features for SL"):
             # context 
             text = self.insert_marker(example.text, 
-                                      example.true_type, 
                                       [example.trigger_left, example.trigger_right],
                                       self.config.markers,
                                       whitespace)
