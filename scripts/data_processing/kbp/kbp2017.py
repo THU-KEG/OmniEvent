@@ -702,9 +702,8 @@ def to_jsonl(filename, save_dir, documents):
                 for argument in trigger["arguments"]:
                     if argument["role"] not in role2id:
                         role2id[argument["role"]] = len(role2id)
-    if "pilot" in filename:
-        json.dump(label2id, open(os.path.join(save_dir, "label2id.json"), "w"))
-        json.dump(role2id, open(os.path.join(save_dir, "role2id.json"), "w"))
+    json.dump(label2id, open(os.path.join(save_dir, "label2id.json"), "w"))
+    json.dump(role2id, open(os.path.join(save_dir, "role2id.json"), "w"))
     with jsonlines.open(filename, "w") as w:
         w.write_all(documents)
 

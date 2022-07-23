@@ -1,1 +1,2 @@
-CUDA_VISIBLE_DEVICES=2 python prompt_tuning.py ../../config/ed/s2s/pt.yaml 
+# CUDA_VISIBLE_DEVICES=$1 python delta_tuning.py ../../config/ed/s2s/dt.yaml 
+CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/ed/s2s/ace.yaml 
