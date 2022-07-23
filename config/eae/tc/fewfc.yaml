@@ -5,22 +5,22 @@ do_predict: True
 # top-level config #
 paradigm: token_classification
 task_name: EAE
-dataset_name: ACE2005
+dataset_name: FewFC
 language: Chinese
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-ZH
-type2id_path: ../../data/processed/ace2005-zh/label2id.json
-role2id_path: ../../data/processed/ace2005-zh/role2id.json
-train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+output_dir: output/FewFC
+type2id_path: ../../data/processed/FewFC/label2id.json
+role2id_path: ../../data/processed/FewFC/role2id.json
+train_file: ../../data/processed/FewFC/train_base.unified.json
+validation_file: ../../data/processed/FewFC/dev_base.unified.json
+test_file: ../../data/processed/FewFC/test_base.unified.json
 # event detection predictions
 golden_trigger: False
-train_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/train_preds.json
-validation_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/valid_preds.json
-test_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/test_preds.json
+train_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/train_preds.json
+validation_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/valid_preds.json
+test_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/test_preds.json
 # config for some specific paradigms
 
 # config for data processor #
