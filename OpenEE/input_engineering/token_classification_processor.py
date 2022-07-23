@@ -56,7 +56,8 @@ class EDTCProcessor(EDDataProcessor):
                             example_id=candidate["id"],
                             text=item["text"],
                             trigger_left=candidate["position"][0],
-                            trigger_right=candidate["position"][1]
+                            trigger_right=candidate["position"][1],
+                            labels="NA",
                         )
                         # # if test set has labels
                         # assert not (self.config.test_exists_labels ^ ("type" in candidate))

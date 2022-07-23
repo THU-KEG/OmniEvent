@@ -143,11 +143,14 @@ trainer.train()
 
 
 if training_args.do_predict:
-    test_dataset = data_class(data_args, tokenizer, data_args.test_file)
-    logits, labels, metrics = trainer.predict(
-        test_dataset=test_dataset,
-        ignore_keys=["loss"]
-    )
+    pred_func = predict_sub_ed if data_args.split_infer else predict_ed
+
+    logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, data_args.test_file)
+    # test_dataset = data_class(data_args, tokenizer, data_args.test_file)
+    # logits, labels, metrics = trainer.predict(
+    #     test_dataset=test_dataset,
+    #     ignore_keys=["loss"]
+    # )
     # pdb.set_trace()
     if data_args.test_exists_labels:
         # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])

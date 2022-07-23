@@ -1,7 +1,7 @@
 seed: 42
 do_train: True
 do_predict: True
-do_ED_infer: True
+do_ED_infer: False
 
 paradigm: sequence_labeling
 
@@ -53,4 +53,3 @@ evaluation_strategy: epoch
 eval_steps: 500
 save_strategy: epoch
 save_steps: 500
-

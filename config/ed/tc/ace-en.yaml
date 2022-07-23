@@ -30,8 +30,8 @@ head_scale: 2
 
 # training config #
 num_train_epochs: 5
-max_seq_length: 128
-max_out_length: 128
+max_seq_length: 160
+max_out_length: 160
 dataloader_num_workers: 2
 
 per_device_train_batch_size: 32

@@ -1,39 +1,40 @@
 seed: 42
 do_train: True
 do_predict: True
-do_ED_infer: True
+do_ED_infer: False
 
-paradigm: sequence_labeling
-
+# top-level config #
+paradigm: token_classification
 task_name: ED
 dataset_name: LEVEN
-output_dir: output/LEVEN
-type2id_path: ../data/processed/LEVEN/label2id.json
-train_file: ../data/processed/LEVEN/train.unified.jsonl
-validation_file: ../data/processed/LEVEN/valid.unified.jsonl
-test_file: ../data/processed/LEVEN/test.unified.jsonl
 language: Chinese
 test_exists_labels: False
 
+# file path #
+output_dir: output/LEVEN
+type2id_path: ../../data/processed/LEVEN/label2id.json
+train_file: ../../data/processed/LEVEN/train.unified.jsonl
+validation_file: ../../data/processed/LEVEN/valid.unified.jsonl
+test_file: ../../data/processed/LEVEN/test.unified.jsonl
+
+# config for data processor #
 return_token_type_ids: True
 truncate_seq2seq_output: False
 
+# model config #
 model_type: bert
 model_name_or_path: bert-base-chinese
 hidden_size: 768
-aggregation: none
+aggregation: marker
+head_scale: 2
 
+# training config #
 num_train_epochs: 5
 max_seq_length: 256
 max_out_length: 256
 dataloader_num_workers: 2
 
-generation_max_length: 128
-generation_num_beams: 4
-predict_with_generate: True
-ignore_pad_token_for_loss: True
-
-per_device_train_batch_size: 8
+per_device_train_batch_size: 16
 per_device_eval_batch_size: 8
 gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
@@ -54,3 +55,6 @@ eval_steps: 500
 save_strategy: epoch
 save_steps: 500
 
+# split inference #
+split_infer: True
+split_infer_size: 500

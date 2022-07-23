@@ -3,40 +3,40 @@ do_train: True
 do_predict: True
 do_ED_infer: True
 
+# top-level config #
 paradigm: token_classification
-
 task_name: ED
 dataset_name: ACE2005
-output_dir: output/ACE2005-ZH
-type2id_path: ../data/processed/ace2005-zh/label2id.json
-train_file: ../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../data/processed/ace2005-zh/test.unified.jsonl
 language: Chinese
 test_exists_labels: True
 
+# file path #
+output_dir: output/ACE2005-ZH
+type2id_path: ../../data/processed/ace2005-zh/label2id.json
+train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+
+# config for data processor #
+truncate_in_batch: False
 return_token_type_ids: True
 truncate_seq2seq_output: False
 
+# model config #
 model_type: bert
 model_name_or_path: bert-base-chinese
 hidden_size: 768
-aggregation: none
+aggregation: marker
+head_scale: 2
 
-truncate_in_batch: False
-
-num_train_epochs: 5
+# training config #
+num_train_epochs: 10
 max_seq_length: 256
 max_out_length: 256
 dataloader_num_workers: 2
 
-generation_max_length: 128
-generation_num_beams: 4
-predict_with_generate: True
-ignore_pad_token_for_loss: True
-
-per_device_train_batch_size: 16
-per_device_eval_batch_size: 8
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 16
 gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5
@@ -59,4 +59,3 @@ save_steps: 500
 # split inference #
 split_infer: True
 split_infer_size: 500
-

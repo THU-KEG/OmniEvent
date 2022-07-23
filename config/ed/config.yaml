@@ -58,5 +58,3 @@ save_steps: 500
 # split inference #
 split_infer: False 
 split_infer_size: 500
-
-
