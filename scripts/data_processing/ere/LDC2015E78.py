@@ -430,6 +430,132 @@ def sentence_tokenize(documents):
             documents_without_event.append(document_without_event)
 
     assert check_position(documents_split)
+    return fix_subword(documents_split, documents_without_event)
+
+
+def fix_subword(documents_split, documents_without_event):
+    document_modified = list()
+    for document in documents_split:
+        # Initialize a list to store the number of characters before
+        # each character after splitting sub-words.
+        num_subword = [0 for i in range(len(document["text"]) + 1)]
+
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                if not (trigger["position"][0] == 0 or trigger["position"][1] == len(document["text"])):
+                    if document["text"][trigger["position"][0] - 1] != " " \
+                            or document["text"][trigger["position"][1]] not in [" ", ",", ".", "!", "?", ":", "”",
+                                                                                ";", "'", "\"", ")", "\t"]:
+                        if document["text"][trigger["position"][0] - 1:trigger["position"][1]].startswith("-"):
+                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
+                            for i in range(trigger["position"][0], len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("-")
+                                    for j in range(len(subword_list)):
+                                        if j != len(subword_list) - 1:
+                                            subword_list[j] = subword_list[j] + "-"
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 1].endswith("-"):
+                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
+                            for i in range(trigger["position"][1] + 1, len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("-")
+                                    for j in range(len(subword_list)):
+                                        if j == len(subword_list) - 1:
+                                            subword_list[j] = "-" + subword_list[j]
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 2].endswith("’s"):
+                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
+                            for i in range(trigger["position"][1] + 1, len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("’")
+                                    for j in range(len(subword_list)):
+                                        if j == len(subword_list) - 1:
+                                            subword_list[j] = "’" + subword_list[j]
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+
+        for entity in document["entities"]:
+            for mention in entity["mentions"]:
+                if not (mention["position"][0] == 0 or mention["position"][1] == len(document["text"])):
+                    if document["text"][mention["position"][0] - 1] != " " \
+                            or document["text"][mention["position"][1]] not in [" ", ",", ".", "!", "?", ":", "”",
+                                                                                ";", "'", "\"", ")", "\t"]:
+                        if document["text"][mention["position"][0] - 1:mention["position"][1]].startswith("-"):
+                            subword_index = len(document["text"][:mention["position"][1]].split()) - 1
+                            for i in range(mention["position"][0], len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("-")
+                                    for j in range(len(subword_list)):
+                                        if j != len(subword_list) - 1:
+                                            subword_list[j] = subword_list[j] + "-"
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+                        elif document["text"][mention["position"][0]:mention["position"][1] + 1].endswith("-"):
+                            subword_index = len(document["text"][:mention["position"][1]].split()) - 1
+                            for i in range(mention["position"][1] + 1, len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("-")
+                                    for j in range(len(subword_list)):
+                                        if j == len(subword_list) - 1:
+                                            subword_list[j] = "-" + subword_list[j]
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+                        elif document["text"][mention["position"][0]:mention["position"][1] + 2].endswith("’s"):
+                            subword_index = len(document["text"][:mention["position"][1]].split()) - 1
+                            for i in range(mention["position"][1] + 1, len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("’")
+                                    for j in range(len(subword_list)):
+                                        if j == len(subword_list) - 1:
+                                            subword_list[j] = "’" + subword_list[j]
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+
+        if document["id"] in document_modified:
+            for event in document["events"]:
+                for trigger in event["triggers"]:
+                    trigger["position"][0] += num_subword[trigger["position"][0]]
+                    trigger["position"][1] += num_subword[trigger["position"][1]]
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                    for argument in trigger["arguments"]:
+                        for mention in argument["mentions"]:
+                            mention["position"][0] += num_subword[mention["position"][0]]
+                            mention["position"][1] += num_subword[mention["position"][1]]
+                            mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+            for entity in document["entities"]:
+                for mention in entity["mentions"]:
+                    mention["position"][0] += num_subword[mention["position"][0]]
+                    mention["position"][1] += num_subword[mention["position"][1]]
+                    mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+
+    assert check_position(documents_split)
     return documents_split, documents_without_event
 
 

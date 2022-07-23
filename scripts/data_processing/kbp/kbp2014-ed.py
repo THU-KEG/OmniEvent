@@ -185,25 +185,23 @@ def read_source(documents, source_folder, token_folder):
                         != trigger["trigger_word"]:
                     # Manually fix some annotation errors within the dataset.
                     if document["text"][trigger["position"][0]:trigger["position"][1]] == "ant":
-                        trigger["trigger_word"] = "anti-war"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("anti-war")]
+                        trigger["position"][0] += len("anti-")
+                        trigger["position"][1] += len("anti-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "Ant":
-                        trigger["trigger_word"] = "Anti-war"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("Anti-war")]
+                        trigger["position"][0] += len("Anti-")
+                        trigger["position"][1] += len("Anti-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "pro":
-                        trigger["trigger_word"] = "pro-war"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("pro-war")]
+                        trigger["position"][0] += len("pro-")
+                        trigger["position"][1] += len("pro-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "counter-t":
-                        trigger["trigger_word"] = "counter-terrorism"
-                        trigger["position"] \
-                            = [trigger["position"][0], trigger["position"][0] + len("counter-terrorism")]
+                        trigger["position"][0] += len("counter-")
+                        trigger["position"][1] += len("counter-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "Counter-demons":
-                        trigger["trigger_word"] = "Counter-demonstrations"
-                        trigger["position"] \
-                            = [trigger["position"][0], trigger["position"][0] + len("Counter-demonstrations")]
+                        trigger["position"][0] += len("Counter-")
+                        trigger["position"][1] += len("Counter-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "re-elect":
-                        trigger["trigger_word"] = "re-election"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("re-election")]
+                        trigger["position"][0] += len("re-")
+                        trigger["position"][1] += len("re-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "w":
                         trigger["trigger_word"] = "wedding"
                         trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("wedding")]
@@ -211,11 +209,11 @@ def read_source(documents, source_folder, token_folder):
                         trigger["trigger_word"] = "War"
                         trigger["position"] = [trigger["position"][0] + 1, trigger["position"][1] + 1]
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "co-foun":
-                        trigger["trigger_word"] = "co-founded"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("co-founded")]
+                        trigger["position"][0] += len("co-")
+                        trigger["position"][1] += len("co-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "Non-ele":
-                        trigger["trigger_word"] = "Non-elected"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("Non-elected")]
+                        trigger["position"][0] += len("Non-")
+                        trigger["position"][1] += len("Non-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "'Terminall":
                         trigger["trigger_word"] = "Terminally"
                         trigger["position"] = [trigger["position"][0] + 1, trigger["position"][1] + 1]
@@ -223,11 +221,11 @@ def read_source(documents, source_folder, token_folder):
                         trigger["trigger_word"] = "Battered"
                         trigger["position"] = [trigger["position"][0] + 1, trigger["position"][1] + 1]
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "CO-FOUN":
-                        trigger["trigger_word"] = "CO-FOUNDER"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("CO-FOUNDER")]
+                        trigger["position"][0] += len("CO-")
+                        trigger["position"][1] += len("CO-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "post-ele":
-                        trigger["trigger_word"] = "post-election"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("post-election")]
+                        trigger["position"][0] += len("post-")
+                        trigger["position"][1] += len("post-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "r":
                         trigger["trigger_word"] = "resignation"
                         trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("resignation")]
@@ -304,6 +302,72 @@ def sentence_tokenize(documents):
         # Append the sentence without event into the list.
         if len(document_without_event["sentences"]) != 0:
             documents_without_event.append(document_without_event)
+
+    assert check_position(documents_split)
+    return fix_subword(documents_split, documents_without_event)
+
+def fix_subword(documents_split, documents_without_event):
+    document_modified = list()
+    for document in documents_split:
+        # Initialize a list to store the number of characters before
+        # each character after splitting sub-words.
+        num_subword = [0 for i in range(len(document["text"]) + 1)]
+
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                if not (trigger["position"][0] == 0 or trigger["position"][1] == len(document["text"])):
+                    if document["text"][trigger["position"][0] - 1] != " " \
+                            or document["text"][trigger["position"][1]] not in [" ", ",", ".", "!", "?", ":", "”",
+                                                                                ";", "'", "\"", ")", "\t"]:
+                        if document["text"][trigger["position"][0] - 1:trigger["position"][1]].startswith("-"):
+                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
+                            for i in range(trigger["position"][0], len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("-")
+                                    for j in range(len(subword_list)):
+                                        if j != len(subword_list) - 1:
+                                            subword_list[j] = subword_list[j] + "-"
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 1].endswith("-"):
+                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
+                            for i in range(trigger["position"][1] + 1, len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("-")
+                                    for j in range(len(subword_list)):
+                                        if j == len(subword_list) - 1:
+                                            subword_list[j] = "-" + subword_list[j]
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 2].endswith("’s"):
+                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
+                            for i in range(trigger["position"][1] + 1, len(num_subword)):
+                                num_subword[i] += 1
+                            text_list = document["text"].split()
+                            for i in range(len(text_list)):
+                                if i == subword_index:
+                                    subword_list = text_list[subword_index].split("’")
+                                    for j in range(len(subword_list)):
+                                        if j == len(subword_list) - 1:
+                                            subword_list[j] = "’" + subword_list[j]
+                                    text_list[i] = " ".join(subword_list)
+                            document["text"] = " ".join(text_list)
+                            document_modified.append(document["id"])
+
+        if document["id"] in document_modified:
+            for event in document["events"]:
+                for trigger in event["triggers"]:
+                    trigger["position"][0] += num_subword[trigger["position"][0]]
+                    trigger["position"][1] += num_subword[trigger["position"][1]]
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
 
     assert check_position(documents_split)
     return documents_split, documents_without_event
