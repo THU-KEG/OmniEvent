@@ -1,5 +1,5 @@
 seed: 42
-do_train: True
+do_train: False
 do_predict: True 
 do_ED_infer: True 
 
@@ -15,7 +15,7 @@ output_dir: output/MAVEN
 type2id_path: ../../data/processed/MAVEN/label2id.json 
 train_file: ../../data/processed/MAVEN/train.unified.jsonl
 validation_file: ../../data/processed/MAVEN/valid.unified.jsonl
-test_file: ../../data/processed/MAVEN/test.unified.jsonl
+test_file: ../../data/processed/MAVEN/valid.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 
@@ -29,7 +29,7 @@ hidden_size: 768
 aggregation: none
 
 # training config #
-num_train_epochs: 5
+num_train_epochs: 10
 max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2

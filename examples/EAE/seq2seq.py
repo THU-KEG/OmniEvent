@@ -91,7 +91,7 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path, \
                                            model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
@@ -118,8 +118,9 @@ trainer = Seq2SeqTrainer(
     callbacks=[earlystoppingCallBack],
     # decoding_type_schema={"role_list": all_roles_except_na}
 )
-trainer.train()
 
+if training_args.do_train:
+    trainer.train()
 
 if training_args.do_predict:
     if not data_args.split_infer:

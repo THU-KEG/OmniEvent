@@ -16,7 +16,7 @@ from opendelta import SoftPromptModel
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.seq2seq_processor_hybrid import EDSeq2SeqProcessor
+from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
 
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
@@ -87,7 +87,7 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, "output/ALL-EN/ED/seq2seq/mt5-base-none/checkpoint-30045",
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
                                            model_args.model_name_or_path, data_args.markers,
                                            new_tokens=data_args.markers)
 model = get_model(model_args, backbone)

@@ -19,7 +19,7 @@ from opendelta import SoftPromptModel
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.seq2seq_processor_hybrid import (
+from OpenEE.input_engineering.seq2seq_processor import (
     EAESeq2SeqProcessor
 )
 from OpenEE.model.model import get_model

@@ -1,5 +1,5 @@
 seed: 42
-do_train: False 
+do_train: True 
 do_predict: True
 
 # top-level config #
@@ -11,10 +11,9 @@ test_exists_labels: True
 
 # file path #
 output_dir: output/ALL-EN
-train_file: ../../data/processed/all/train.unified.jsonl
-validation_file: ../../data/processed/all/dev.unified.jsonl
-# test_file: ../../data/processed/all/test.unified.jsonl
-test_file:  ../../data/processed/MAVEN/valid.unified.jsonl 
+train_file: ../../data/processed/all-ed/train.unified.jsonl
+validation_file: ../../data/processed/all-ed/dev.unified.jsonl
+test_file: ../../data/processed/all-ed/test.unified.jsonl
 
 # config for data processor # 
 truncate_in_batch: True 
@@ -25,10 +24,10 @@ truncate_seq2seq_output: True
 model_type: mt5
 model_name_or_path: google/mt5-base
 aggregation: none 
-early_stopping_patience: 100
+# early_stopping_patience: 100
 
 # training config #
-num_train_epochs: 5
+num_train_epochs: 10
 max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2
