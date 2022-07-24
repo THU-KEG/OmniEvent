@@ -27,19 +27,17 @@ class EAEMRCProcessor(EAEDataProcessor):
         self.data_for_evaluation["golden_arguments"] = []
         trigger_idx = 0
         query_templates = read_query_templates(self.config.prompt_file)
-        template_id = 3
+        template_id = self.config.mrc_template_id
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.event_preds is not None \
-                                and not self.config.golden_trigger \
-                                and not self.is_training:    
-                                pred_event_type = self.event_preds[trigger_idx] 
-                            else:
+                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
                                 pred_event_type = event["type"]
+                            else:
+                                pred_event_type = self.event_preds[trigger_idx]
                             trigger_idx += 1
                             # Evaluation mode for EAE
                             # If the predicted event type is NA, We don't consider the trigger
@@ -80,8 +78,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                 input_template=query,
                                                 trigger_left=trigger_left,
                                                 trigger_right=trigger_right,
-                                                argu_left=left_pos,
-                                                argu_right=right_pos-1
+                                                argument_left=left_pos,
+                                                argument_right=right_pos-1
                                             )
                                             self.examples.append(example)
                                     if no_answer:
@@ -93,8 +91,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             input_template=query,
                                             trigger_left=trigger_left,
                                             trigger_right=trigger_right,
-                                            argu_left=-1,
-                                            argu_right=-1
+                                            argument_left=-1,
+                                            argument_right=-1
                                         )
                                         self.examples.append(example)
                                 else:
@@ -126,18 +124,17 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         input_template=query,
                                         trigger_left=trigger_left,
                                         trigger_right=trigger_right,
-                                        argu_left=-1,
-                                        argu_right=-1
+                                        argument_left=-1,
+                                        argument_right=-1
                                     )
                                     self.examples.append(example)
                     # negative triggers 
                     for neg_trigger in item["negative_triggers"]:
-                        if self.event_preds is not None \
-                            and not self.config.golden_trigger \
-                            and not self.is_training:    
-                            pred_event_type = self.event_preds[trigger_idx]
-                        else:
+                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
                             pred_event_type = "NA"
+                        else:
+                            pred_event_type = self.event_preds[trigger_idx]
+
                         trigger_idx += 1         
                         if self.config.eae_eval_mode == "loose":
                             continue
@@ -169,8 +166,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         input_template=query,
                                         trigger_left=trigger_left,
                                         trigger_right=trigger_right,
-                                        argu_left=-1,
-                                        argu_right=-1
+                                        argument_left=-1,
+                                        argument_right=-1
                                     )
                                     self.examples.append(example)
                         else:
@@ -206,11 +203,12 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     input_template=query,
                                     trigger_left=trigger_left,
                                     trigger_right=trigger_right,
-                                    argu_left=-1,
-                                    argu_right=-1
+                                    argument_left=-1,
+                                    argument_right=-1
                                 )
                                 self.examples.append(example)
-            assert trigger_idx == len(self.event_preds)
+            if self.event_preds is not None:
+                assert trigger_idx == len(self.event_preds)
 
 
     def word_offset_to_subword_offset_start(self, position, wordids):
@@ -283,8 +281,8 @@ class EAEMRCProcessor(EAEDataProcessor):
             input_ids = input_ids[:self.config.max_seq_length]
             attention_mask = attention_mask[:self.config.max_seq_length]
             # output labels
-            start_position = 0 if example.argu_left == -1 else example.argu_left + 1
-            end_position = 0 if example.argu_right == -1 else example.argu_right + 1
+            start_position = 0 if example.argument_left == -1 else example.argument_left + 1
+            end_position = 0 if example.argument_right == -1 else example.argument_right + 1
             # data for evaluation
             text_range = dict()
             text_range["start"] = 1

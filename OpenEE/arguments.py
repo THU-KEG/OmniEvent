@@ -121,6 +121,12 @@ class DataArguments:
             "help": "Evaluation mode for EAE, one of [default, loose, strict]"
         }
     )
+    mrc_template_id: int = field(
+        default=0,
+        metadata={
+            "help": "mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
+        }
+    )
 
 
 @dataclass
