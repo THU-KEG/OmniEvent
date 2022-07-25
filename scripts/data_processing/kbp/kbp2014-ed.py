@@ -316,7 +316,7 @@ def fix_subword(documents_split, documents_without_event):
         for event in document["events"]:
             for trigger in event["triggers"]:
                 if not (trigger["position"][0] == 0 or trigger["position"][1] == len(document["text"])):
-                    if document["text"][trigger["position"][0] - 1] != " " \
+                    if document["text"][trigger["position"][0] - 1] not in [" ", "'", "\"", "“", "("] \
                             or document["text"][trigger["position"][1]] not in [" ", ",", ".", "!", "?", ":", "”",
                                                                                 ";", "'", "\"", ")", "\t"]:
                         if document["text"][trigger["position"][0] - 1:trigger["position"][1]].startswith("-"):
@@ -328,7 +328,7 @@ def fix_subword(documents_split, documents_without_event):
                                 if i == subword_index:
                                     subword_list = text_list[subword_index].split("-")
                                     for j in range(len(subword_list)):
-                                        if j != len(subword_list) - 1:
+                                        if not j == len(subword_list) - 1:
                                             subword_list[j] = subword_list[j] + "-"
                                     text_list[i] = " ".join(subword_list)
                             document["text"] = " ".join(text_list)
@@ -342,7 +342,7 @@ def fix_subword(documents_split, documents_without_event):
                                 if i == subword_index:
                                     subword_list = text_list[subword_index].split("-")
                                     for j in range(len(subword_list)):
-                                        if j == len(subword_list) - 1:
+                                        if not j == 0:
                                             subword_list[j] = "-" + subword_list[j]
                                     text_list[i] = " ".join(subword_list)
                             document["text"] = " ".join(text_list)
