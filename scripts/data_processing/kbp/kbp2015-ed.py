@@ -127,6 +127,7 @@ def read_source(documents, source_folder):
             text_del = re.sub("http(.*?) ", " ", text_del)
             text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
+            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces.
             text_del = re.sub(" +", " ", text_del)
@@ -143,6 +144,7 @@ def read_source(documents, source_folder):
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
         document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
+        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces.
         document["text"] = re.sub(" +", " ", document["text"])
@@ -234,126 +236,108 @@ def sentence_tokenize(documents):
             documents_without_event.append(document_without_event)
 
     assert check_position(documents_split)
-    return fix_subword(documents_split, documents_without_event)
+    return add_spaces(documents_split, documents_without_event)
 
 
-def fix_subword(documents_split, documents_without_event):
-    document_modified = list()
-    for document in documents_split:
-        # Initialize a list to store the number of characters before
-        # each character after splitting sub-words.
-        num_subword = [0 for i in range(len(document["text"]) + 1)]
+def add_spaces(documents_split, documents_without_event):
+    for document in tqdm(documents_split, desc="Adding spaces..."):
+        punc_char = list()
+        for i in range(len(document["text"])):
+            # Retrieve the top i characters.
+            text = document["text"][:i]
+            text_space = re.sub(",", " , ", text)
+            text_space = re.sub("\.", " . ", text_space)
+            text_space = re.sub(":", " : ", text_space)
+            text_space = re.sub(";", " : ", text_space)
+            text_space = re.sub("\?", " ? ", text_space)
+            text_space = re.sub("!", " ! ", text_space)
+            text_space = re.sub("'", " ' ", text_space)
+            text_space = re.sub("\"", " \" ", text_space)
+            text_space = re.sub("\(", " ( ", text_space)
+            text_space = re.sub("\)", " ) ", text_space)
+            text_space = re.sub("\[", " [ ", text_space)
+            text_space = re.sub("\]", " ] ", text_space)
+            text_space = re.sub("\{", " { ", text_space)
+            text_space = re.sub("\}", " } ", text_space)
+            text_space = re.sub("-", " - ", text_space)
+            text_space = re.sub("/", " / ", text_space)
+            text_space = re.sub("_", " _ ", text_space)
+            text_space = re.sub("\*", " * ", text_space)
+            text_space = re.sub("`", " ` ", text_space)
+            text_space = re.sub("‘", " ‘ ", text_space)
+            text_space = re.sub("’", " ’ ", text_space)
+            text_space = re.sub("“", " “ ", text_space)
+            text_space = re.sub("”", " ” ", text_space)
+            text_space = re.sub("…", " … ", text_space)
+            text_space = re.sub(" +", " ", text_space)
+            punc_char.append(len(text_space.lstrip()))
+        punc_char.append(punc_char[-1])
+
+        document["text"] = re.sub(",", " , ", document["text"])
+        document["text"] = re.sub("\.", " . ", document["text"])
+        document["text"] = re.sub(":", " : ", document["text"])
+        document["text"] = re.sub(";", " ; ", document["text"])
+        document["text"] = re.sub("\?", " ? ", document["text"])
+        document["text"] = re.sub("!", " ! ", document["text"])
+        document["text"] = re.sub("'", " ' ", document["text"])
+        document["text"] = re.sub("\"", " \" ", document["text"])
+        document["text"] = re.sub("\(", " ( ", document["text"])
+        document["text"] = re.sub("\)", " ) ", document["text"])
+        document["text"] = re.sub("\[", " [ ", document["text"])
+        document["text"] = re.sub("\]", " ] ", document["text"])
+        document["text"] = re.sub("\{", " { ", document["text"])
+        document["text"] = re.sub("\}", " } ", document["text"])
+        document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub("/", " / ", document["text"])
+        document["text"] = re.sub("_", " _ ", document["text"])
+        document["text"] = re.sub("\*", " * ", document["text"])
+        document["text"] = re.sub("`", " ` ", document["text"])
+        document["text"] = re.sub("‘", " ‘ ", document["text"])
+        document["text"] = re.sub("’", " ’ ", document["text"])
+        document["text"] = re.sub("“", " “ ", document["text"])
+        document["text"] = re.sub("”", " ” ", document["text"])
+        document["text"] = re.sub("…", " … ", document["text"])
+        document["text"] = re.sub(" +", " ", document["text"]).strip()
 
         for event in document["events"]:
             for trigger in event["triggers"]:
-                if not (trigger["position"][0] == 0 or trigger["position"][1] == len(document["text"])):
-                    if document["text"][trigger["position"][0] - 1] not in [" ", "'", "\"", "“", "("] \
-                            or document["text"][trigger["position"][1]] not in [" ", "'", "\"", "”", ")"]:
-                        if document["text"][trigger["position"][0] - 2:trigger["position"][1]].startswith("--"):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][0], len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("--")
-                                    for j in range(len(subword_list)):
-                                        if not j == len(subword_list) - 1:
-                                            subword_list[j] = subword_list[j] + "--"
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-                        elif document["text"][trigger["position"][0] - 1:trigger["position"][1]].startswith("-"):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][0], len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("-")
-                                    for j in range(len(subword_list)):
-                                        if not j == len(subword_list) - 1:
-                                            subword_list[j] = subword_list[j] + "-"
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 1].endswith("-"):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][1] + 1, len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("-")
-                                    for j in range(len(subword_list)):
-                                        if not j == 0:
-                                            subword_list[j] = "-" + subword_list[j]
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 2].endswith("’s"):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][1] + 1, len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("’")
-                                    for j in range(len(subword_list)):
-                                        if j == len(subword_list) - 1:
-                                            subword_list[j] = "’" + subword_list[j]
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-                        elif document["text"][trigger["position"][0] - 4:trigger["position"][1]].startswith("...."):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][0], len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("....")
-                                    for j in range(len(subword_list)):
-                                        if not j == len(subword_list) - 1:
-                                            subword_list[j] = subword_list[j] + "...."
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-                        elif document["text"][trigger["position"][0] - 1:trigger["position"][1]].startswith("/"):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][0], len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("/")
-                                    for j in range(len(subword_list)):
-                                        if not j == len(subword_list) - 1:
-                                            subword_list[j] = subword_list[j] + "/"
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-                        elif document["text"][trigger["position"][0]:trigger["position"][1] + 1].endswith("/"):
-                            subword_index = len(document["text"][:trigger["position"][1]].split()) - 1
-                            for i in range(trigger["position"][1] + 1, len(num_subword)):
-                                num_subword[i] += 1
-                            text_list = document["text"].split()
-                            for i in range(len(text_list)):
-                                if i == subword_index:
-                                    subword_list = text_list[subword_index].split("/")
-                                    for j in range(len(subword_list)):
-                                        if not j == 0:
-                                            subword_list[j] = "/" + subword_list[j]
-                                    text_list[i] = " ".join(subword_list)
-                            document["text"] = " ".join(text_list)
-                            document_modified.append(document["id"])
-
-        if document["id"] in document_modified:
-            for event in document["events"]:
-                for trigger in event["triggers"]:
-                    trigger["position"][0] += num_subword[trigger["position"][0]]
-                    trigger["position"][1] += num_subword[trigger["position"][1]]
+                trigger["position"][0] = punc_char[trigger["position"][0]]
+                trigger["position"][1] = punc_char[trigger["position"][1]]
+                trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].startswith(" "):
+                    trigger["position"][0] += 1
                     trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].endswith(" "):
+                    trigger["position"][1] -= 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+
+    for document in documents_without_event:
+        for i in range(len(document["sentences"])):
+            document["sentences"][i] = re.sub(",", " , ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\.", " . ", document["sentences"][i])
+            document["sentences"][i] = re.sub(":", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub(";", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\?", " ? ", document["sentences"][i])
+            document["sentences"][i] = re.sub("!", " ! ", document["sentences"][i])
+            document["sentences"][i] = re.sub("'", " ' ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\"", " \" ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\(", " ( ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\)", " ) ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\[", " [ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\]", " ] ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
+            document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
+            document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
+            document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])
+            document["sentences"][i] = re.sub("`", " ` ", document["sentences"][i])
+            document["sentences"][i] = re.sub("‘", " ‘ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("’", " ’ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("“", " “ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("”", " ” ", document["sentences"][i])
+            document["sentences"][i] = re.sub("…", " … ", document["sentences"][i])
+            document["sentences"][i] = re.sub(" +", " ", document["sentences"][i]).strip()
 
     assert check_position(documents_split)
     return documents_split, documents_without_event
