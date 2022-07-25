@@ -23,7 +23,7 @@ validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-n
 test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
 # config for some specific paradigms
 prompt_file: ../../data/processed/ace2005/description_queries.csv # used for MRC paradigm
-mrc_template_id: 3
+mrc_template_id: 0
 
 # config for data processor # 
 truncate_in_batch: False 

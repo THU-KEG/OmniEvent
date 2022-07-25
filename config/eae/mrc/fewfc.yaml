@@ -5,40 +5,40 @@ do_predict: True
 # top-level config #
 paradigm: mrc
 task_name: EAE
-dataset_name: ACE2005-ZH
+dataset_name: FewFC
 language: Chinese
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-ZH
-type2id_path: ../../data/processed/ace2005-zh/label2id.json
-role2id_path: ../../data/processed/ace2005-zh/role2id.json
-train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+output_dir: output/FewFC
+type2id_path: ../../data/processed/FewFC/label2id.json
+role2id_path: ../../data/processed/FewFC/role2id.json
+train_file: ../../data/processed/FewFC/train_base.unified.json
+validation_file: ../../data/processed/FewFC/dev_base.unified.json
+test_file: ../../data/processed/FewFC/test_base.unified.json
 # event detection predictions
 golden_trigger: True
-train_pred_file: output/ACE2005-ZH/ED/sequence_labeling/bert-base-uncased-none/train_preds.json
-validation_pred_file: output/ACE2005-ZH/ED/sequence_labeling/bert-base-uncased-none/valid_preds.json
-test_pred_file: output/ACE2005-ZH/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
+train_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese-none/train_preds.json
+validation_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese-none/valid_preds.json
+test_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese-none/test_preds.json
 # config for some specific paradigms
 prompt_file: ../../data/processed/ace2005-zh/description_queries.csv # used for MRC paradigm
 mrc_template_id: 0
 
-# config for data processor # 
-truncate_in_batch: False 
-return_token_type_ids: False 
+# config for data processor #
+truncate_in_batch: False
+return_token_type_ids: False
 truncate_seq2seq_output: True
 
 # model config #
 model_type: bert
 model_name_or_path: bert-base-chinese
 hidden_size: 768
-aggregation: none 
+aggregation: none
 
 # training config #
 num_train_epochs: 10
-max_seq_length: 160
+max_seq_length: 256
 dataloader_num_workers: 2
 
 per_device_train_batch_size: 8
@@ -65,4 +65,3 @@ save_steps: 500
 # split inference #
 split_infer: False
 split_infer_size: 5000
-
