@@ -8,7 +8,7 @@ paradigm: seq2seq
 task_name: ED
 dataset_name: ACE-ZH
 language: Chinese
-test_exists_labels: False 
+test_exists_labels: True 
 
 # file path # 
 output_dir: output/ACE-ZH

@@ -119,10 +119,11 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
+                prefix = []
                 if self.config.language == "English":
-                    words = item["text"].split()
+                    words = prefix + item["text"].split()
                 elif self.config.language == "Chinese":
-                    words = list(item["text"])
+                    words = prefix + list(item["text"])
                 else:
                     raise NotImplementedError
                 if "events" in item:

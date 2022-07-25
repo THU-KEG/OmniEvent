@@ -55,7 +55,7 @@ if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
     # If we pass only one argument to the script and it's the path to a json file,
     # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
+elif len(sys.argv) >= 2 and sys.argv[1].endswith(".yaml"):
     model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
@@ -79,7 +79,7 @@ logging.basicConfig(
 )
 
 # markers 
-markers = ["<event>", "</event>"]
+markers = ["<event>", "</event>", "<ace>", "<duee>", "<fewfc>"]
 data_args.markers = markers
 print(data_args, model_args, training_args)
 
