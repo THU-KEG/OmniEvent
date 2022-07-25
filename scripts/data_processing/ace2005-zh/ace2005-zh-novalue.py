@@ -169,7 +169,7 @@ class Extractor():
                 DOMtree = parse(path + "/" + file)
                 collection = DOMtree.documentElement
                 all_ents += len(collection.getElementsByTagName("entity"))
-                tags = ["entity", "value", "timex2"]
+                tags = ["entity"]
                 for tag in tags:
                     mention_tag = f"{tag}_mention"
                     elements = collection.getElementsByTagName(tag)
@@ -179,6 +179,8 @@ class Extractor():
                         ent_type = element.getAttribute("SUBTYPE")
                         for sample in mention:
                             mention_id = sample.getAttribute("ID")
+                            if sample.getAttribute("TYPE") == "PRO":
+                                continue
                             start = int(sample.getElementsByTagName("extent")[0].getElementsByTagName("charseq")[0].getAttribute("START"))
                             end = int(sample.getElementsByTagName("extent")[0].getElementsByTagName("charseq")[0].getAttribute("END"))
                             name = str(sample.getElementsByTagName("extent")[0].getElementsByTagName("charseq")[0].childNodes[0].data)
@@ -227,7 +229,9 @@ class Extractor():
                             argument_name = str(argument_info.childNodes[0].data)
                             argument_start = int(argument_info.getAttribute("START"))
                             argument_end = int(argument_info.getAttribute("END"))
-                            assert (argument_start,argument_end) in map_entity
+                            # assert (argument_start,argument_end) in map_entity
+                            if (argument_start,argument_end) not in map_entity:
+                                continue
                             entity_id = map_entity[(argument_start,argument_end)]
                             assert argument_name==entities[entity_id]['name']
                             entities[entity_id]['role'] = role

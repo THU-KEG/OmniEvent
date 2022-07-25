@@ -122,8 +122,10 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 prefix = []
                 if self.config.language == "English":
                     words = prefix + item["text"].split()
+                    whitespace = " "
                 elif self.config.language == "Chinese":
                     words = prefix + list(item["text"])
+                    whitespace = ""
                 else:
                     raise NotImplementedError
                 if "events" in item:
@@ -144,9 +146,10 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             labels = []
                             arguments_per_trigger = defaultdict(list)
                             for argument in trigger["arguments"]:
+                                role = argument["role"]
                                 for mention in argument["mentions"]:
                                     arguments_per_trigger[argument["role"]].append(mention["mention"])
-                                    labels.append(f"{type_start} {argument['role']}{split_word} {mention['mention']} {type_end}")
+                                    labels.append(f"{type_start}{whitespace}{role}{split_word}{whitespace}{mention['mention']}{whitespace}{type_end}")
                             if len(labels) != 0:
                                 labels = "".join(labels)
                             else:       # no arguments for the trigger

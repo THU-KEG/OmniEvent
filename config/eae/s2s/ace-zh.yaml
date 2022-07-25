@@ -10,12 +10,12 @@ language: Chinese
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-ZH
-type2id_path: ../../data/processed/ace2005-zh/label2id.json
-role2id_path: ../../data/processed/ace2005-zh/role2id.json
-train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+output_dir: output/ace2005-zh-novalue
+type2id_path: ../../data/processed/ace2005-zh-novalue/label2id.json
+role2id_path: ../../data/processed/ace2005-zh-novalue/role2id.json
+train_file: ../../data/processed/ace2005-zh-novalue/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-zh-novalue/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-zh-novalue/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json

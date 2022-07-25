@@ -75,6 +75,10 @@ class DataArguments:
         default=None,
         metadata={"help": "Path to role2id file."}
     )
+    role2norm_path: str = field(
+        default=None,
+        metadata={"help": "role2norm path."}
+    )
     prompt_file: str = field(
         default=None, 
         metadata={

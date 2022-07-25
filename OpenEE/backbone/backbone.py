@@ -45,6 +45,8 @@ def get_backbone(model_type, model_name_or_path, tokenizer_name, markers,
         tokenizer.add_tokens(token, special_tokens = True)
     if len(new_tokens) > 0:
         model.resize_token_embeddings(len(tokenizer))
+        # word_embeddings = model.get_input_embeddings()
+        # word_embeddings.weight.data[-len(new_tokens):, :] = torch.zeros((len(new_tokens), model.config.hidden_size))
 
     config = model.config
     return model, tokenizer, config
