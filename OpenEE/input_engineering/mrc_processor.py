@@ -52,14 +52,14 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                                                  trigger=trigger,
                                                                                  language=self.config.language)
 
-                            for role in query_templates[pred_event_type].keys():
-                                query = query_templates[pred_event_type][role][template_id]
+                            for role in query_templates[event["type"]].keys():
+                                query = query_templates[event["type"]][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(trigger["trigger_word"])[0])
                                 query = get_words(text=query, language=self.config.language)
                                 if self.is_training:
                                     no_answer = True
                                     for argument in trigger["arguments"]:
-                                        if argument["role"] not in query_templates[pred_event_type]:
+                                        if argument["role"] not in query_templates[event["type"]]:
                                             # raise ValueError(
                                             #     "No template for %s in %s" % (argument["role"], pred_event_type)
                                             # )
