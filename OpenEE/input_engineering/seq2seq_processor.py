@@ -28,8 +28,8 @@ def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"[{
         words = span.strip().split(split_word)
         if len(words) != 2:
             continue
-        role = words[0].strip()
-        value = words[1].strip()
+        role = words[0].strip().replace(" ", "")
+        value = words[1].strip().replace(" ", "")
         if role != "" and value != "":
             arguments.append((instance_id, event_type, role, value))
     arguments = list(set(arguments))
