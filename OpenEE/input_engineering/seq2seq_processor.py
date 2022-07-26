@@ -1,5 +1,4 @@
-
-import pdb 
+import re
 import json
 import logging
 
@@ -16,8 +15,25 @@ from .base_processor import (
 
 type_start = "<"
 type_end = ">"
+split_word = ":"
 
 logger = logging.getLogger(__name__)
+
+
+def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"[{type_start}{type_end}]")):
+    arguments = []
+    for span in template.split(raw_text):
+        if span.strip() == "":
+            continue
+        words = span.strip().split(split_word)
+        if len(words) != 2:
+            continue
+        role = words[0].strip().replace(" ", "")
+        value = words[1].strip().replace(" ", "")
+        if role != "" and value != "":
+            arguments.append((instance_id, event_type, role, value))
+    arguments = list(set(arguments))
+    return arguments
 
 
 class EDSeq2SeqProcessor(EDDataProcessor):
@@ -33,12 +49,19 @@ class EDSeq2SeqProcessor(EDDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
+                if self.config.language == "English":
+                    words = item["text"].split()
+                elif self.config.language == "Chinese":
+                    words = list(item["text"])
+                else:
+                    raise NotImplementedError
                 # training and valid set
                 if "events" in item:
                     labels = []
                     for event in item["events"]:
+                        type = "".join("".join(event["type"].split(".")[-1].split("-")).split("_")).lower()
                         for trigger in event["triggers"]:
-                            labels.append(f"{type_start} {event['type'].split('.')[-1]} {trigger['trigger_word']} {type_end}")
+                            labels.append(f"{type_start} {type}{split_word} {trigger['trigger_word']} {type_end}")
                     if len(labels) != 0:
                         labels = "".join(labels)
                         # labels = type_start + labels + type_end 
@@ -47,25 +70,24 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                         # labels = f"{type_start}{type_end}"
                     example = EDInputExample(
                         example_id=item["id"],
-                        text=item["text"],
+                        text=words,
                         labels=labels
                     )
                     self.examples.append(example)
 
     def convert_examples_to_features(self):
         self.input_features = []
-        whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
             # context 
-            input_context = self.tokenizer(example.text.split(),
+            input_context = self.tokenizer(example.text,
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length,
                                            is_split_into_words=True)
             # output labels
             label_outputs = self.tokenizer(example.labels.split(),
-                                           padding="max_length",
                                            truncation=True,
+                                           padding="max_length",
                                            max_length=self.config.max_out_length,
                                            is_split_into_words=True)
             # set -100 to unused token 
@@ -79,7 +101,6 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                 labels = label_outputs["input_ids"]
             )
             self.input_features.append(features)
-
 
 
 class EAESeq2SeqProcessor(EAEDataProcessor):
@@ -98,6 +119,15 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
+                prefix = []
+                if self.config.language == "English":
+                    words = prefix + item["text"].split()
+                    whitespace = " "
+                elif self.config.language == "Chinese":
+                    words = prefix + list(item["text"])
+                    whitespace = ""
+                else:
+                    raise NotImplementedError
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
@@ -116,19 +146,18 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             labels = []
                             arguments_per_trigger = defaultdict(list)
                             for argument in trigger["arguments"]:
+                                role = argument["role"]
                                 for mention in argument["mentions"]:
                                     arguments_per_trigger[argument["role"]].append(mention["mention"])
-                                    labels.append(f"{type_start} {argument['role']} {mention['mention']} {type_end}")
+                                    labels.append(f"{type_start}{whitespace}{role}{split_word}{whitespace}{mention['mention']}{whitespace}{type_end}")
                             if len(labels) != 0:
                                 labels = "".join(labels)
-                                # labels = type_start + labels + type_end
                             else:       # no arguments for the trigger
                                 labels = ""
-                                # labels = f"{type_start}{type_end}"
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=trigger["id"],
-                                text=item["text"],
+                                text=words,
                                 pred_type=pred_event_type,
                                 true_type=event["type"],
                                 trigger_left=trigger["position"][0],
@@ -150,12 +179,11 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                         elif self.config.eae_eval_mode in ["default", "strict"]:
                             if pred_event_type != "NA":
                                 labels = ""
-                                # labels = f"{type_start}{type_end}"
                                 arguments_per_trigger = {}
                                 self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                                 example = EAEInputExample(
                                     example_id=trigger_idx-1,
-                                    text=item["text"],
+                                    text=words,
                                     pred_type=pred_event_type,
                                     true_type="NA",
                                     trigger_left=neg_trigger["position"][0],
@@ -176,7 +204,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=item["id"],
-                                text=item["text"],
+                                text=words,
                                 pred_type=pred_event_type,
                                 true_type="NA",   # true type not given, set to NA.
                                 trigger_left=candi["position"][0],
@@ -188,31 +216,30 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 assert trigger_idx == len(self.event_preds)
 
 
-    def insert_marker(self, text, trigger_pos, markers, whitespace=True):
+    def insert_marker(self, tokens, trigger_pos, markers, whitespace=True):
         space = " " if whitespace else ""
-        markered_text = ""
-        tokens = text.split()
+        markered_words = []
         char_pos = 0
         for i, token in enumerate(tokens):
             if char_pos == trigger_pos[0]:
-                markered_text += markers[0] + space
+                markered_words.append(markers[0])
             char_pos += len(token) + len(space)
-            markered_text += token + space
+            markered_words.append(token)
             if char_pos == trigger_pos[1] + len(space):
-                markered_text += markers[1] + space
-        markered_text = markered_text.strip()
-        return markered_text
+                markered_words.append(markers[1])
+        return markered_words
         
+
     def convert_examples_to_features(self):
         self.input_features = []
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):
             # context 
-            text = self.insert_marker(example.text, 
+            words = self.insert_marker(example.text, 
                                       [example.trigger_left, example.trigger_right],
                                       self.config.markers,
                                       whitespace)
-            input_context = self.tokenizer(text.split(),
+            input_context = self.tokenizer(words,
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length,

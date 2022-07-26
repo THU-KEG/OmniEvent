@@ -75,6 +75,10 @@ class DataArguments:
         default=None,
         metadata={"help": "Path to role2id file."}
     )
+    role2norm_path: str = field(
+        default=None,
+        metadata={"help": "role2norm path."}
+    )
     prompt_file: str = field(
         default=None, 
         metadata={
@@ -138,6 +142,10 @@ class ModelArguments:
         metadata={"help": "Model type."}
     )
     model_name_or_path: str = field(
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    checkpoint_path: str = field(
+        default=None,
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     hidden_size: int = field(

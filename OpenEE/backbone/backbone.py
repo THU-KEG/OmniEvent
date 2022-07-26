@@ -9,7 +9,7 @@ import numpy as np
 
 from transformers import BertModel, BertTokenizerFast 
 from transformers import RobertaModel, RobertaTokenizerFast
-from transformers import T5ForConditionalGeneration, T5TokenizerFast
+from transformers import T5ForConditionalGeneration, T5TokenizerFast, T5Config
 from transformers import MT5ForConditionalGeneration
 from transformers.utils import ModelOutput 
 

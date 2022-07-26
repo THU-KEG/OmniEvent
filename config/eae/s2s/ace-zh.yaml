@@ -6,16 +6,16 @@ do_predict: True
 paradigm: seq2seq
 task_name: EAE
 dataset_name: ACE2005
-language: English
+language: Chinese
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-EN
-type2id_path: ../../data/processed/ace2005-dygie/label2id.json
-role2id_path: ../../data/processed/ace2005-dygie/role2id.json
-train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
-test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
+output_dir: output/ace2005-zh
+type2id_path: ../../data/processed/ace2005-zh/label2id.json
+role2id_path: ../../data/processed/ace2005-zh/role2id.json
+train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
 train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
@@ -28,9 +28,9 @@ return_token_type_ids: False
 truncate_seq2seq_output: True
 
 # model config #
-model_type: t5
-model_name_or_path: t5-base
-checkpoint_path: t5-base
+model_type: mt5
+model_name_or_path: google/mt5-base
+checkpoint_path: google/mt5-base
 hidden_size: 768
 aggregation: none
 
@@ -39,7 +39,6 @@ num_train_epochs: 10
 max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2
-early_stopping_patience: 100
 
 generation_max_length: 128
 generation_num_beams: 4
@@ -53,9 +52,8 @@ gradient_accumulation_steps: 2
 learning_rate: 1.0e-4
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
-max_grad_norm: 1.0
+max_grad_norm: 1
 optim: adamw_torch
-# lr_scheduler_type: constant
 
 load_best_model_at_end: True
 metric_for_best_model: micro_f1 

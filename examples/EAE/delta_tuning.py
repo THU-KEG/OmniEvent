@@ -15,11 +15,11 @@ from collections import defaultdict
 from transformers import set_seed
 from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
-from opendelta import SoftPromptModel
+from opendelta import LoraModel
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.seq2seq_processor_hybrid import (
+from OpenEE.input_engineering.seq2seq_processor import (
     EAESeq2SeqProcessor
 )
 from OpenEE.model.model import get_model
@@ -43,8 +43,8 @@ if len(sys.argv) >= 2 and sys.argv[1].endswith(".json"):
     # If we pass only one argument to the script and it's the path to a json file,
     # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) >= 2 and sys.argv[1].endswith(".yaml"):
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
+elif len(sys.argv) >= 2 and sys.argv[2].endswith(".yaml"):
+    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[2]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -81,8 +81,9 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
 # model 
 backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
                                            model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
-# delta_model = SoftPromptModel(backbone_model=backbone)
-# delta_model.freeze_module(set_state_dict=True)
+delta_model = LoraModel(backbone_model=backbone)
+delta_model.freeze_module(set_state_dict=True)
+backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
 model = get_model(model_args, backbone)
 model.cuda()
 
@@ -107,7 +108,9 @@ trainer = Seq2SeqTrainer(
     tokenizer=tokenizer,
     callbacks=[earlystoppingCallBack]
 )
-trainer.train()
+
+if training_args.do_train:
+    trainer.train()
 
 
 if training_args.do_predict:

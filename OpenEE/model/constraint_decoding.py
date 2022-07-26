@@ -263,6 +263,10 @@ class StruConstraintDecoder(ConstraintDecoder):
 class SpanConstraintDecoder(ConstraintDecoder):
     def __init__(self, tokenizer, type_schema, *args, **kwargs):
         super().__init__(tokenizer, *args, **kwargs)
+        self.tree_end = '<tree-end>'
+        self.type_tree = get_label_name_tree(type_schema["role_list"],
+                                             tokenizer=self.tokenizer,
+                                             end_symbol=self.tree_end)
 
     def check_state(self, tgt_generated, special_tokens_in_tgt):
         if tgt_generated[-1] == self.tokenizer.pad_token_id:
