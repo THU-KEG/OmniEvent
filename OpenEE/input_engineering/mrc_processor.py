@@ -44,12 +44,14 @@ class EAEMRCProcessor(EAEDataProcessor):
                             trigger_idx += 1
 
                             # Evaluation mode for EAE
-                            # If the predicted event type is NA, We don't consider the trigger
+                            # If predicted event type is NA:
+                            #   in [default] and [loose] modes, we don't consider the trigger
+                            #   in [strict] mode, we consider the trigger
                             if self.config.eae_eval_mode in ["default", "loose"] and pred_event_type == "NA":
                                 continue
 
-                            # golden label
-                            arguments_per_trigger = dict(id=idx,
+                            # golden label for the trigger
+                            arguments_per_trigger = dict(id=trigger_idx-1,
                                                          arguments=[],
                                                          pred_type=pred_event_type,
                                                          true_type=event["type"])
@@ -57,8 +59,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 arguments_per_role = dict(role=argument["role"], mentions=[])
                                 for mention in argument["mentions"]:
                                     left_pos, right_pos = get_left_and_right_pos(text=item["text"],
-                                                                                    trigger=mention,
-                                                                                    language=self.config.language)
+                                                                                 trigger=mention,
+                                                                                 language=self.config.language)
                                     arguments_per_role["mentions"].append({
                                         "position": [left_pos, right_pos - 1]
                                     })
@@ -67,6 +69,7 @@ class EAEMRCProcessor(EAEDataProcessor):
 
                             if pred_event_type == "NA":
                                 assert self.config.eae_eval_mode == "strict"
+                                # in strict mode, we add the gold args for the trigger but do not make predictions
                                 continue
 
                             trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
@@ -84,6 +87,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             # raise ValueError(
                                             #     "No template for %s in %s" % (argument["role"], pred_event_type)
                                             # )
+                                            logger.warning(
+                                                "No template for %s in %s" % (argument["role"], pred_event_type))
                                             pass
                                         if argument["role"] != role:
                                             continue
@@ -93,7 +98,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                                                          trigger=mention,
                                                                                          language=self.config.language)
                                             example = EAEInputExample(
-                                                example_id=idx,
+                                                example_id=trigger_idx-1,
                                                 text=words,
                                                 pred_type=pred_event_type,
                                                 true_type=event["type"],
@@ -102,12 +107,12 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                 trigger_right=trigger_right,
                                                 argument_left=left_pos,
                                                 argument_right=right_pos - 1,
-                                                argument_role=role 
+                                                argument_role=role
                                             )
                                             self.examples.append(example)
                                     if no_answer:
                                         example = EAEInputExample(
-                                            example_id=idx,
+                                            example_id=trigger_idx-1,
                                             text=words,
                                             pred_type=pred_event_type,
                                             true_type=event["type"],
@@ -116,13 +121,13 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             trigger_right=trigger_right,
                                             argument_left=-1,
                                             argument_right=-1,
-                                            argument_role=role 
+                                            argument_role=role
                                         )
                                         self.examples.append(example)
                                 else:
                                     # one instance per query
                                     example = EAEInputExample(
-                                        example_id=idx,
+                                        example_id=trigger_idx-1,
                                         text=words,
                                         pred_type=pred_event_type,
                                         true_type=event["type"],
@@ -131,7 +136,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         trigger_right=trigger_right,
                                         argument_left=-1,
                                         argument_right=-1,
-                                        argument_role=role 
+                                        argument_role=role
                                     )
                                     self.examples.append(example)
                     # negative triggers
@@ -157,7 +162,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 query = get_words(text=query, language=self.config.language)
                                 # one instance per query
                                 example = EAEInputExample(
-                                    example_id=idx,
+                                    example_id=trigger_idx-1,
                                     text=words,
                                     pred_type=pred_event_type,
                                     true_type="NA",
@@ -169,6 +174,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     argument_role=role
                                 )
                                 self.examples.append(example)
+
                         else:
                             raise ValueError("Invalid eae_eval_mode: %s" % self.config.eae_eval_mode)
                 else:
@@ -185,7 +191,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 query = get_words(text=query, language=self.config.language)
                                 # one instance per query
                                 example = EAEInputExample(
-                                    example_id=idx,
+                                    example_id=trigger_idx-1,
                                     text=words,
                                     pred_type=pred_event_type,
                                     true_type="NA",
@@ -194,7 +200,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     trigger_right=trigger_right,
                                     argument_left=-1,
                                     argument_right=-1,
-                                    argument_role=role 
+                                    argument_role=role
                                 )
                                 self.examples.append(example)
             if self.event_preds is not None:
