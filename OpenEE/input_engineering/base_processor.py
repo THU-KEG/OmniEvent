@@ -60,6 +60,7 @@ class EAEInputExample(object):
                  input_template=None,
                  trigger_left=None,
                  trigger_right=None,
+                 argument_role=None,
                  argument_left=None,
                  argument_right=None,
                  labels=None):
@@ -79,6 +80,7 @@ class EAEInputExample(object):
         self.input_template = input_template
         self.trigger_left = trigger_left
         self.trigger_right = trigger_right
+        self.argument_role = argument_role
         self.argument_left = argument_left
         self.argument_right = argument_right
         self.labels = labels
@@ -212,6 +214,9 @@ class EAEDataProcessor(Dataset):
     def get_data_for_evaluation(self):
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()
+        self.data_for_evaluation["ids"] = self.get_ids()
+        if self.examples[0].argument_role is not None:
+            self.data_for_evaluation["roles"] = self.get_roles()
         return self.data_for_evaluation
 
     def get_pred_types(self):
@@ -225,6 +230,12 @@ class EAEDataProcessor(Dataset):
         for example in self.examples:
             true_types.append(example.true_type)
         return true_types
+    
+    def get_roles(self):
+        roles = []
+        for example in self.examples:
+            roles.append(example.argument_role)
+        return roles 
 
     def _truncate(self, outputs, max_seq_length):
         is_truncation = False

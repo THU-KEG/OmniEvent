@@ -29,7 +29,7 @@ class EAEMRCProcessor(EAEDataProcessor):
         query_templates = read_query_templates(self.config.prompt_file)
         template_id = 3
         with open(input_file, "r", encoding="utf-8") as f:
-            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+            for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
                 if "events" in item:
                     for event in item["events"]:
@@ -54,6 +54,24 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 trigger_right = trigger["position"][1]
                             else:
                                 raise NotImplementedError
+                            # golden label 
+                            arguments_per_trigger = dict(id=idx, role=role, arguments=[])
+                            arguments_per_trigger["pred_type"] = pred_event_type
+                            arguments_per_trigger["true_type"] = event["type"]
+                            for argument in trigger["arguments"]:
+                                arguments_per_role = {
+                                    "role": argument["role"],
+                                    "mentions": []
+                                }
+                                for mention in argument["mentions"]:
+                                    left_pos = len(item["text"][:mention["position"][0]].split())
+                                    right_pos = len(item["text"][:mention["position"][1]].split())
+                                    arguments_per_role["mentions"].append({
+                                        "position": [left_pos, right_pos-1]
+                                    })
+                                    arguments_per_trigger["arguments"].append(arguments_per_role)
+                            self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
+                            # loop for query 
                             for role in query_templates[pred_event_type].keys():
                                 query = query_templates[pred_event_type][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(trigger["trigger_word"])[0])
@@ -98,28 +116,9 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         )
                                         self.examples.append(example)
                                 else:
-                                    # golden label
-                                    key = str(item["id"]) + "_" + trigger["id"]
-                                    arguments_per_trigger = dict(id=key, role=role, arguments=[])
-                                    arguments_per_trigger["pred_type"] = pred_event_type
-                                    arguments_per_trigger["true_type"] = event["type"]
-                                    for argument in trigger["arguments"]:
-                                        if argument["role"] == role:
-                                            arguments_per_role = {
-                                                "role": role,
-                                                "mentions": []
-                                            }
-                                            for mention in argument["mentions"]:
-                                                left_pos = len(item["text"][:mention["position"][0]].split())
-                                                right_pos = len(item["text"][:mention["position"][1]].split())
-                                                arguments_per_role["mentions"].append({
-                                                    "position": [left_pos, right_pos-1]
-                                                })
-                                            arguments_per_trigger["arguments"].append(arguments_per_role)
-                                    self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
                                     # one instance per query 
                                     example = EAEInputExample(
-                                        example_id=trigger["id"],
+                                        example_id=idx, # IMPORTANT 
                                         text=item["text"],
                                         pred_type=pred_event_type,
                                         true_type=event["type"],
@@ -127,7 +126,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         trigger_left=trigger_left,
                                         trigger_right=trigger_right,
                                         argu_left=-1,
-                                        argu_right=-1
+                                        argu_right=-1,
+                                        argument_role=role
                                     )
                                     self.examples.append(example)
                     # negative triggers 
@@ -154,15 +154,9 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 for role in query_templates[pred_event_type].keys():
                                     query = query_templates[pred_event_type][role][template_id]
                                     query = query.replace("[trigger]", self.tokenizer.tokenize(neg_trigger["trigger_word"])[0])
-                                    # golden label
-                                    key = str(item["id"]) + "_" + str(trigger_idx-1)
-                                    arguments_per_trigger = dict(id=key, role=role, arguments=[])
-                                    arguments_per_trigger["pred_type"] = pred_event_type
-                                    arguments_per_trigger["true_type"] = "NA"
-                                    self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
                                     # one instance per query 
                                     example = EAEInputExample(
-                                        example_id=trigger_idx-1,
+                                        example_id=idx,
                                         text=item["text"],
                                         pred_type=pred_event_type,
                                         true_type="NA",
@@ -170,7 +164,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         trigger_left=trigger_left,
                                         trigger_right=trigger_right,
                                         argu_left=-1,
-                                        argu_right=-1
+                                        argu_right=-1,
+                                        argument_role=role
                                     )
                                     self.examples.append(example)
                         else:
@@ -191,15 +186,9 @@ class EAEMRCProcessor(EAEDataProcessor):
                             for role in query_templates[pred_event_type].keys():
                                 query = query_templates[pred_event_type][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(candi["trigger_word"])[0])
-                                # golden label
-                                key = str(item["id"]) + "_" + str(trigger_idx-1)
-                                arguments_per_trigger = dict(id=key, role=role, arguments=[])
-                                arguments_per_trigger["pred_type"] = pred_event_type
-                                arguments_per_trigger["true_type"] = "NA"
-                                self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
                                 # one instance per query 
                                 example = EAEInputExample(
-                                    example_id=trigger_idx-1,
+                                    example_id=idx, 
                                     text=item["text"],
                                     pred_type=pred_event_type,
                                     true_type="NA",
@@ -207,7 +196,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     trigger_left=trigger_left,
                                     trigger_right=trigger_right,
                                     argu_left=-1,
-                                    argu_right=-1
+                                    argu_right=-1,
+                                    argument_role=role
                                 )
                                 self.examples.append(example)
             assert trigger_idx == len(self.event_preds)

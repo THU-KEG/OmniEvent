@@ -71,22 +71,22 @@ def char_pos_to_word_pos(text, position):
 
 def make_preditions(all_start_logits, all_end_logits, training_args):
     data_for_evaluation = training_args.data_for_evaluation
-    assert len(all_start_logits) == len(data_for_evaluation["golden_arguments"])
+    assert len(all_start_logits) == len(data_for_evaluation["ids"])
     # all golden labels
     final_all_labels = []
-    for example_id, arguments in enumerate(data_for_evaluation["golden_arguments"]):
-        event_argument_type = data_for_evaluation["golden_arguments"][example_id]["true_type"] + "_" + arguments["role"]
+    for arguments in data_for_evaluation["golden_arguments"]:
+        event_argument_type = arguments["true_type"] + "_" + arguments["role"]
         arguments_per_trigger = []
         for argument in arguments["arguments"]:
             for mention in argument["mentions"]:
-                arguments_per_trigger.append((event_argument_type, (mention["position"][0], mention["position"][1]), example_id))
+                arguments_per_trigger.append((event_argument_type, (mention["position"][0], mention["position"][1]), arguments["id"]))
         final_all_labels.extend(arguments_per_trigger)
     # predictions 
     _PrelimPrediction = collections.namedtuple("PrelimPrediction",
                                                ["start_index", "end_index", "start_logit", "end_logit"])
     final_all_predictions = []
     for example_id, (start_logits, end_logits) in enumerate(zip(all_start_logits, all_end_logits)):
-        event_argument_type = data_for_evaluation["golden_arguments"][example_id]["pred_type"] + "_" + data_for_evaluation["golden_arguments"][example_id]["role"]
+        event_argument_type = data_for_evaluation["true_types"][example_id] + "_" + data_for_evaluation["roles"][example_id]
         start_indexes = _get_best_indexes(start_logits, 20, True, start_logits[0])
         end_indexes = _get_best_indexes(end_logits, 20, True, end_logits[0])
         # add span preds
@@ -116,7 +116,7 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
         predictions_per_query = []
         for _, pred in enumerate(prelim_predictions[:max_num_pred_per_arg]):
             na_prob = (start_logits[0] + end_logits[0]) - (pred.start_logit + pred.end_logit)
-            predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob, example_id))
+            predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob, data_for_evaluation["ids"][example_id]))
         final_all_predictions.extend(predictions_per_query)
     # pdb.set_trace()
     print("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
