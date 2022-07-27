@@ -12,3 +12,4 @@ CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/eae/s2s/ace.yaml
 #         --deepspeed ../../config/deepspeed.json 
 # CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/eae/s2s/fewfc.yaml
 # CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/eae/s2s/duee.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py ../../config/eae/tc/ace-en.yaml 

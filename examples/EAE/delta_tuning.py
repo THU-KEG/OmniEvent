@@ -85,7 +85,6 @@ delta_model = LoraModel(backbone_model=backbone)
 delta_model.freeze_module(set_state_dict=True)
 backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
 model = get_model(model_args, backbone)
-model.cuda()
 
 data_class = EAESeq2SeqProcessor
 metric_fn = compute_seq_F1
