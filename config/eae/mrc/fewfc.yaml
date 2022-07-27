@@ -37,7 +37,7 @@ hidden_size: 768
 aggregation: none
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 6
 max_seq_length: 256
 dataloader_num_workers: 2
 
