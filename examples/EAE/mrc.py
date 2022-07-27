@@ -116,7 +116,7 @@ model.cuda()
 
 data_class = EAEMRCProcessor
 metric_fn = compute_mrc_F1
-training_args.label_names = ["start_positions", "end_positions"]
+training_args.label_names = ["argument_left", "argument_right"]
 
 # dataset 
 train_dataset = data_class(data_args, tokenizer, data_args.train_file, data_args.train_pred_file, True)

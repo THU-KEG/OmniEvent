@@ -17,10 +17,10 @@ train_file: ../../data/processed/ace2005/train.unified.jsonl
 validation_file: ../../data/processed/ace2005/valid.unified.jsonl
 test_file: ../../data/processed/ace2005/test.unified.jsonl
 # event detection predictions
-golden_trigger: True
-train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/train_preds.json
-validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/valid_preds.json
-test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
+golden_trigger: False
+train_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/train_preds.json
+validation_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/valid_preds.json
+test_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/test_preds.json
 # config for some specific paradigms
 prompt_file: ../../data/processed/ace2005/description_queries.csv # used for MRC paradigm
 mrc_template_id: 0
