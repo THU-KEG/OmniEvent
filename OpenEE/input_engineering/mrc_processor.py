@@ -65,6 +65,10 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 arguments_per_trigger["arguments"].append(arguments_per_role)
                             self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
 
+                            if pred_event_type == "NA":
+                                assert self.config.eae_eval_mode == "strict"
+                                continue
+
                             trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
                                                                                  trigger=trigger,
                                                                                  language=self.config.language)
