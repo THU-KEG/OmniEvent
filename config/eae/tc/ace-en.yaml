@@ -17,16 +17,15 @@ train_file: ../../data/processed/ace2005/train.unified.jsonl
 validation_file: ../../data/processed/ace2005/valid.unified.jsonl
 test_file: ../../data/processed/ace2005/test.unified.jsonl
 # event detection predictions
-golden_trigger: False
+golden_trigger: False 
 train_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/train_preds.json
 validation_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/test_preds.json
 # config for some specific paradigms
 
 # config for data processor #
-truncate_in_batch: False
+truncate_in_batch: True
 return_token_type_ids: False
-truncate_seq2seq_output: True
 
 # model config #
 model_type: bert
@@ -38,19 +37,13 @@ head_scale: 2
 # training config #
 num_train_epochs: 5
 max_seq_length: 160
-max_out_length: 160
 dataloader_num_workers: 2
-
-generation_max_length: 128
-generation_num_beams: 4
-predict_with_generate: True
-ignore_pad_token_for_loss: True
 
 per_device_train_batch_size: 32
 per_device_eval_batch_size: 64
-gradient_accumulation_steps: 1
+gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
-learning_rate: 5.0e-5
+learning_rate: 3.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1
 max_grad_norm: 1

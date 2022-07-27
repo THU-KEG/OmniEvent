@@ -75,6 +75,10 @@ class DataArguments:
         default=None,
         metadata={"help": "Path to role2id file."}
     )
+    role2norm_path: str = field(
+        default=None,
+        metadata={"help": "role2norm path."}
+    )
     prompt_file: str = field(
         default=None, 
         metadata={
@@ -121,6 +125,12 @@ class DataArguments:
             "help": "Evaluation mode for EAE, one of [default, loose, strict]"
         }
     )
+    mrc_template_id: int = field(
+        default=0,
+        metadata={
+            "help": "mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
+        }
+    )
 
 
 @dataclass
@@ -132,6 +142,10 @@ class ModelArguments:
         metadata={"help": "Model type."}
     )
     model_name_or_path: str = field(
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    checkpoint_path: str = field(
+        default=None,
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     hidden_size: int = field(

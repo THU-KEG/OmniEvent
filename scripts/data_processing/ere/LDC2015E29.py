@@ -203,6 +203,7 @@ def read_xml(gold_folder, source_folder):
             document["events"].append(hopper_dict)
         documents.append(document)
 
+    assert check_argument(documents)
     return read_source(documents, source_folder)
 
 
@@ -241,6 +242,7 @@ def read_source(documents, source_folder):
             text_del = re.sub("http(.*?) ", " ", text_del)
             text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
+            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces within the text.
             text_del = re.sub(" +", " ", text_del)
@@ -257,6 +259,7 @@ def read_source(documents, source_folder):
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
         document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
+        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces within the text.
         document["text"] = re.sub(" +", " ", document["text"])
@@ -282,6 +285,7 @@ def read_source(documents, source_folder):
                                              "58,000 on the banks of the Mississippi River":
                         mention["position"][1] = mention["position"][0] + len(mention["mention"])
 
+    assert check_argument(documents)
     return clean_documents(documents)
 
 
@@ -346,6 +350,7 @@ def clean_documents(documents):
             document_clean["events"].append(event_clean)
         documents_clean.append(document_clean)
 
+    assert check_argument(documents_clean)
     assert check_position(documents_clean)
     return sentence_tokenize(documents_clean)
 
@@ -447,6 +452,134 @@ def sentence_tokenize(documents):
         if len(document_without_event["sentences"]) != 0:
             documents_without_event.append(document_without_event)
 
+    assert check_argument(documents_split)
+    assert check_position(documents_split)
+    return add_spaces(documents_split, documents_without_event)
+
+
+def add_spaces(documents_split, documents_without_event):
+    for document in tqdm(documents_split, desc="Adding spaces..."):
+        punc_char = list()
+        for i in range(len(document["text"])):
+            # Retrieve the top i characters.
+            text = document["text"][:i]
+            text_space = re.sub(",", " , ", text)
+            text_space = re.sub("\.", " . ", text_space)
+            text_space = re.sub(":", " : ", text_space)
+            text_space = re.sub(";", " : ", text_space)
+            text_space = re.sub("\?", " ? ", text_space)
+            text_space = re.sub("!", " ! ", text_space)
+            text_space = re.sub("'", " ' ", text_space)
+            text_space = re.sub("\"", " \" ", text_space)
+            text_space = re.sub("\(", " ( ", text_space)
+            text_space = re.sub("\)", " ) ", text_space)
+            text_space = re.sub("\[", " [ ", text_space)
+            text_space = re.sub("\]", " ] ", text_space)
+            text_space = re.sub("\{", " { ", text_space)
+            text_space = re.sub("\}", " } ", text_space)
+            text_space = re.sub("-", " - ", text_space)
+            text_space = re.sub("/", " / ", text_space)
+            text_space = re.sub("_", " _ ", text_space)
+            text_space = re.sub("\*", " * ", text_space)
+            text_space = re.sub("`", " ` ", text_space)
+            text_space = re.sub("‘", " ‘ ", text_space)
+            text_space = re.sub("’", " ’ ", text_space)
+            text_space = re.sub("“", " “ ", text_space)
+            text_space = re.sub("”", " ” ", text_space)
+            text_space = re.sub("…", " … ", text_space)
+            text_space = re.sub(" +", " ", text_space)
+            punc_char.append(len(text_space.lstrip()))
+        punc_char.append(punc_char[-1])
+
+        document["text"] = re.sub(",", " , ", document["text"])
+        document["text"] = re.sub("\.", " . ", document["text"])
+        document["text"] = re.sub(":", " : ", document["text"])
+        document["text"] = re.sub(";", " ; ", document["text"])
+        document["text"] = re.sub("\?", " ? ", document["text"])
+        document["text"] = re.sub("!", " ! ", document["text"])
+        document["text"] = re.sub("'", " ' ", document["text"])
+        document["text"] = re.sub("\"", " \" ", document["text"])
+        document["text"] = re.sub("\(", " ( ", document["text"])
+        document["text"] = re.sub("\)", " ) ", document["text"])
+        document["text"] = re.sub("\[", " [ ", document["text"])
+        document["text"] = re.sub("\]", " ] ", document["text"])
+        document["text"] = re.sub("\{", " { ", document["text"])
+        document["text"] = re.sub("\}", " } ", document["text"])
+        document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub("/", " / ", document["text"])
+        document["text"] = re.sub("_", " _ ", document["text"])
+        document["text"] = re.sub("\*", " * ", document["text"])
+        document["text"] = re.sub("`", " ` ", document["text"])
+        document["text"] = re.sub("‘", " ‘ ", document["text"])
+        document["text"] = re.sub("’", " ’ ", document["text"])
+        document["text"] = re.sub("“", " “ ", document["text"])
+        document["text"] = re.sub("”", " ” ", document["text"])
+        document["text"] = re.sub("…", " … ", document["text"])
+        document["text"] = re.sub(" +", " ", document["text"]).strip()
+
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                trigger["position"][0] = punc_char[trigger["position"][0]]
+                trigger["position"][1] = punc_char[trigger["position"][1]]
+                trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].startswith(" "):
+                    trigger["position"][0] += 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].endswith(" "):
+                    trigger["position"][1] -= 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                for argument in trigger["arguments"]:
+                    for mention in argument["mentions"]:
+                        mention["position"][0] = punc_char[mention["position"][0]]
+                        mention["position"][1] = punc_char[mention["position"][1]]
+                        mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+                        if mention["mention"].startswith(" "):
+                            mention["position"][0] += 1
+                            mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+                        if mention["mention"].endswith(" "):
+                            mention["position"][1] -= 1
+                            mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+        for entity in document["entities"]:
+            for mention in entity["mentions"]:
+                mention["position"][0] = punc_char[mention["position"][0]]
+                mention["position"][1] = punc_char[mention["position"][1]]
+                mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+                if mention["mention"].startswith(" "):
+                    mention["position"][0] += 1
+                    mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+                if mention["mention"].endswith(" "):
+                    mention["position"][1] -= 1
+                    mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
+
+    for document in documents_without_event:
+        for i in range(len(document["sentences"])):
+            document["sentences"][i] = re.sub(",", " , ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\.", " . ", document["sentences"][i])
+            document["sentences"][i] = re.sub(":", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub(";", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\?", " ? ", document["sentences"][i])
+            document["sentences"][i] = re.sub("!", " ! ", document["sentences"][i])
+            document["sentences"][i] = re.sub("'", " ' ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\"", " \" ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\(", " ( ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\)", " ) ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\[", " [ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\]", " ] ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
+            document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
+            document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
+            document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])
+            document["sentences"][i] = re.sub("`", " ` ", document["sentences"][i])
+            document["sentences"][i] = re.sub("‘", " ‘ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("’", " ’ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("“", " “ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("”", " ” ", document["sentences"][i])
+            document["sentences"][i] = re.sub("…", " … ", document["sentences"][i])
+            document["sentences"][i] = re.sub(" +", " ", document["sentences"][i]).strip()
+
+    assert check_argument(documents_split)
     assert check_position(documents_split)
     return documents_split, documents_without_event
 
@@ -487,6 +620,20 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
 
     assert len(new_sentence_tokenize) == len(new_sentence_pos)
     return new_sentence_tokenize, new_sentence_pos
+
+
+def check_argument(documents):
+    for document in documents:
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                for argument in trigger["arguments"]:
+                    for arg_mention in argument["mentions"]:
+                        for entity in document["entities"]:
+                            for ent_mention in entity["mentions"]:
+                                if arg_mention["id"] == ent_mention["id"]:
+                                    if not arg_mention == ent_mention:
+                                        return False
+    return True
 
 
 def check_position(documents):

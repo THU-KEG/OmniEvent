@@ -32,3 +32,25 @@ def check_if_start(start_poses, char_pos):
 
 def get_word_position(start_poses, char_pos):
     return start_poses.index(char_pos[0])
+
+
+def get_words(text, language):
+    if language == "English":
+        words = text.split()
+    elif language == "Chinese":
+        words = list(text)
+    else:
+        raise NotImplementedError
+    return words
+
+
+def get_left_and_right_pos(text, trigger, language):
+    if language == "English":
+        left_pos = len(text[:trigger["position"][0]].split())
+        right_pos = len(text[:trigger["position"][1]].split())
+    elif language == "Chinese":
+        left_pos = trigger["position"][0]
+        right_pos = trigger["position"][1]
+    else:
+        raise NotImplementedError
+    return left_pos, right_pos

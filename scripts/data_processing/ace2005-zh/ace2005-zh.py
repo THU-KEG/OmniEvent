@@ -632,8 +632,8 @@ def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> di
             del instance["file"]
             f.write(json.dumps(instance)+"\n")
     if "train" in file_name:
-        json.dump(label2id, open(os.path.join(output_dir, "label2id.json"), "w"))
-        json.dump(role2id, open(os.path.join(output_dir, "role2id.json"), "w"))
+        json.dump(label2id, open(os.path.join(output_dir, "label2id.json"), "w"), indent=4)
+        json.dump(role2id, open(os.path.join(output_dir, "role2id.json"), "w"), indent=4)
         
 
 if __name__ == "__main__":

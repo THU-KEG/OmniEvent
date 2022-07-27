@@ -140,28 +140,19 @@ trainer.train()
 
 
 if training_args.do_predict:
-    if not data_args.split_infer:
-        logits, labels, metrics, test_dataset = predict_eae(trainer, tokenizer, data_class, data_args, training_args)
-    else:
-        logits, labels, test_dataset = predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args)
+    pred_func = predict_sub_eae if data_args.split_infer else predict_eae
 
-    # pdb.set_trace()
-    preds = np.argmax(logits, axis=-1)
-    if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
-        print(metrics)
-        if model_args.paradigm == "sequence_labeling":
-            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-        else:
-            pass
-    else:
-        # save name
-        aggregation = model_args.aggregation
-        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
-        if model_args.paradigm == "token_classification":
-            pass
+    for eval_mode in ['default', 'loose', 'strict']:
+        print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
+        data_args.eae_eval_mode = eval_mode
 
-        elif model_args.paradigm == "sequence_labeling":
-            if data_args.dataset_name == "DuEE1.0":
-                print("Start get duee submission++++++++++++++++++")
-                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
+        print("\n" + "-" * 50 + '\n')
+        print("Test File: {}, \nMetrics: {}, \nSplit_Infer: {}".format(data_args.test_file, metrics,
+                                                                       data_args.split_infer))
+
+        # pdb.set_trace()
+        preds = np.argmax(logits, axis=-1)
+        if data_args.test_exists_labels:
+            assert model_args.paradigm == "mrc"
+            print("Above is the [{}]test performance for MRC Paradigm.".format(eval_mode))

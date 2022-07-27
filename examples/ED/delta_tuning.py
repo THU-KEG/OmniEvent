@@ -41,7 +41,7 @@ from OpenEE.evaluation.convert_format import (
 )
 from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
-from OpenEE.trainer_seq2seq import Seq2SeqTrainer, ConstrainedSeq2SeqTrainer
+from OpenEE.trainer_seq2seq import Seq2SeqTrainer
 
 # from torch.utils.tensorboard import SummaryWriter
 
@@ -74,21 +74,8 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
-# prepare labels
-type2id_path = data_args.type2id_path
-data_args.type2id = json.load(open(type2id_path))
-model_args.num_labels = len(data_args.type2id)
-training_args.label_name = ["labels"]
-
-# used for evaluation
-training_args.type2id = data_args.type2id
-data_args.id2type = {id: type for type, id in data_args.type2id.items()}
-all_types_except_na = [type for type in training_args.type2id if type != "NA"]
-
-
 # markers 
-# data_args.markers =  ["[unused0]", "[unused1]"]
-data_args.markers = ["<event>", "</event>"]
+data_args.markers = ["<ere>", "<maven>"]
 
 print(data_args, model_args, training_args)
 
@@ -103,8 +90,6 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
 backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
                                            model_args.model_name_or_path, data_args.markers,
                                            new_tokens=data_args.markers)
-delta_model = SoftPromptModel(backbone_model=backbone)
-delta_model.freeze_module(set_state_dict=True)
 model = get_model(model_args, backbone)
 model.cuda()
 
@@ -116,7 +101,7 @@ train_dataset = data_class(data_args, tokenizer, data_args.train_file)
 eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
 
 # Trainer 
-trainer = ConstrainedSeq2SeqTrainer(
+trainer = Seq2SeqTrainer(
     args=training_args,
     model=model,
     train_dataset=train_dataset,
@@ -125,10 +110,10 @@ trainer = ConstrainedSeq2SeqTrainer(
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
     callbacks=[earlystoppingCallBack],
-    decoding_type_schema={"role_list": all_types_except_na}
 )
-trainer.train()
 
+if training_args.do_train:
+    trainer.train()
 
 if training_args.do_predict:
     test_dataset = data_class(data_args, tokenizer, data_args.test_file)

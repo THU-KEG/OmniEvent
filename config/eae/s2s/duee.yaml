@@ -1,0 +1,75 @@
+seed: 42
+do_train: True 
+do_predict: True
+
+# top-level config #
+paradigm: seq2seq
+task_name: EAE
+dataset_name: DuEE1.0
+language: Chinese
+test_exists_labels: True
+
+# file path #
+output_dir: output/DuEE1.0/
+type2id_path: ../../data/processed/DuEE1.0/label2id.json
+role2id_path: ../../data/processed/DuEE1.0/role2id.json
+train_file: ../../data/processed/DuEE1.0/duee_train.unified.json
+validation_file: ../../data/processed/DuEE1.0/duee_dev.unified.json
+test_file: ../../data/processed/DuEE1.0/duee_test2.unified.json
+
+# event detection predictions
+golden_trigger: True 
+# train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
+# validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
+# test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
+
+# config for data processor # 
+truncate_in_batch: True 
+return_token_type_ids: False 
+truncate_seq2seq_output: True
+
+# model config #
+model_type: mt5
+model_name_or_path: google/mt5-base
+checkpoint_path: google/mt5-base
+hidden_size: 768
+aggregation: none
+
+# training config #
+num_train_epochs: 10
+max_seq_length: 160
+max_out_length: 128
+dataloader_num_workers: 2
+# early_stopping_patience: 100
+
+generation_max_length: 128
+generation_num_beams: 4
+predict_with_generate: True 
+ignore_pad_token_for_loss: True 
+
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 32
+gradient_accumulation_steps: 2
+# eval_accumulation_steps: 4
+learning_rate: 1.0e-4
+weight_decay: 1.0e-5
+warmup_ratio: 0.1 
+max_grad_norm: 1.0
+optim: adamw_torch
+# lr_scheduler_type: constant
+
+load_best_model_at_end: True
+metric_for_best_model: micro_f1 
+greater_is_better: True 
+
+logging_strategy: steps
+logging_steps: 100
+evaluation_strategy: epoch
+eval_steps: 500
+save_strategy: epoch
+save_steps: 500
+
+# split inference #
+split_infer: False
+split_infer_size: 5000
+

@@ -161,3 +161,4 @@ if training_args.do_predict:
             if data_args.dataset_name == "DuEE1.0":
                 print("Start get duee submission++++++++++++++++++")
                 get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+            break

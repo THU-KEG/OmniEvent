@@ -10,40 +10,36 @@ language: English
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-EN
+output_dir: output/ACE2005-EN/
 type2id_path: ../../data/processed/ace2005/label2id.json
 role2id_path: ../../data/processed/ace2005/role2id.json
 train_file: ../../data/processed/ace2005/train.unified.jsonl
 validation_file: ../../data/processed/ace2005/valid.unified.jsonl
 test_file: ../../data/processed/ace2005/test.unified.jsonl
 # event detection predictions
-golden_trigger: False
-train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/train_preds.json
-validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/valid_preds.json
-test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
-# config for some specific paradigms
+golden_trigger: True
+# train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/train_preds.json
+# validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/valid_preds.json
+# test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
+train_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/train_preds.json
+validation_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/valid_preds.json
+test_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/test_preds.json
 
 # config for data processor #
-truncate_in_batch: False
+truncate_in_batch: True
 return_token_type_ids: False
-truncate_seq2seq_output: True
 
 # model config #
 model_type: bert
 model_name_or_path: bert-base-uncased
+checkpoint_path: bert-base-uncased
 hidden_size: 768
 aggregation: none
 
 # training config #
-num_train_epochs:35
+num_train_epochs: 10
 max_seq_length: 160
-max_out_length: 160
 dataloader_num_workers: 2
-
-generation_max_length: 128
-generation_num_beams: 4
-predict_with_generate: True
-ignore_pad_token_for_loss: True
 
 per_device_train_batch_size: 16
 per_device_eval_batch_size: 64

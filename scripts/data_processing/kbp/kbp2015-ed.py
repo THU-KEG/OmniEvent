@@ -127,6 +127,7 @@ def read_source(documents, source_folder):
             text_del = re.sub("http(.*?) ", " ", text_del)
             text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
+            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces.
             text_del = re.sub(" +", " ", text_del)
@@ -143,6 +144,7 @@ def read_source(documents, source_folder):
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
         document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
+        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces.
         document["text"] = re.sub(" +", " ", document["text"])
@@ -232,6 +234,110 @@ def sentence_tokenize(documents):
         # Append the sentence without event into the list.
         if len(document_without_event["sentences"]) != 0:
             documents_without_event.append(document_without_event)
+
+    assert check_position(documents_split)
+    return add_spaces(documents_split, documents_without_event)
+
+
+def add_spaces(documents_split, documents_without_event):
+    for document in tqdm(documents_split, desc="Adding spaces..."):
+        punc_char = list()
+        for i in range(len(document["text"])):
+            # Retrieve the top i characters.
+            text = document["text"][:i]
+            text_space = re.sub(",", " , ", text)
+            text_space = re.sub("\.", " . ", text_space)
+            text_space = re.sub(":", " : ", text_space)
+            text_space = re.sub(";", " : ", text_space)
+            text_space = re.sub("\?", " ? ", text_space)
+            text_space = re.sub("!", " ! ", text_space)
+            text_space = re.sub("'", " ' ", text_space)
+            text_space = re.sub("\"", " \" ", text_space)
+            text_space = re.sub("\(", " ( ", text_space)
+            text_space = re.sub("\)", " ) ", text_space)
+            text_space = re.sub("\[", " [ ", text_space)
+            text_space = re.sub("\]", " ] ", text_space)
+            text_space = re.sub("\{", " { ", text_space)
+            text_space = re.sub("\}", " } ", text_space)
+            text_space = re.sub("-", " - ", text_space)
+            text_space = re.sub("/", " / ", text_space)
+            text_space = re.sub("_", " _ ", text_space)
+            text_space = re.sub("\*", " * ", text_space)
+            text_space = re.sub("`", " ` ", text_space)
+            text_space = re.sub("‘", " ‘ ", text_space)
+            text_space = re.sub("’", " ’ ", text_space)
+            text_space = re.sub("“", " “ ", text_space)
+            text_space = re.sub("”", " ” ", text_space)
+            text_space = re.sub("…", " … ", text_space)
+            text_space = re.sub(" +", " ", text_space)
+            punc_char.append(len(text_space.lstrip()))
+        punc_char.append(punc_char[-1])
+
+        document["text"] = re.sub(",", " , ", document["text"])
+        document["text"] = re.sub("\.", " . ", document["text"])
+        document["text"] = re.sub(":", " : ", document["text"])
+        document["text"] = re.sub(";", " ; ", document["text"])
+        document["text"] = re.sub("\?", " ? ", document["text"])
+        document["text"] = re.sub("!", " ! ", document["text"])
+        document["text"] = re.sub("'", " ' ", document["text"])
+        document["text"] = re.sub("\"", " \" ", document["text"])
+        document["text"] = re.sub("\(", " ( ", document["text"])
+        document["text"] = re.sub("\)", " ) ", document["text"])
+        document["text"] = re.sub("\[", " [ ", document["text"])
+        document["text"] = re.sub("\]", " ] ", document["text"])
+        document["text"] = re.sub("\{", " { ", document["text"])
+        document["text"] = re.sub("\}", " } ", document["text"])
+        document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub("/", " / ", document["text"])
+        document["text"] = re.sub("_", " _ ", document["text"])
+        document["text"] = re.sub("\*", " * ", document["text"])
+        document["text"] = re.sub("`", " ` ", document["text"])
+        document["text"] = re.sub("‘", " ‘ ", document["text"])
+        document["text"] = re.sub("’", " ’ ", document["text"])
+        document["text"] = re.sub("“", " “ ", document["text"])
+        document["text"] = re.sub("”", " ” ", document["text"])
+        document["text"] = re.sub("…", " … ", document["text"])
+        document["text"] = re.sub(" +", " ", document["text"]).strip()
+
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                trigger["position"][0] = punc_char[trigger["position"][0]]
+                trigger["position"][1] = punc_char[trigger["position"][1]]
+                trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].startswith(" "):
+                    trigger["position"][0] += 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].endswith(" "):
+                    trigger["position"][1] -= 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+
+    for document in documents_without_event:
+        for i in range(len(document["sentences"])):
+            document["sentences"][i] = re.sub(",", " , ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\.", " . ", document["sentences"][i])
+            document["sentences"][i] = re.sub(":", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub(";", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\?", " ? ", document["sentences"][i])
+            document["sentences"][i] = re.sub("!", " ! ", document["sentences"][i])
+            document["sentences"][i] = re.sub("'", " ' ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\"", " \" ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\(", " ( ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\)", " ) ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\[", " [ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\]", " ] ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
+            document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
+            document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
+            document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])
+            document["sentences"][i] = re.sub("`", " ` ", document["sentences"][i])
+            document["sentences"][i] = re.sub("‘", " ‘ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("’", " ’ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("“", " “ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("”", " ” ", document["sentences"][i])
+            document["sentences"][i] = re.sub("…", " … ", document["sentences"][i])
+            document["sentences"][i] = re.sub(" +", " ", document["sentences"][i]).strip()
 
     assert check_position(documents_split)
     return documents_split, documents_without_event

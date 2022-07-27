@@ -117,6 +117,7 @@ def read_source(documents, source_folder, token_folder):
             text_del = re.sub("http(.*?) ", " ", text_del)
             text_del = re.sub("amp;", " ", text_del)
             # Replace the line breaks using spaces.
+            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces within the text.
             text_del = re.sub(" +", " ", text_del)
@@ -172,6 +173,7 @@ def read_source(documents, source_folder, token_folder):
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
         document["text"] = re.sub("amp;", " ", document["text"])
         # Replace the line breaks using spaces.
+        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces.
         document["text"] = re.sub(" +", " ", document["text"])
@@ -185,25 +187,23 @@ def read_source(documents, source_folder, token_folder):
                         != trigger["trigger_word"]:
                     # Manually fix some annotation errors within the dataset.
                     if document["text"][trigger["position"][0]:trigger["position"][1]] == "ant":
-                        trigger["trigger_word"] = "anti-war"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("anti-war")]
+                        trigger["position"][0] += len("anti-")
+                        trigger["position"][1] += len("anti-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "Ant":
-                        trigger["trigger_word"] = "Anti-war"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("Anti-war")]
+                        trigger["position"][0] += len("Anti-")
+                        trigger["position"][1] += len("Anti-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "pro":
-                        trigger["trigger_word"] = "pro-war"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("pro-war")]
+                        trigger["position"][0] += len("pro-")
+                        trigger["position"][1] += len("pro-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "counter-t":
-                        trigger["trigger_word"] = "counter-terrorism"
-                        trigger["position"] \
-                            = [trigger["position"][0], trigger["position"][0] + len("counter-terrorism")]
+                        trigger["position"][0] += len("counter-")
+                        trigger["position"][1] += len("counter-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "Counter-demons":
-                        trigger["trigger_word"] = "Counter-demonstrations"
-                        trigger["position"] \
-                            = [trigger["position"][0], trigger["position"][0] + len("Counter-demonstrations")]
+                        trigger["position"][0] += len("Counter-")
+                        trigger["position"][1] += len("Counter-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "re-elect":
-                        trigger["trigger_word"] = "re-election"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("re-election")]
+                        trigger["position"][0] += len("re-")
+                        trigger["position"][1] += len("re-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "w":
                         trigger["trigger_word"] = "wedding"
                         trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("wedding")]
@@ -211,11 +211,11 @@ def read_source(documents, source_folder, token_folder):
                         trigger["trigger_word"] = "War"
                         trigger["position"] = [trigger["position"][0] + 1, trigger["position"][1] + 1]
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "co-foun":
-                        trigger["trigger_word"] = "co-founded"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("co-founded")]
+                        trigger["position"][0] += len("co-")
+                        trigger["position"][1] += len("co-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "Non-ele":
-                        trigger["trigger_word"] = "Non-elected"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("Non-elected")]
+                        trigger["position"][0] += len("Non-")
+                        trigger["position"][1] += len("Non-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "'Terminall":
                         trigger["trigger_word"] = "Terminally"
                         trigger["position"] = [trigger["position"][0] + 1, trigger["position"][1] + 1]
@@ -223,11 +223,11 @@ def read_source(documents, source_folder, token_folder):
                         trigger["trigger_word"] = "Battered"
                         trigger["position"] = [trigger["position"][0] + 1, trigger["position"][1] + 1]
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "CO-FOUN":
-                        trigger["trigger_word"] = "CO-FOUNDER"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("CO-FOUNDER")]
+                        trigger["position"][0] += len("CO-")
+                        trigger["position"][1] += len("CO-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "post-ele":
-                        trigger["trigger_word"] = "post-election"
-                        trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("post-election")]
+                        trigger["position"][0] += len("post-")
+                        trigger["position"][1] += len("post-")
                     elif document["text"][trigger["position"][0]:trigger["position"][1]] == "r":
                         trigger["trigger_word"] = "resignation"
                         trigger["position"] = [trigger["position"][0], trigger["position"][0] + len("resignation")]
@@ -304,6 +304,110 @@ def sentence_tokenize(documents):
         # Append the sentence without event into the list.
         if len(document_without_event["sentences"]) != 0:
             documents_without_event.append(document_without_event)
+
+    assert check_position(documents_split)
+    return add_spaces(documents_split, documents_without_event)
+
+
+def add_spaces(documents_split, documents_without_event):
+    for document in tqdm(documents_split, desc="Adding spaces..."):
+        punc_char = list()
+        for i in range(len(document["text"])):
+            # Retrieve the top i characters.
+            text = document["text"][:i]
+            text_space = re.sub(",", " , ", text)
+            text_space = re.sub("\.", " . ", text_space)
+            text_space = re.sub(":", " : ", text_space)
+            text_space = re.sub(";", " : ", text_space)
+            text_space = re.sub("\?", " ? ", text_space)
+            text_space = re.sub("!", " ! ", text_space)
+            text_space = re.sub("'", " ' ", text_space)
+            text_space = re.sub("\"", " \" ", text_space)
+            text_space = re.sub("\(", " ( ", text_space)
+            text_space = re.sub("\)", " ) ", text_space)
+            text_space = re.sub("\[", " [ ", text_space)
+            text_space = re.sub("\]", " ] ", text_space)
+            text_space = re.sub("\{", " { ", text_space)
+            text_space = re.sub("\}", " } ", text_space)
+            text_space = re.sub("-", " - ", text_space)
+            text_space = re.sub("/", " / ", text_space)
+            text_space = re.sub("_", " _ ", text_space)
+            text_space = re.sub("\*", " * ", text_space)
+            text_space = re.sub("`", " ` ", text_space)
+            text_space = re.sub("‘", " ‘ ", text_space)
+            text_space = re.sub("’", " ’ ", text_space)
+            text_space = re.sub("“", " “ ", text_space)
+            text_space = re.sub("”", " ” ", text_space)
+            text_space = re.sub("…", " … ", text_space)
+            text_space = re.sub(" +", " ", text_space)
+            punc_char.append(len(text_space.lstrip()))
+        punc_char.append(punc_char[-1])
+
+        document["text"] = re.sub(",", " , ", document["text"])
+        document["text"] = re.sub("\.", " . ", document["text"])
+        document["text"] = re.sub(":", " : ", document["text"])
+        document["text"] = re.sub(";", " ; ", document["text"])
+        document["text"] = re.sub("\?", " ? ", document["text"])
+        document["text"] = re.sub("!", " ! ", document["text"])
+        document["text"] = re.sub("'", " ' ", document["text"])
+        document["text"] = re.sub("\"", " \" ", document["text"])
+        document["text"] = re.sub("\(", " ( ", document["text"])
+        document["text"] = re.sub("\)", " ) ", document["text"])
+        document["text"] = re.sub("\[", " [ ", document["text"])
+        document["text"] = re.sub("\]", " ] ", document["text"])
+        document["text"] = re.sub("\{", " { ", document["text"])
+        document["text"] = re.sub("\}", " } ", document["text"])
+        document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub("/", " / ", document["text"])
+        document["text"] = re.sub("_", " _ ", document["text"])
+        document["text"] = re.sub("\*", " * ", document["text"])
+        document["text"] = re.sub("`", " ` ", document["text"])
+        document["text"] = re.sub("‘", " ‘ ", document["text"])
+        document["text"] = re.sub("’", " ’ ", document["text"])
+        document["text"] = re.sub("“", " “ ", document["text"])
+        document["text"] = re.sub("”", " ” ", document["text"])
+        document["text"] = re.sub("…", " … ", document["text"])
+        document["text"] = re.sub(" +", " ", document["text"]).strip()
+
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                trigger["position"][0] = punc_char[trigger["position"][0]]
+                trigger["position"][1] = punc_char[trigger["position"][1]]
+                trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].startswith(" "):
+                    trigger["position"][0] += 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].endswith(" "):
+                    trigger["position"][1] -= 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+
+    for document in documents_without_event:
+        for i in range(len(document["sentences"])):
+            document["sentences"][i] = re.sub(",", " , ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\.", " . ", document["sentences"][i])
+            document["sentences"][i] = re.sub(":", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub(";", " : ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\?", " ? ", document["sentences"][i])
+            document["sentences"][i] = re.sub("!", " ! ", document["sentences"][i])
+            document["sentences"][i] = re.sub("'", " ' ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\"", " \" ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\(", " ( ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\)", " ) ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\[", " [ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\]", " ] ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
+            document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
+            document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
+            document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])
+            document["sentences"][i] = re.sub("`", " ` ", document["sentences"][i])
+            document["sentences"][i] = re.sub("‘", " ‘ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("’", " ’ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("“", " “ ", document["sentences"][i])
+            document["sentences"][i] = re.sub("”", " ” ", document["sentences"][i])
+            document["sentences"][i] = re.sub("…", " … ", document["sentences"][i])
+            document["sentences"][i] = re.sub(" +", " ", document["sentences"][i]).strip()
 
     assert check_position(documents_split)
     return documents_split, documents_without_event

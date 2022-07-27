@@ -231,6 +231,7 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(fewfc_data), data_path))
 
+    data_path = '/data/processed'.join(data_path.split('/data'))
     if dump:
         with jsonlines.open(data_path.replace(".json", ".unified.json"), "w") as f:
             for item in formatted_data:
@@ -240,15 +241,17 @@ def convert_fewfc_to_unified(data_path: str, dump=True, tokenizer="jieba") -> li
 
 
 if __name__ == "__main__":
-    json.dump(label2id, open("../../../data/FewFC/label2id.json", "w", encoding="utf-8"), indent=4, ensure_ascii=False)
-    get_role2id("../../../data/FewFC/train_base.json",
-                "../../../data/FewFC/test_base.json",
-                "../../../data/FewFC/role2id.json")
+    os.makedirs("../../../data/processed/FewFC/", exist_ok=True)
+
+    with open("../../../data/processed/FewFC/label2id.json", "w", encoding="utf-8") as f:
+        json.dump(label2id, f, indent=4, ensure_ascii=False)
+
+    get_role2id(train_file="../../../data/FewFC/train_base.json",
+                test_file="../../../data/FewFC/test_base.json",
+                output_file="../../../data/processed/FewFC/role2id.json")
     if not os.path.exists("../../../data/FewFC/dev_base.json"):
         split_training_data("../../../data/FewFC/train_base.json", "../../../data/FewFC/dev_base.json")
 
     convert_fewfc_to_unified("../../../data/FewFC/train_base.json")
     convert_fewfc_to_unified("../../../data/FewFC/dev_base.json")
-    convert_fewfc_to_unified("../../../data/FewFC/train_trans.json")
     convert_fewfc_to_unified("../../../data/FewFC/test_base.json")
-    convert_fewfc_to_unified("../../../data/FewFC/test_trans.json")
