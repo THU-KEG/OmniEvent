@@ -123,7 +123,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 if "source" in item:
                     kwargs = {"source": [item["source"]]}
                 else:
-                    kwargs = {"source": ["<ace>"]}
+                    kwargs = {"source": []}
                 if self.config.language == "English":
                     words = item["text"].split()
                     whitespace = " "

@@ -3,10 +3,11 @@
     "gradient_clipping": "auto",
     "train_batch_size": "auto",
     "train_micro_batch_size_per_gpu": "auto",
+    "steps_per_print": 1000,
 
     "amp": {
-        "enabled": true,
-        "opt_level": "O1"
+        "enabled": "auto",
+        "opt_level": "auto"
     },
 
     "optimizer": {
@@ -27,10 +28,9 @@
         },
         "allgather_partitions": true,
         "allgather_bucket_size": 2e8,
+        "overlap_comm": true,
         "reduce_scatter": true,
         "reduce_bucket_size": 2e8,
-        "overlap_comm": true,
-        "contiguous_gradients": true,
-        "round_robin_gradients": true
-     }
+        "contiguous_gradients": true
+    }
 }

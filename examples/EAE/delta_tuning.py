@@ -67,7 +67,7 @@ logging.basicConfig(
 )
 
 # markers 
-markers = ["<event>", "</event>"]
+markers = ["<event>", "</event>", "<ace>", "<ere>", "<kbp>", "<duee>", "<fewfc>"]
 data_args.markers = markers
 print(data_args, model_args, training_args)
 
@@ -83,8 +83,14 @@ backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.mod
                                            model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
 delta_model = LoraModel(backbone_model=backbone)
 delta_model.freeze_module(set_state_dict=True)
-backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
+# backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
 model = get_model(model_args, backbone)
+if training_args.pipeline:
+    num_layers = config.num_layers
+    gpu_numbers = torch.cuda.device_count()
+    num_per_gpus = int(num_layers / gpu_numbers)
+    device_map = {i : [j for j in range(num_per_gpus * i, num_per_gpus * (i + 1))] for i in range(gpu_numbers)}
+    model.parallelize(device_map)
 
 data_class = EAESeq2SeqProcessor
 metric_fn = compute_seq_F1
