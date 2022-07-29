@@ -43,8 +43,8 @@ if len(sys.argv) >= 2 and sys.argv[1].endswith(".json"):
     # If we pass only one argument to the script and it's the path to a json file,
     # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) >= 2 and sys.argv[2].endswith(".yaml"):
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[2]))
+elif len(sys.argv) >= 2 and sys.argv[1].endswith(".yaml"):
+    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -83,7 +83,7 @@ backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.mod
                                            model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
 delta_model = LoraModel(backbone_model=backbone)
 delta_model.freeze_module(set_state_dict=True)
-# backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
+backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
 model = get_model(model_args, backbone)
 if training_args.pipeline:
     num_layers = config.num_layers
