@@ -4,28 +4,37 @@ import torch
 import logging
 
 from torch.utils.data import Dataset
+from typing import Dict, List, Union
 
 logger = logging.getLogger(__name__)
 
 
 class EDInputExample(object):
-    """A single training/test example for event extraction."""
+    """A single training/test example for event detection.
+
+    A single training/test example for event detection, representing the basic information of an event trigger,
+    including its example id, the source text it is within, its start and end position, and its event type.
+
+    Attributes:
+        example_id (`Union[int, str]`):
+            A string or an integer for the unique id of the example.
+        text (`int`):
+            A string representing the source text the event trigger is within.
+        trigger_left (`int`):
+            An integer for the left position of the event trigger.
+        trigger_right (`int`):
+            An integer for the right position of the event trigger.
+        labels (`int`):
+            A string indicating the type of the event trigger.
+    """
 
     def __init__(self,
-                 example_id,
-                 text,
-                 trigger_left=None,
-                 trigger_right=None,
-                 labels=None):
-        """Constructs a InputExample.
-
-        Args:
-            example_id: Unique id for the example.
-            text: List of str. The untokenized text.
-            triggerL: Left position of trigger.
-            triggerR: Light position of tigger.
-            labels: Event type of the trigger
-        """
+                 example_id: Union[int, str],
+                 text: str,
+                 trigger_left: int = None,
+                 trigger_right: int = None,
+                 labels: str = None):
+        """Constructs an EDInputExample."""
         self.example_id = example_id
         self.text = text
         self.trigger_left = trigger_left
@@ -34,16 +43,38 @@ class EDInputExample(object):
 
 
 class EDInputFeatures(object):
-    """Input features of an instance."""
+    """Input features of an instance for event detection.
+
+    A single training/test example for event detection, representing the basic features of an event trigger,
+    including its example id, the indices of tokens in the vocabulary, the attention mask, segment token indices, the
+    start and end position, and its event type.
+
+    Attributes:
+        example_id (`Union[int, str]`):
+            A string or an integer for the unique id of the example.
+        input_ids (`List[int]`):
+            A list of integers representing the indices of input sequence tokens in the vocabulary.
+        attention_mask (`List[int]`):
+            A list of integers (in 0/1) for masks to avoid attention on padding tokens.
+        token_type_ids (`List[int]`, `optional`, defaults to `None`):
+            A list of integers indicating the first and second portions of the inputs.
+        trigger_left (`int`, `optional`, defaults to `None`):
+            An integer for the left position of the event trigger.
+        trigger_right (`int`, `optional`, defaults to `None`):
+            An integer for the right position of the event trigger.
+        labels (`str`, `optional`, defaults to `None`):
+            A string indicating the type of the event trigger.
+    """
 
     def __init__(self,
-                 example_id,
-                 input_ids,
-                 attention_mask,
-                 token_type_ids=None,
-                 trigger_left=None,
-                 trigger_right=None,
-                 labels=None):
+                 example_id: Union[int, str],
+                 input_ids: List[int],
+                 attention_mask: List[int],
+                 token_type_ids: List[int] = None,
+                 trigger_left: int = None,
+                 trigger_right: int = None,
+                 labels: str = None):
+        """Constructs an EDInputFeatures."""
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
@@ -54,25 +85,36 @@ class EDInputFeatures(object):
 
 
 class EAEInputExample(object):
-    """A single training/test example for event extraction."""
+    """A single training/test example for event argument extraction.
 
-    def __init__(self, example_id, text, pred_type, true_type,
+    A single training/test example for event argument extraction, representing the basic information of an event
+    trigger, including its example id, the source text it is within, its start and end position, and its event type.
+
+    Attributes:
+        example_id: A string for the unique id of the example.
+        text: A string representing the source text the event trigger is within.
+
+        trigger_left: An integer for the left position of the event trigger.
+        trigger_right: An integer for the right position of the event trigger.
+        argument_left: An integer for the left position of the argument mention.
+        argument_right: An integer for the right position of the argument mention.
+        argument_role: A string indicating the argument role of the argument mention.
+        labels: A string indicating the type of the event trigger.
+    """
+
+    def __init__(self,
+                 example_id: Union[int, str],
+                 text: str,
+                 pred_type,
+                 true_type,
                  input_template=None,
-                 trigger_left=None,
-                 trigger_right=None,
-                 argument_left=None,
-                 argument_right=None,
-                 argument_role=None, 
-                 labels=None):
-        """Constructs a InputExample.
-
-        Args:
-            example_id: Unique id for the example.
-            text: List of str. The untokenized text.
-            triggerL: Left position of trigger.
-            triggerR: Light position of tigger.
-            labels: Event type of the trigger
-        """
+                 trigger_left: int = None,
+                 trigger_right: int = None,
+                 argument_left: int = None,
+                 argument_right: int = None,
+                 argument_role: str = None,
+                 labels: str = None):
+        """Constructs a InputExample."""
         self.example_id = example_id
         self.text = text
         self.pred_type = pred_type
@@ -87,19 +129,45 @@ class EAEInputExample(object):
 
 
 class EAEInputFeatures(object):
-    """Input features of an instance."""
+    """Input features of an instance for event argument extraction.
+
+    A single training/test example for event argument extraction, representing the basic features of an argument
+    mention, including its example id, the indices of tokens in the vocabulary, the attention mask, segment token
+    indices, the start and end position of the event trigger and argument mention, and its event type.
+
+    Attributes:
+        example_id (`Union[int, str]`):
+            A string or an integer for the unique id of the example.
+        input_ids (`List[int]`):
+            A list of integers representing the indices of input sequence tokens in the vocabulary.
+        attention_mask (`List[int]`):
+            A list of integers (in 0/1) for masks to avoid attention on padding tokens.
+        token_type_ids (`List[int]`, `optional`, defaults to `None`):
+            A list of integers indicating the first and second portions of the inputs.
+        trigger_left (`int`, `optional`, defaults to `None`):
+            An integer for the left position of the event trigger.
+        trigger_right (`int`, `optional`, defaults to `None`):
+            An integer for the right position of the event trigger.
+        argument_left (`int`, `optional`, defaults to `None`):
+            An integer for the left position of the argument mention.
+        argument_right (`int`, `optional`, defaults to `None`):
+            An integer for the right position of the argument mention.
+        labels (`str`, `optional`, defaults to `None`):
+            A string indicating the type of the event trigger.
+    """
 
     def __init__(self,
-                 example_id,
-                 input_ids,
-                 attention_mask,
-                 token_type_ids=None,
-                 trigger_left=None,
-                 trigger_right=None,
-                 argument_left=None,
-                 argument_right=None,
-                 labels=None,
+                 example_id: Union[int, str],
+                 input_ids: List[int],
+                 attention_mask: List[int],
+                 token_type_ids: List[int] = None,
+                 trigger_left: int = None,
+                 trigger_right: int = None,
+                 argument_left: int = None,
+                 argument_right: int = None,
+                 labels: str = None,
                  ):
+        """Constructs an EAEInputFeatures."""
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
@@ -112,21 +180,44 @@ class EAEInputFeatures(object):
 
 
 class EDDataProcessor(Dataset):
-    """Base class of data processor for event detection."""
+    """Base class of data processor for event detection.
 
-    def __init__(self, config, tokenizer):
+    The base class of data processor for event detection, which would be inherited to construct task-specific data
+    processors.
+
+    Attributes:
+        config:
+            The pre-defined configurations of the execution.
+        tokenizer (`str`):
+            A string represents the tokenizer utilized for tokenization.
+        examples (`List[EDInputExample]`):
+            A list of `EDInputExample`s constructed based on the input dataset.
+        input_features (`List[EDInputFeatures]`):
+            A list of `EDInputFeatures`s corresponding to the `EDInputExample`s.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str):
+        """Constructs an EDDataProcessor."""
         self.config = config
         self.tokenizer = tokenizer
         self.examples = []
         self.input_features = []
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str):
+        """Obtains a collection of `EDInputExample`s for the dataset."""
         raise NotImplementedError
 
     def convert_examples_to_features(self):
+        """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         raise NotImplementedError
 
-    def _truncate(self, outputs, max_seq_length):
+    def _truncate(self,
+                  outputs: dict,
+                  max_seq_length: int):
+        """Truncate sthe sequences that exceed the maximum length."""
         is_truncation = False
         if len(outputs["input_ids"]) > max_seq_length:
             print("An instance exceeds the maximum length.")
@@ -137,16 +228,20 @@ class EDDataProcessor(Dataset):
                 outputs[key] = outputs[key][:max_seq_length]
         return outputs, is_truncation
 
-    def get_ids(self):
+    def get_ids(self) -> List[Union[int, str]]:
+        """Returns the id of the examples."""
         ids = []
         for example in self.examples:
             ids.append(example.example_id)
         return ids
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Returns the length of the examples."""
         return len(self.input_features)
 
-    def __getitem__(self, index):
+    def __getitem__(self,
+                    index: int) -> Dict[str, torch.Tensor]:
+        """Returns the features of a given example index in a dictionary."""
         features = self.input_features[index]
         data_dict = dict(
             input_ids=torch.tensor(features.input_ids, dtype=torch.long),
@@ -162,7 +257,8 @@ class EDDataProcessor(Dataset):
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
         return data_dict
 
-    def collate_fn(self, batch):
+    def collate_fn(self, batch) -> Dict[str, torch.Tensor]:
+        """Collates the samples in batches."""
         output_batch = dict()
         for key in batch[0].keys():
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)
@@ -182,9 +278,34 @@ class EDDataProcessor(Dataset):
 
 
 class EAEDataProcessor(Dataset):
-    """Base class of data processor."""
+    """Base class of data processor for event argument extraction.
 
-    def __init__(self, config, tokenizer, pred_file, is_training):
+    The base class of data processor for event argument extraction, which would be inherited to construct task-specific
+    data processors.
+
+    Attributes:
+        config:
+            The pre-defined configurations of the execution.
+        tokenizer (`str`):
+            A string represents the tokenizer utilized for tokenization.
+        is_training (`bool`):
+            A boolean variable indicating the state is training or not.
+        examples (`List[EDInputExample]`):
+            A list of `EDInputExample`s constructed based on the input dataset.
+        input_features (`List[EDInputFeatures]`):
+            A list of `EDInputFeatures`s corresponding to the `EDInputExample`s.
+        data_for_evaluation (`dict`):
+            A dictionary representing the evaluation data.
+        event_preds (`list`):
+            A list of event prediction data if the file exists.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 pred_file: str,
+                 is_training: bool):
+        """Constructs a EAEDataProcessor."""
         self.config = config
         self.tokenizer = tokenizer
         self.is_training = is_training
@@ -205,13 +326,17 @@ class EAEDataProcessor(Dataset):
             logger.warning("Event predictions is none! We use golden triggers.")
             self.event_preds = None
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str):
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         raise NotImplementedError
 
     def convert_examples_to_features(self):
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         raise NotImplementedError
 
-    def get_data_for_evaluation(self):
+    def get_data_for_evaluation(self) -> dict:
+        """Obtains the data for evaluation."""
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()
         self.data_for_evaluation["ids"] = self.get_ids()
@@ -231,13 +356,17 @@ class EAEDataProcessor(Dataset):
             true_types.append(example.true_type)
         return true_types
 
-    def get_roles(self): # for MRC
+    def get_roles(self) -> List[str]:
+        """Obtains the role of each argument mention (for MRC)."""
         roles = []
         for example in self.examples:
             roles.append(example.argument_role)
-        return roles 
+        return roles
 
-    def _truncate(self, outputs, max_seq_length):
+    def _truncate(self,
+                  outputs: dict,
+                  max_seq_length: int):
+        """Truncates the sequences that exceed the maximum length."""
         is_truncation = False
         if len(outputs["input_ids"]) > max_seq_length:
             print("An instance exceeds the maximum length.")
@@ -248,16 +377,20 @@ class EAEDataProcessor(Dataset):
                 outputs[key] = outputs[key][:max_seq_length]
         return outputs, is_truncation
 
-    def get_ids(self):
+    def get_ids(self) -> List[Union[int, str]]:
+        """Returns the id of the examples."""
         ids = []
         for example in self.examples:
             ids.append(example.example_id)
         return ids
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Returns the length of the examples."""
         return len(self.input_features)
 
-    def __getitem__(self, index):
+    def __getitem__(self,
+                    index: int) -> Dict[str, torch.Tensor]:
+        """Returns the features of a given example index in a dictionary."""
         features = self.input_features[index]
         data_dict = dict(
             input_ids=torch.tensor(features.input_ids, dtype=torch.long),
@@ -277,7 +410,8 @@ class EAEDataProcessor(Dataset):
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
         return data_dict
 
-    def collate_fn(self, batch):
+    def collate_fn(self, batch) -> dict:
+        """Collates the samples in batches."""
         output_batch = dict()
         for key in batch[0].keys():
             output_batch[key] = torch.stack([x[key] for x in batch], dim=0)

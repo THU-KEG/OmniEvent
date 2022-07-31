@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+from typing import List
 
 from tqdm import tqdm 
 from collections import defaultdict
@@ -21,6 +22,18 @@ logger = logging.getLogger(__name__)
 
 
 def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"[{type_start}{type_end}]")):
+    """Extracts the arguments from the raw text.
+
+    Args:
+        raw_text (`str`):
+            A string indicating the input raw text.
+        instance_id:
+            The id of the input example.
+        event_type:
+            A string indicating the type of the event.
+        template (`str`, `optional`, defaults to `re.compile(f"[{type_start}{type_end}]")`):
+            The template of the event argument extraction.
+    """
     arguments = []
     for span in template.split(raw_text):
         if span.strip() == "":
@@ -37,14 +50,24 @@ def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"[{
 
 
 class EDSeq2SeqProcessor(EDDataProcessor):
-    "Data processor for sequence to sequence."
+    """Data processor for sequence to sequence for event detection.
 
-    def __init__(self, config, tokenizer, input_file):
+    Data processor for token classification for event detection. The class is inherited from the`EDDataProcessor` class,
+    in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
+    the rest of the attributes and functions are multiplexed from the `EDDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str):
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
     
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str):
+        """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
@@ -76,6 +99,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                     self.examples.append(example)
 
     def convert_examples_to_features(self):
+        """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
             # context 
@@ -104,14 +128,27 @@ class EDSeq2SeqProcessor(EDDataProcessor):
 
 
 class EAESeq2SeqProcessor(EAEDataProcessor):
-    "Data processor for sequence to sequence."
+    """Data processor for sequence to sequence for event argument extraction.
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
+    Data processor for token classification for event argument extraction. The class is inherited from the
+    `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are  implemented; a new function entitled `insert_marker()` is defined, and
+    the rest of the attributes and functions are multiplexed from the `EAEDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str,
+                 pred_file: str,
+                 is_training: bool = False):
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
     
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str):
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
         self.data_for_evaluation["roles"] = []
@@ -216,7 +253,12 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 assert trigger_idx == len(self.event_preds)
 
 
-    def insert_marker(self, tokens, trigger_pos, markers, whitespace=True):
+    def insert_marker(self,
+                      tokens: List[str],
+                      trigger_pos: List[int],
+                      markers: List,
+                      whitespace: bool = True) -> List:
+        """Adds a marker at the start and end position of event triggers and argument mentions."""
         space = " " if whitespace else ""
         markered_words = []
         char_pos = 0
@@ -231,6 +273,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         
 
     def convert_examples_to_features(self):
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         self.input_features = []
         whitespace = True if self.config.language == "English" else False 
         for example in tqdm(self.examples, desc="Processing features for SL"):

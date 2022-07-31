@@ -2,6 +2,8 @@ import json
 import logging
 
 from tqdm import tqdm
+from typing import List
+
 from .base_processor import (
     EDDataProcessor,
     EDInputExample,
@@ -15,14 +17,25 @@ logger = logging.getLogger(__name__)
 
 
 class EDTCProcessor(EDDataProcessor):
-    """Data processor for token classification."""
+    """Data processor for token classification for event detection.
 
-    def __init__(self, config, tokenizer, input_file):
+    Data processor for token classification for event detection. The class is inherited from the`EDDataProcessor` class,
+    in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
+    the rest of the attributes and functions are multiplexed from the `EDDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str):
+        """Constructs an EDTCProcessor."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str):
+        """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         with open(input_file, "r") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
@@ -66,6 +79,7 @@ class EDTCProcessor(EDDataProcessor):
                         self.examples.append(example)
 
     def convert_examples_to_features(self):
+        """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         # merge and then tokenize
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for TC"):
@@ -106,14 +120,28 @@ class EDTCProcessor(EDDataProcessor):
 
 
 class EAETCProcessor(EAEDataProcessor):
-    """Data processor for token classification."""
+    """Data processor for token classification for event argument extraction.
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
+    Data processor for token classification for event argument extraction. The class is inherited from the
+    `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are  implemented; a new function entitled `insert_marker()` is defined, and
+    the rest of the attributes and functions are multiplexed from the `EAEDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str,
+                 pred_file: str,
+                 is_training: bool = False):
+        """Constructs a EAETCProcessor."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file):
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         trigger_idx = 0
         with open(input_file, "r") as f:
@@ -286,7 +314,14 @@ class EAETCProcessor(EAEDataProcessor):
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-    def insert_marker(self, text, type, trigger_position, argument_position, markers, whitespace=True):
+    def insert_marker(self,
+                      text: str,
+                      type: str,
+                      trigger_position: List[int],
+                      argument_position: List[int],
+                      markers: dict,
+                      whitespace: bool = True):
+        """Adds a marker at the start and end position of event triggers and argument mentions."""
         markered_text = ""
         for i, char in enumerate(text):
             if i == trigger_position[0]:
@@ -305,6 +340,7 @@ class EAETCProcessor(EAEDataProcessor):
         return markered_text
 
     def convert_examples_to_features(self):
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         # merge and then tokenize
         self.input_features = []
         whitespace = True if self.config.language == "English" else False

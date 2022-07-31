@@ -39,12 +39,27 @@ class Config(object):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
 
-def read_xml(hopper_folder, source_folder):
-    """
-    Read the annotated files and construct the data.
-    :param hopper_folder: The path for the event_hopper folder.
-    :param source_folder: The path for the source folder.
-    :return: documents:   The set of the constructed documents.
+def read_xml(hopper_folder: str,
+             source_folder: str):
+    """Read the annotation files and save the annotation of event triggers.
+
+    Read the annotation files and extract the event trigger annotations and save them to a dictionary. Finally, the
+    annotations of each document are stored in a list.
+
+    Args:
+        hopper_folder: The path of the folder containing the annotations of the documents.
+        source_folder: The path of the folder containing the source text of the documents.
+
+    Returns:
+        A list of dictionaries containing each document's document id and the trigger annotations. The source text of
+        each document is temporarily left blank, which will be extracted in the `read_source()` function. For example:
+
+        {"id": "NYT_ENG_20130607.0076", "text": "",
+         "events": [{"type": "convict", "triggers": [{"id": "em-23", "trigger_word": "Convicted",
+                                                      "position": [172, 181], "arguments": []}]}, ... ]
+         "negative_triggers": [], "entities": []}
+
+        The processed `documents` is then sent to the `read_source()` function for source text extraction.
     """
     # Initialise the document list.
     documents = list()
@@ -99,12 +114,28 @@ def read_xml(hopper_folder, source_folder):
     return read_source(documents, source_folder)
 
 
-def read_source(documents, source_folder):
-    """
-    Extract the source texts from the corresponding file.
-    :param documents:     The documents lists with triggers.
-    :param source_folder: Path of the source folder.
-    :return: documents:   The set of the constructed documents.
+def read_source(documents: list,
+                source_folder: str):
+    """Extract the source text of each document, delete the xml elements, and replace the position annotations.
+
+    Extract the source text of each document replace the position annotation of each trigger word to character-level
+    annotation. The xml annotations (covered by "<>") and the urls (starting with "http") are then deleted from the
+    source text, and then the position of each trigger is amended.
+
+    Args:
+        documents: A list of dictionaries containing the document id and event trigger annotations.
+        source_folder: The path of the folder containing the source text of the documents.
+
+    Returns:
+        A list of dictionaries containing the document id, source text, and event trigger annotations of each document.
+        For example:
+
+        {"id": "NYT_ENG_20130607.0076", "text": "Convicted killer stabbed to death Katherine Seeber, ...",
+         "events": [{"type": "convict", "triggers": [{"id": "em-23", "trigger_word": "Convicted",
+                                                      "position": [0, 9], "arguments": []}]}, ... ]
+         "negative_triggers": [], "entities": []}
+
+        The processed documents` is then sent to the `sentence_tokenize()` function for sentence tokenization.
     """
     for document in tqdm(documents, desc="Reading source..."):
         # Extract the sentence of each document.
@@ -185,11 +216,32 @@ def read_source(documents, source_folder):
     return sentence_tokenize(documents)
 
 
-def sentence_tokenize(documents):
-    """
-    Tokenize the document into multiple sentences.
-    :param documents:         The structured documents list.
-    :return: documents_split: The split sentences' document.
+def sentence_tokenize(documents: list):
+    """Tokenize the source text into sentences and match the corresponding event triggers.
+
+    Tokenize the source text into sentences, and match the event triggers that belong to each sentence. The sentences do
+    not contain any triggers are stored separately.
+
+    Args:
+        documents: A list of dictionaries containing the document id, source text, and the event trigger annotations of
+        each document.
+
+    Returns:
+        documents_split: A list of dictionaries containing the document id, source text, and the event trigger
+        annotations of each sentence within each document. For example:
+
+        {"id": "NYT_ENG_20130607.0076-0", "text": "Convicted killer stabbed to death Katherine Seeber, ...",
+         "events": [{"type": "convict", "triggers": [{"id": "em-23", "trigger_word": "Convicted",
+                                                      "position": [0, 9], "arguments": []}]}, ... ]
+         "negative_triggers": [], "entities": []}
+
+        documents_without_event: A list of dictionaries containing the sentences not contain any triggers within. For
+        example:
+
+        {"id": "NYT_ENG_20130607.0076", "sentences": ["The criminal case against Seeber was one of the ...", ... ]}
+
+        The processed `documents_split` and `documents_without_event` is then sent to the `add_spaces()` function
+        for adding spaces beside punctuations.
     """
     # Initialise a list of the splitted documents.
     documents_split = list()
@@ -249,7 +301,34 @@ def sentence_tokenize(documents):
     return add_spaces(documents_split, documents_without_event)
 
 
-def add_spaces(documents_split, documents_without_event):
+def add_spaces(documents_split: list,
+               documents_without_event: list):
+    """Add a space before and after the punctuations.
+
+    Add a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
+    source texts. The mention and position of the event trigger annotations are also amended.
+
+    Args:
+        documents_split: A list of dictionaries containing the document id and the event trigger annotations of each
+        sentence.
+        documents_without_event: A list of dictionaries containing the sentences not contain any trigger within.
+
+    Returns:
+        documents_split: A list of dictionaries containing the document id and the event trigger annotations of each
+        sentence. For example:
+
+        {"id": "NYT_ENG_20130607.0076-0", "text": "Convicted killer stabbed to death Katherine Seeber , ...",
+         "events": [{"type": "convict", "triggers": [{"id": "em-23", "trigger_word": "Convicted",
+                                                      "position": [0, 9], "arguments": []}]}, ... ]
+         "negative_triggers": [], "entities": []}
+
+        documents_without_event: A list of dictionaries containing the sentences not contain any triggers within. For
+        example:
+
+        {"id": "NYT_ENG_20130607.0076", "sentences": ["The criminal case against Seeber was one of the ...", ... ]}
+
+        The processed `documents_split` and `documents_without_event` are returned as final results.
+    """
     for document in tqdm(documents_split, desc="Adding spaces..."):
         punc_char = list()
         for i in range(len(document["text"])):
@@ -356,11 +435,19 @@ def add_spaces(documents_split, documents_without_event):
     return documents_split, documents_without_event
 
 
-def check_position(documents):
-    """
-    Check whether the position of each trigger is correct.
-    :param documents: The set of the constructed documents.
-    :return: True/False
+def check_position(documents: list) -> bool:
+    """Check whether the start and end positions correspond to the event triggers.
+
+    Check whether the string sliced from the source text based on the start and end positions corresponds to the
+    event triggers.
+
+    Args:
+        documents: A list of dictionaries containing the document id, source text, and event trigger annotations of each
+        document/sentence.
+
+    Returns:
+        True/False: Returns `False` if an inconsistency is found between the positions and the event trigger; otherwise,
+        returns `True`.
     """
     for document in documents:
         for event in document["events"]:
@@ -372,12 +459,17 @@ def check_position(documents):
     return True
 
 
-def to_jsonl(filename, save_dir, documents):
-    """
-    Write the manipulated dataset into jsonl file.
-    :param filename:  Name of the saved file.
-    :param documents: The manipulated dataset.
-    :return:
+def to_jsonl(filename: str,
+             save_dir: str,
+             documents: list):
+    """Write the manipulated dataset into a jsonl file.
+
+    Write the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
+
+    Args:
+        filename: The filename of the saved jsonl file.
+        save_dir: The directory to place the jsonl file.
+        documents: The `document_split` or the `document_without_event` dataset.
     """
     label2id = dict(NA=0)
     role2id = dict(NA=0)

@@ -33,12 +33,34 @@ class Config(object):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
 
-def read_xml(gold_folder, source_folder):
-    """
-    Read the annotated files and construct the hoppers.
-    :param gold_folder:   The path for the gold_standard folder.
-    :param source_folder: The path for the source folder.
-    :return: documents:   The set of the constructed documents.
+def read_xml(gold_folder: str,
+             source_folder: str):
+    """Read the annotation files and save the annotation of event triggers, arguments, and entities.
+
+    Read the annotation files and extract the event trigger, argument, and entity annotations and save them to a
+    dictionary. Finally, the annotations of each document are stored in a list.
+
+    Args:
+        gold_folder: The path of the folder containing the annotations of the documents.
+        source_folder: The path of the folder containing the source text of the documents.
+
+    Returns:
+        A list of dictionaries containing each document's document id and the trigger, argument, and entity annotations.
+        The source text of each document is temporarily left blank, which will be extracted in the `read_source()`
+        function. For example:
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84", "text": "",
+         "events": [
+            {"type": "attack",
+             "triggers": [{"id": "em-341", "trigger_word": "invasion", "position": [1402, 1410],
+                           "arguments": [{"role": "attacker", "mentions": [
+                            {"id": "m-231", "mention": "Vietnam", "position": [1356, 1363]}, ... ]}, ... ]},
+                          ... ]}, ... ],
+         "negative_triggers": [],
+         "entities": [{"type": "PER",
+                       "mentions": [{"id": "m-51", "mention": "the blog owner", "position": [971, 985]}, ... ], ... ]}
+
+        The processed `documents` is then sent to the `read_source()` function for source text extraction.
     """
     # Initialise the document list.
     documents = list()
@@ -206,12 +228,36 @@ def read_xml(gold_folder, source_folder):
     return read_source(documents, source_folder)
 
 
-def read_source(documents, source_folder):
-    """
-    Extract the source texts from the corresponding file.
-    :param documents:     The structured documents list.
-    :param source_folder: Path of the source folder.
-    :return documents:    The list of the constructed documents.
+def read_source(documents: list,
+                source_folder: str):
+    """Extract the source text of each document and remove the xml elements.
+
+    Extract the source text of each document and remove the xml elements (covered by "<>"), url elements (start with
+    "http"), and linebreaks within the source text. The position of trigger words, arguments, and entities are also
+    amended after removing the xml elements.
+
+    Args:
+        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each document.
+        source_folder: The path of the folder containing the source text of the documents.
+
+    Returns:
+        A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+        annotations of each document. For example:
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84", "text": "High-Ranking Officials Confusing, ...",
+         "events": [
+            {"type": "attack",
+             "triggers": [{"id": "em-341", "trigger_word": "invasion", "position": [1128, 1136],
+                           "arguments": [{"role": "attacker", "mentions": [
+                            {"id": "m-231", "mention": "Vietnam", "position": [1082, 1089]}, ... ]}, ... ]},
+                          ... ]}, ... ],
+         "negative_triggers": [],
+         "entities": [{"type": "PER",
+                       "mentions": [{"id": "m-51", "mention": "the blog owner", "position": [770, 784]}, ... ], ... ]}
+
+        The processed `documents` is then sent to the `clean_documents()` to remove the arguments and entities that
+        within the xml elements of the original source text.
     """
     for document in tqdm(documents, desc="Reading source..."):
         # Extract the sentence of each document.
@@ -281,11 +327,34 @@ def read_source(documents, source_folder):
     return clean_documents(documents)
 
 
-def clean_documents(documents):
-    """
-    Delete the entities and arguments in the xml elements.
-    :param documents:         The structured documents list.
-    :return: documents_clean: The cleaned documents list.
+def clean_documents(documents: list):
+    """Remove the entities and arguments within the xml elements of the original source text.
+
+    Remove the entities and arguments within the xml elements of the original source text, Considering the xml elements
+    have been removed from the source text in the `read_source()` function by constructing a new dataset, in which the
+    event trigger, argument, and entity annotations are not within the xml elements.
+
+    Args:
+        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each document.
+
+    Returns:
+        A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+        annotations of each document, without the arguments and entities within the xml elements of the original source
+        text. For example:
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84", "text": "High-Ranking Officials Confusing, ...",
+         "events": [
+            {"type": "attack",
+             "triggers": [{"id": "em-341", "trigger_word": "invasion", "position": [1128, 1136],
+                           "arguments": [{"role": "attacker", "mentions": [
+                            {"id": "m-231", "mention": "Vietnam", "position": [1082, 1089]}, ... ]}, ... ]},
+                          ... ]}, ... ],
+         "negative_triggers": [],
+         "entities": [{"type": "PER",
+                       "mentions": [{"id": "m-51", "mention": "the blog owner", "position": [770, 784]}, ... ], ... ]}
+
+        The processed `documents_clean` is then sent to the `sentence_tokenize()` function for sentence tokenization.
     """
     # Initialise the structure for the cleaned documents.
     documents_clean = list()
@@ -347,11 +416,32 @@ def clean_documents(documents):
     return sentence_tokenize(documents_clean)
 
 
-def sentence_tokenize(documents):
-    """
-    Tokenize the document into multiple sentences.
-    :param documents:         The structured documents list.
-    :return: documents_split: The split sentences" document.
+def sentence_tokenize(documents: list):
+    """Tokenize the source text into sentences and match the corresponding event triggers, arguments, and entities.
+
+    Tokenize the source text into sentences, and match the event triggers, arguments, and entities that belong to each
+    sentence. The sentences do not contain any triggers and entities are stored separately.
+
+    Args:
+        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each document.
+
+    Returns:
+        documents_split: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each sentence within each document.
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84-0", "text": "High-Ranking Officials Confusing, ...",
+         "events": [], "negative_triggers": [],
+         "entities": [{"type": "GPE",
+                       "mentions": [{"id": "m-75", "mention": "China", "position": [59, 64]}, ... ], ... ]}
+
+        documents_without_event: A list of dictionaries containing the sentences not contain any triggers and entities
+        within. For example:
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84", "sentences": ["Such a position lacked logic."]}
+
+        The processed `documents_split` and `documents_without_event` is then sent to the `add_spaces()` function
+        for adding spaces beside punctuations.
     """
     # Initialise a list of the splitted documents.
     documents_split, documents_without_event = list(), list()
@@ -449,7 +539,35 @@ def sentence_tokenize(documents):
     return add_spaces(documents_split, documents_without_event)
 
 
-def add_spaces(documents_split, documents_without_event):
+def add_spaces(documents_split: list,
+               documents_without_event: list):
+    """Add a space before and after the punctuations.
+
+    Add a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
+    source texts. The mention and position of the event trigger, argument, and entity annotations are also amended.
+
+    Args:
+        documents_split: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each sentence.
+        documents_without_event: A list of dictionaries containing the sentences not contain any triggers and entities
+        within.
+
+    Returns:
+        documents_split: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each sentence. For example:
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84-0", "text": "High-Ranking Officials Confusing, ...",
+         "events": [], "negative_triggers": [],
+         "entities": [{"type": "GPE",
+                       "mentions": [{"id": "m-75", "mention": "China", "position": [59, 64]}, ... ], ... ]}
+
+        documents_without_event: A list of dictionaries containing the sentences not contain any triggers and entities
+        within. For example:
+
+        {"id": "4c2488e10c34e5412d3b67e794c9bc84", "sentences": ["Such a position lacked logic ."]}
+
+        The processed `documents_split` and `documents_without_event` are returned as final results.
+    """
     for document in tqdm(documents_split, desc="Adding spaces..."):
         punc_char = list()
         for i in range(len(document["text"])):
@@ -579,12 +697,24 @@ def add_spaces(documents_split, documents_without_event):
     return documents_split, documents_without_event
 
 
-def fix_tokenize(sentence_tokenize, sentence_pos):
-    """
-    Fix the wrong tokenization within a sentence.
-    :param sentence_pos:      List of starting and ending position of each sentence.
-    :param sentence_tokenize: The tokenized sentences list.
-    :return: The fixed sentence position and tokenization lists.
+def fix_tokenize(sentence_tokenize: list,
+                 sentence_pos: list):
+    """Fix the wrong sentence tokenizations that affect the mention extraction.
+
+    Fix the wrong sentence tokenizations caused by `nltk.tokenize.punkt.PunktSentenceTokenizer` due to points (".")
+    existing at the end of abbreviations, which are regarded as the end of a sentence from the sentence tokenization
+    algorithm. Fix some wrong tokenizations that split a trigger word, an argument mention, or an entity mention into
+    two sentences.
+
+    Args:
+        sentence_tokenize: A list of sentences tokenized by `nltk.tokenize.punkt.PunktSentenceTokenizer`.
+        sentence_pos: A list of lists containing each sentence's start and end character positions, corresponding to the
+        sentences in `sentence_tokenize`.
+
+    Returns:
+        new_sentence_tokenize: A list of sentences after fixing the wrong tokenizations.
+        new_sentence_pos: A list of lists containing each sentence's start and end character positions, corresponding
+        to the sentences in `sentence_tokenize`.
     """
     # Set a list for the deleted indexes.
     del_index = list()
@@ -621,7 +751,20 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
     return new_sentence_tokenize, new_sentence_pos
 
 
-def check_argument(documents):
+def check_argument(documents: list) -> bool:
+    """Check whether the argument and entity mentions with the same id are consistent.
+
+    Check whether the argument and entity mentions with the same id are consistent, considering various operations are
+    conducted in each function.
+
+    Args:
+        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotations of each document/sentence.
+
+    Returns:
+        True/False: Returns `False` if an inconsistency is found between the argument and entity mentions with the same
+        id; otherwise returns `True`.
+    """
     for document in documents:
         for event in document["events"]:
             for trigger in event["triggers"]:
@@ -635,11 +778,19 @@ def check_argument(documents):
     return True
 
 
-def check_position(documents):
-    """
-    Check whether the position of each trigger is correct.
-    :param documents: The set of the constructed documents.
-    :return: True/False
+def check_position(documents: list) -> bool:
+    """Check whether the start and end positions correspond to the mention.
+
+    Check whether the string sliced from the source text based on the start and end positions corresponds to the
+    mention.
+
+    Args:
+        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
+        annotation of each document/sentence.
+
+    Returns:
+        True/False: Returns `False` if an inconsistency is found between the positions and the mention; otherwise,
+        returns `True`.
     """
     for document in documents:
         # Check the positions of the events.
@@ -662,12 +813,17 @@ def check_position(documents):
     return True
 
 
-def to_jsonl(filename, save_dir, documents):
-    """
-    Write the manipulated dataset into jsonl file.
-    :param filename:  Name of the saved file.
-    :param documents: The manipulated dataset.
-    :return:
+def to_jsonl(filename: str,
+             save_dir: str,
+             documents: list):
+    """Write the manipulated dataset into a jsonl file.
+
+    Write the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
+
+    Args:
+        filename: The filename of the saved jsonl file.
+        save_dir: The directory to place the jsonl file.
+        documents: The `document_split` or the `document_without_event` dataset.
     """
     label2id = dict(NA=0)
     role2id = dict(NA=0)

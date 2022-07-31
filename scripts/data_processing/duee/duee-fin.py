@@ -14,6 +14,15 @@ random.seed(42)
 
 
 def generate_label2id_role2id(data_path: str):
+    """Allocate an id for event types and roles within the event schema.
+
+    Allocate an id for event types and roles within the event schema. The id of event types and roles start from 0.
+    Finally, the correspondence of each event type/role and their id are stored in a dictionary, in which the key of
+    each element is the event type/role, and the value is their id.
+
+    Args:
+        data_path: The path of the `duee_fin_event_schema.json` schema file.
+    """
     label2id, role2id = dict(NA=0), dict(NA=0)
 
     schema = list(jsonlines.open(data_path))
@@ -32,6 +41,21 @@ def generate_label2id_role2id(data_path: str):
 
 
 def chinese_tokenizer(input_text: str, tokenizer="jieba") -> List[str]:
+    """Tokenize the Chinese input sequence into tokens.
+
+    Tokenize the Chinese sequence into tokens by calling the relevant packages. The `chinese_tokenizer()` function
+    integrates four commonly-used tokenizers, including Jieba, LTP, THULAC, and HanLP. The tokenized tokens are stored
+    as a list for return.
+
+    Args:
+        input_text: The input text for tokenization.
+        tokenizer: The tokenizer utilized for the tokenization process, such as Jieba, LTP, etc.
+
+    Returns:
+        A list of tokens after the tokenization of a Chinese input sequence. For example:
+
+        ["万讯", "自控", "：", "傅宇晨", "解除", "部分", "股份", "质押", "、", "累计", "质押", "比例", "为", "39.55%", ... ]
+    """
     token_list = []
     if tokenizer == "jieba":
         token_list = jieba.lcut(input_text)
@@ -75,9 +99,31 @@ def re_tokenize(token_list: List[str], mention: dict) -> List[str]:
 
 
 def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> list:
-    """
-    Convert DuEE-fin dataset to unified format.
-    Dataset link: https://www.luge.ai/#/luge/dataDetail?id=7
+    """Convert DuEE-fin dataset to the unified format.
+
+    Extract the information from the original DuEE-fin dataset and convert the format to a unified OpenEE dataset. The
+    tokens not annotated as triggers are also regarded as negative triggers. The converted dataset is written to a json
+    file.
+
+    Args:
+        data_path: The path of the original DuEE-fin dataset.
+        dump: The setting of whether to write the manipulated dataset into a json file.
+        tokenizer: The tokenizer utilized for the tokenization process, such as Jieba, LTP, etc.
+
+    Returns:
+        The manipulated dataset of DuEE-fin after converting its format into a unified OpenEE dataset. For example:
+
+        {"id": "b2b3d9dc2eb40c41036a1ab12f58de8c", "text": "万讯自控：傅宇晨解除部分股份质押、累计质押比例为39.55% ...",
+         "events": [
+            {"type": "质押",
+             "triggers": [{"id": "b2b3d9dc2eb40c41036a1ab12f58de8c-ec1b8ca1f91e1d4c1ff49b7889463e85",
+                           "trigger_word": "质押", "position": [14, 16],
+                           "arguments": [{"id": "bdd640fb06671ad11c80317fa3b1799d", "role": "披露时间", "mentions": [
+                            {"mention_id": "23b8c1e9392456de3eb13b9046685257", "mention": "质押",
+                             "position": [14, 16]}, ... ]}, ... ]},
+                          ... ]}, ... ],
+         "negative_triggers": [{"id": "b2b3d9dc2eb40c41036a1ab12f58de8c-4b0dbb418d5288f1142c3fe860e7a113",
+                                "trigger_word": "万讯", "position": [0, 2]}, ... ]}
     """
     dueefin_data = list(jsonlines.open(data_path))
 
