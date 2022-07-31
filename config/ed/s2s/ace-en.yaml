@@ -1,21 +1,21 @@
 seed: 42
-do_train: True
+do_train: False
 do_predict: True 
 do_ED_infer: True 
 
 # top-level config #
 paradigm: seq2seq
 task_name: ED
-dataset_name: ACE-ZH
-language: Chinese
-test_exists_labels: True 
+dataset_name: ACE2005-EN
+language: English
+test_exists_labels: True
 
 # file path # 
-output_dir: output/ACE2005-ZH
-type2id_path: ../../data/processed/ace2005-zh/label2id.json
-train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+output_dir: output/ACE2005-EN
+type2id_path: ../../data/processed/ace2005/label2id.json
+train_file: ../../data/processed/ace2005/train.unified.jsonl
+validation_file: ../../data/processed/ace2005/valid.unified.jsonl
+test_file: ../../data/processed/ace2005/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 
