@@ -43,8 +43,8 @@ if len(sys.argv) >= 2 and sys.argv[1].endswith(".json"):
     # If we pass only one argument to the script and it's the path to a json file,
     # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) >= 2 and sys.argv[1].endswith(".yaml"):
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
+elif len(sys.argv) >= 2 and sys.argv[2].endswith(".yaml"):
+    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[2]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -79,11 +79,11 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
-                                           model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
-delta_model = LoraModel(backbone_model=backbone)
-delta_model.freeze_module(set_state_dict=True)
-backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path, \
+                                           model_args.checkpoint_path, data_args.markers, new_tokens=data_args.markers)
+# delta_model = LoraModel(backbone_model=backbone)
+# delta_model.freeze_module(set_state_dict=True)
+# backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.pt")), strict=True)
 model = get_model(model_args, backbone)
 if training_args.pipeline:
     num_layers = config.num_layers
@@ -114,9 +114,10 @@ trainer = Seq2SeqTrainer(
     callbacks=[earlystoppingCallBack]
 )
 
+# trainer.save_model(os.path.join(training_args.output_dir, "forbm"))
+
 if training_args.do_train:
     trainer.train()
-
 
 if training_args.do_predict:
     if not data_args.split_infer:

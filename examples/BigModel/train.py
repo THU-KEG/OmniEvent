@@ -3,8 +3,9 @@ import random
 import os
 import csv
 import sys 
-sys.path.append("../")
+sys.path.append("../../")
 
+import copy 
 import torch
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
@@ -108,31 +109,37 @@ def prepare_dataset(args, tokenizer):
     return dataset
 
 
-def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset, verbalizer):
+def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
     loss_func = bmt.loss.FusedCrossEntropy(ignore_index=-100)
 
     # print_inspect(model, '*')
 
-    bmt.print_rank(verbalizer)
+    # bmt.print_rank(verbalizer)
 
-    for epoch in range(20):
+    dataloader_num_workers = 2
+    for epoch in range(10):
         dataloader = {
-            "train": DistributedDataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True),
-            "dev": DistributedDataLoader(dataset['dev'], batch_size=args.batch_size, shuffle=False),
+            "train": DistributedDataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True, **{"num_workers": dataloader_num_workers}),
+            "dev": DistributedDataLoader(dataset['dev'], batch_size=args.batch_size, shuffle=False, **{"num_workers": dataloader_num_workers}),
         }
 
         model.train()
         for it, data in enumerate(dataloader['train']):
-            enc_input = data["input_ids"]
-            enc_length = data["attention_mask"].sum(-1).to(torch.int32)
-            dec_input = data["labels"]
-            dec_length = (data["labels"]!=-100).sum(-1).to(torch.int32)
+            enc_input = data["input_ids"].cuda()
+            enc_length = data["attention_mask"].cuda().sum(-1).to(torch.int32)
+            target = copy.deepcopy(data["labels"]).cuda()
+            dec_input = data["labels"].cuda()
+            dec_length = (data["labels"]!=-100).cuda().sum(-1).to(torch.int32)
+            dec_input = (dec_input!=-100) * dec_input
 
             optimizer.zero_grad()
 
+            # import pdb; pdb.set_trace()
             logits = model(enc_input, enc_length, dec_input, dec_length, output_logits=True).logits
 
-            loss = loss_func(logits, dec_input)
+            logits = logits.reshape(-1, logits.size(-1))
+            target = target.reshape(-1)
+            loss = loss_func(logits, target)
             global_loss = bmt.sum_loss(loss).item()
 
             loss = optimizer.loss_scale(loss)
@@ -154,23 +161,25 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset, verbalize
             )
             # if it % args.inspect_iters == 0: print_inspect(model, "*")
             # if args.save != None and it % args.save_iters == 0:
-            #     bmt.save(model, os.path.join(args.save, args.save_name+("-%d.pt" % it)))
+                # bmt.save(model, os.path.join(args.save, args.save_name+("-%d.pt" % it)))
+
 
         model.eval()
         with torch.no_grad():
-            for split in ['dev']:
+            for split in []:
                 pd = []
                 gt = []
                 for it, data in enumerate(dataloader[split]):
-                    enc_input = data["input_ids"]
-                    enc_length = data["attention_mask"].sum(-1).to(torch.int32)
-                    dec_input = data["labels"]
-                    dec_length = (data["labels"]!=-100).sum(-1).to(torch.int32)
-
+                    enc_input = data["input_ids"].cuda()
+                    enc_length = data["attention_mask"].cuda().sum(-1).to(torch.int32)
+                    target = copy.deepcopy(data["labels"]).cuda()
+                    dec_input = data["labels"].cuda()
+                    dec_length = (data["labels"]!=-100).cuda().sum(-1).to(torch.int32)
+                    dec_input = (dec_input!=-100) * dec_input
 
                     generated_tokens = model.generate(enc_input, enc_length, dec_input, dec_length, return_logits=True)                
                     pd.extend(generated_tokens.cpu().tolist())
-                    gt.extend(dec_input.cpu().tolist())
+                    gt.extend(target.cpu().tolist())
 
                     bmt.print_rank(
                         "{} | epoch {:3d} | Iter: {:6d}/{:6d} |".format(
@@ -189,6 +198,8 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset, verbalize
                 mirco_f1 = compute_seq_F1(pd, gt, {"tokenizer": tokenizer, "training_args": args})
                 bmt.print_rank(mirco_f1)
 
+    # save 
+    bmt.save(model, os.path.join(args.save, args.save_name+("-%d.pt" % epoch)))
 
 def main():
     args = initialize()
