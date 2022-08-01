@@ -1,6 +1,13 @@
+import torch 
+import torch.distributed as dist
+import torch.nn as nn 
+
+from abc import ABC
+from typing import Optional, Tuple, Dict, Any
+from copy import deepcopy
+from transformers.utils.generic import ModelOutput
 
 
-@dataclass
 class BeamSearchDecoderOnlyOutput(ModelOutput):
     """
     Base class for outputs of decoder-only generation models using beam search.
@@ -35,7 +42,6 @@ class BeamSearchDecoderOnlyOutput(ModelOutput):
     hidden_states: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
 
 
-@dataclass
 class BeamSearchEncoderDecoderOutput(ModelOutput):
     """
     Base class for outputs of encoder-decoder generation models using beam search. Hidden states and attention weights
@@ -86,6 +92,75 @@ class BeamSearchEncoderDecoderOutput(ModelOutput):
     decoder_hidden_states: Optional[Tuple[Tuple[torch.FloatTensor]]] = None
 
 
+class StoppingCriteria(ABC):
+    """Abstract base class for all stopping criteria that can be applied during generation."""
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        raise NotImplementedError("StoppingCriteria needs to be subclassed")
+
+
+class MaxLengthCriteria(StoppingCriteria):
+    """
+    This class can be used to stop generation whenever the full generated number of tokens exceeds `max_length`. Keep
+    in mind for decoder-only type of transformers, this will include the initial prompted tokens.
+
+    Args:
+        max_length (`int`):
+            The maximum length that the output sequence can have in number of tokens.
+    """
+
+    def __init__(self, max_length: int):
+        self.max_length = max_length
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        return input_ids.shape[-1] >= self.max_length
+
+
+class MaxNewTokensCriteria(StoppingCriteria):
+    """
+    This class can be used to stop generation whenever the generated number of tokens exceeds `max_new_tokens`. Keep in
+    mind for decoder-only type of transformers, this will **not** include the initial prompted tokens. This is very
+    close to `MaxLengthCriteria` but ignores the number of initial tokens.
+
+    Args:
+        start_length (`int`):
+            The number of initial tokens.
+        max_new_tokens (`int`):
+            The maximum number of tokens to generate.
+    """
+
+    def __init__(self, start_length: int, max_new_tokens: int):
+        self.start_length = start_length
+        self.max_new_tokens = max_new_tokens
+        self.max_length = start_length + max_new_tokens
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        return input_ids.shape[-1] >= self.max_length
+
+
+class StoppingCriteriaList(list):
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        return any(criteria(input_ids, scores) for criteria in self)
+
+    @property
+    def max_length(self) -> Optional[int]:
+        for stopping_criterium in self:
+            if isinstance(stopping_criterium, MaxLengthCriteria):
+                return stopping_criterium.max_length
+            elif isinstance(stopping_criterium, MaxNewTokensCriteria):
+                return stopping_criterium.max_length
+        return None
+
+
+def validate_stopping_criteria(stopping_criteria: StoppingCriteriaList, max_length: int) -> StoppingCriteriaList:
+    stopping_max_length = stopping_criteria.max_length
+    new_stopping_criteria = deepcopy(stopping_criteria)
+    if stopping_max_length is not None and stopping_max_length != max_length:
+        print("You set different `max_length` for stopping criteria and `max_length` parameter", UserWarning)
+    elif stopping_max_length is None:
+        new_stopping_criteria.append(MaxLengthCriteria(max_length=max_length))
+    return new_stopping_criteria
+
+
 def prepare_inputs_for_generation(self, input_ids: torch.LongTensor, **kwargs) -> Dict[str, Any]:
         """
         Implement in subclasses of [`PreTrainedModel`] for custom behavior to prepare inputs in the generate method.
@@ -93,21 +168,53 @@ def prepare_inputs_for_generation(self, input_ids: torch.LongTensor, **kwargs) -
         return {"input_ids": input_ids}
 
 
+def _update_model_kwargs_for_generation(
+        outputs: ModelOutput, model_kwargs: Dict[str, Any], is_encoder_decoder: bool = False
+    ) -> Dict[str, Any]:
+        # update past
+        if "past_key_values" in outputs:
+            model_kwargs["past"] = outputs.past_key_values
+        elif "mems" in outputs:
+            model_kwargs["past"] = outputs.mems
+        elif "past_buckets_states" in outputs:
+            model_kwargs["past"] = outputs.past_buckets_states
+        else:
+            model_kwargs["past"] = None
+
+        # update token_type_ids with last value
+        if "token_type_ids" in model_kwargs:
+            token_type_ids = model_kwargs["token_type_ids"]
+            model_kwargs["token_type_ids"] = torch.cat([token_type_ids, token_type_ids[:, -1].unsqueeze(-1)], dim=-1)
+
+        # update attention mask
+        if not is_encoder_decoder:
+            if "attention_mask" in model_kwargs:
+                attention_mask = model_kwargs["attention_mask"]
+                model_kwargs["attention_mask"] = torch.cat(
+                    [attention_mask, attention_mask.new_ones((attention_mask.shape[0], 1))], dim=-1
+                )
+
+        return model_kwargs
+
+
+
 def beam_search(
+    config, 
+    model, 
     input_ids: torch.LongTensor,
-    beam_scorer: BeamScorer,
-    logits_processor: Optional[LogitsProcessorList] = None,
-    stopping_criteria: Optional[StoppingCriteriaList] = None,
+    beam_scorer,
+    logits_processor = None,
+    stopping_criteria = None,
     max_length: Optional[int] = None,
-    pad_token_id: Optional[int] = None,
-    eos_token_id: Optional[int] = None,
-    output_attentions: Optional[bool] = None,
-    output_hidden_states: Optional[bool] = None,
-    output_scores: Optional[bool] = None,
-    return_dict_in_generate: Optional[bool] = None,
+    pad_token_id: Optional[int] = 0,
+    eos_token_id: Optional[int] = 1,
+    output_attentions: Optional[bool] = False,
+    output_hidden_states: Optional[bool] = False,
+    output_scores: Optional[bool] = False,
+    return_dict_in_generate: Optional[bool] = True,
     synced_gpus: Optional[bool] = False,
     **model_kwargs,
-) -> Union[BeamSearchOutput, torch.LongTensor]:
+):
     r"""
     Generates sequences of token ids for models with a language modeling head using **beam search decoding** and
     can be used for text-decoder, text-to-text, speech-to-text, and vision-to-text models.
@@ -193,27 +300,11 @@ def beam_search(
     ['Wie alt bist du?']
     ```"""
     # init values
-    logits_processor = logits_processor if logits_processor is not None else LogitsProcessorList()
     stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
     if max_length is not None:
-        warnings.warn(
-            "`max_length` is deprecated in this function, use"
-            " `stopping_criteria=StoppingCriteriaList(MaxLengthCriteria(max_length=max_length))` instead.",
-            UserWarning,
-        )
         stopping_criteria = validate_stopping_criteria(stopping_criteria, max_length)
     if len(stopping_criteria) == 0:
-        warnings.warn("You don't have defined any stopping_criteria, this will likely loop forever", UserWarning)
-    pad_token_id = pad_token_id if pad_token_id is not None else self.config.pad_token_id
-    eos_token_id = eos_token_id if eos_token_id is not None else self.config.eos_token_id
-    output_scores = output_scores if output_scores is not None else self.config.output_scores
-    output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
-    output_hidden_states = (
-        output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
-    )
-    return_dict_in_generate = (
-        return_dict_in_generate if return_dict_in_generate is not None else self.config.return_dict_in_generate
-    )
+        print("You don't have defined any stopping_criteria, this will likely loop forever", UserWarning)
 
     batch_size = len(beam_scorer._beam_hyps)
     num_beams = beam_scorer.num_beams
@@ -235,7 +326,7 @@ def beam_search(
     decoder_hidden_states = () if (return_dict_in_generate and output_hidden_states) else None
 
     # if model is an encoder-decoder, retrieve encoder attention weights and hidden states
-    if return_dict_in_generate and self.config.is_encoder_decoder:
+    if return_dict_in_generate and config.is_encoder_decoder:
         encoder_attentions = model_kwargs["encoder_outputs"].get("attentions") if output_attentions else None
         encoder_hidden_states = (
             model_kwargs["encoder_outputs"].get("hidden_states") if output_hidden_states else None
@@ -258,9 +349,9 @@ def beam_search(
             if this_peer_finished_flag.item() == 0.0:
                 break
 
-        model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
+        model_inputs = prepare_inputs_for_generation(input_ids, **model_kwargs)
 
-        outputs = self(
+        outputs = model(
             **model_inputs,
             return_dict=True,
             output_attentions=output_attentions,
@@ -274,7 +365,6 @@ def beam_search(
         next_token_logits = outputs.logits[:, -1, :]
         # hack: adjust tokens for Marian. For Marian we have to make sure that the `pad_token_id`
         # cannot be generated both before and after the `nn.functional.log_softmax` operation.
-        next_token_logits = self.adjust_logits_during_generation(next_token_logits, cur_len=cur_len)
         next_token_scores = nn.functional.log_softmax(
             next_token_logits, dim=-1
         )  # (batch_size * num_beams, vocab_size)
@@ -288,15 +378,15 @@ def beam_search(
                 scores += (next_token_scores_processed,)
             if output_attentions:
                 decoder_attentions += (
-                    (outputs.decoder_attentions,) if self.config.is_encoder_decoder else (outputs.attentions,)
+                    (outputs.decoder_attentions,) if config.is_encoder_decoder else (outputs.attentions,)
                 )
-                if self.config.is_encoder_decoder:
+                if config.is_encoder_decoder:
                     cross_attentions += (outputs.cross_attentions,)
 
             if output_hidden_states:
                 decoder_hidden_states += (
                     (outputs.decoder_hidden_states,)
-                    if self.config.is_encoder_decoder
+                    if config.is_encoder_decoder
                     else (outputs.hidden_states,)
                 )
 
@@ -308,7 +398,7 @@ def beam_search(
             next_token_scores, 2 * num_beams, dim=1, largest=True, sorted=True
         )
 
-        next_indices = torch_int_div(next_tokens, vocab_size)
+        next_indices = torch.div(next_tokens, vocab_size, rounding_mode="floor")
         next_tokens = next_tokens % vocab_size
 
         # stateless
@@ -328,11 +418,9 @@ def beam_search(
 
         input_ids = torch.cat([input_ids[beam_idx, :], beam_next_tokens.unsqueeze(-1)], dim=-1)
 
-        model_kwargs = self._update_model_kwargs_for_generation(
-            outputs, model_kwargs, is_encoder_decoder=self.config.is_encoder_decoder
+        model_kwargs = _update_model_kwargs_for_generation(
+            outputs, model_kwargs, is_encoder_decoder=config.is_encoder_decoder
         )
-        if model_kwargs["past"] is not None:
-            model_kwargs["past"] = self._reorder_cache(model_kwargs["past"], beam_idx)
 
         if return_dict_in_generate and output_scores:
             beam_indices = tuple((beam_indices[beam_idx[i]] + (beam_idx[i],) for i in range(len(beam_indices))))
@@ -361,7 +449,7 @@ def beam_search(
         if not output_scores:
             sequence_outputs["sequence_scores"] = None
 
-        if self.config.is_encoder_decoder:
+        if config.is_encoder_decoder:
             return BeamSearchEncoderDecoderOutput(
                 sequences=sequence_outputs["sequences"],
                 sequences_scores=sequence_outputs["sequence_scores"],

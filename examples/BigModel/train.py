@@ -22,6 +22,9 @@ from model_center.dataset import DistributedDataLoader
 from OpenEE.input_engineering.seq2seq_processor import EAESeq2SeqProcessor
 from OpenEE.evaluation.metric import compute_seq_F1
 
+from transformers import LogitsProcessorList, MinLengthLogitsProcessor, BeamSearchScorer
+from beam_search import beam_search
+
 
 def get_tokenizer(args):
     tokenizer = T5Tokenizer.from_pretrained(args.model_config)
@@ -166,7 +169,19 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
 
         model.eval()
         with torch.no_grad():
-            for split in []:
+            num_beams = 3
+            beam_scorer = BeamSearchScorer(
+                batch_size=1,
+                num_beams=num_beams,
+                device=model.device,
+            )
+            logits_processor = LogitsProcessorList(
+                [
+                    MinLengthLogitsProcessor(5, eos_token_id=1),
+                ]
+            )
+            model.config.is_encoder_decoder = True 
+            for split in ["dev"]:
                 pd = []
                 gt = []
                 for it, data in enumerate(dataloader[split]):
@@ -176,6 +191,10 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
                     dec_input = data["labels"].cuda()
                     dec_length = (data["labels"]!=-100).cuda().sum(-1).to(torch.int32)
                     dec_input = (dec_input!=-100) * dec_input
+
+                    model_kwargs = {}
+                    beam_search(model.config, model, enc_input, beam_scorer, 
+                                logits_processor=logits_processor, **model_kwargs)
 
                     generated_tokens = model.generate(enc_input, enc_length, dec_input, dec_length, return_logits=True)                
                     pd.extend(generated_tokens.cpu().tolist())
