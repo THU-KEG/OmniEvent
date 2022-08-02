@@ -4,7 +4,7 @@ do_predict: True
 do_ED_infer: True 
 
 # top-level config #
-paradigm: seq2seq
+paradigm: token_classification
 task_name: ED
 dataset_name: ACE2005-dygie
 language: English
@@ -18,32 +18,27 @@ validation_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
 
 # config for data processor #
-truncate_in_batch: True 
-return_token_type_ids: False 
-truncate_seq2seq_output: True 
+return_token_type_ids: True 
+truncate_seq2seq_output: False
 
 # model config #
-model_type: mt5
-model_name_or_path: google/mt5-base
+model_type: bert
+model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: none
+aggregation: marker
+head_scale: 2
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 5
 max_seq_length: 160
-max_out_length: 128
+max_out_length: 160
 dataloader_num_workers: 2
 
-generation_max_length: 128
-generation_num_beams: 4
-predict_with_generate: True 
-ignore_pad_token_for_loss: True 
-
-per_device_train_batch_size: 8
-per_device_eval_batch_size: 20
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 64
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
-learning_rate: 1.0e-4
+learning_rate: 3.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
 max_grad_norm: 1
@@ -63,3 +58,5 @@ save_steps: 500
 # split inference #
 split_infer: False 
 split_infer_size: 500
+
+
