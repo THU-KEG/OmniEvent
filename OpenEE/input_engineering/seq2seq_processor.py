@@ -1,7 +1,7 @@
 import re
 import json
 import logging
-from typing import List
+from typing import List, Union
 
 from tqdm import tqdm 
 from collections import defaultdict
@@ -21,17 +21,20 @@ split_word = ":"
 logger = logging.getLogger(__name__)
 
 
-def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"[{type_start}{type_end}]")):
+def extract_argument(raw_text: str,
+                     instance_id: Union[int, str],
+                     event_type: str,
+                     template=re.compile(f"[{type_start}{type_end}]")):
     """Extracts the arguments from the raw text.
 
     Args:
         raw_text (`str`):
             A string indicating the input raw text.
-        instance_id:
+        instance_id (`Union[int, str]`):
             The id of the input example.
-        event_type:
+        event_type (`str`):
             A string indicating the type of the event.
-        template (`str`, `optional`, defaults to `re.compile(f"[{type_start}{type_end}]")`):
+        template (`optional`, defaults to `re.compile(f"[{type_start}{type_end}]")`):
             The template of the event argument extraction.
     """
     arguments = []
@@ -60,13 +63,14 @@ class EDSeq2SeqProcessor(EDDataProcessor):
     def __init__(self,
                  config,
                  tokenizer: str,
-                 input_file: str):
+                 input_file: str) -> None:
+        """Constructs a `EDSeq2SeqProcessor`."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
     
     def read_examples(self,
-                      input_file: str):
+                      input_file: str) -> None:
         """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         with open(input_file, "r", encoding="utf-8") as f:
@@ -98,7 +102,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                     )
                     self.examples.append(example)
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
         """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
@@ -142,12 +146,13 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                  input_file: str,
                  pred_file: str,
                  is_training: bool = False):
+        """Constructs a `EAESeq2SeqProcessor`."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
     
     def read_examples(self,
-                      input_file: str):
+                      input_file: str) -> None:
         """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
@@ -272,7 +277,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         return markered_words
         
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
         """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         self.input_features = []
         whitespace = True if self.config.language == "English" else False 

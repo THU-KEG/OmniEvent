@@ -1,25 +1,55 @@
-from audioop import bias
-import os 
+import numpy as np
+import os
 import pdb
-from unicodedata import bidirectional
-import torch 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np 
 
-from transformers import BertModel, BertTokenizerFast 
+from audioop import bias
+from typing import List
+from unicodedata import bidirectional
+
+from transformers import BertModel, BertTokenizerFast
 from transformers import RobertaModel, RobertaTokenizerFast
 from transformers import T5ForConditionalGeneration, T5TokenizerFast, T5Config
 from transformers import MT5ForConditionalGeneration
-from transformers.utils import ModelOutput 
+from transformers.utils import ModelOutput
 
 from ..input_engineering.tokenizer import WordLevelTokenizer, load_vocab, VOCAB_FILES_NAMES
 
 
-def get_backbone(model_type, model_name_or_path, tokenizer_name, markers, 
-                model_args=None,
-                new_tokens:list = []
-    ):
+def get_backbone(model_type: str,
+                 model_name_or_path: str,
+                 tokenizer_name: str,
+                 markers: List[str],
+                 model_args=None,
+                 new_tokens: list = []):
+    """Obtains the backbone model and tokenizer.
+
+    Obtains the backbone model and tokenizer. The backbone models are selected from BERT, RoBERTa, T5, MT5, CNN, and
+    LSTM.
+
+    Args:
+        model_type (`str`):
+            A string indicating the model being used as backbone network.
+        model_name_or_path (`str`):
+            A string indicating the path of the pre-trained model.
+        tokenizer_name (`str`):
+            A string indicating the repository name for the model in the hub or a path to a local folder.
+        markers (`List[str]`):
+            A list of strings to mark the start and end position of event triggers and argument mentions.
+        model_args (`optional`, defaults to None):
+            The pre-defined arguments for the model.
+        new_tokens (`list`, `optional`, defaults to []):
+
+    Returns:
+        model (`Union[BertModel, RobertaModel, T5ForConditionalGeneration, CNN, LSTM]`):
+            The backbone model, selected from BERT, RoBERTa, T5, MT5, CNN, and LSTM.
+        tokenizer (`str`):
+            The tokenizer proposed to utilize in the tokenization process.
+        config:
+            The configurations of the model.
+    """
     if model_type == "bert":
         model = BertModel.from_pretrained(model_name_or_path)
         tokenizer = BertTokenizerFast.from_pretrained(tokenizer_name, never_split=markers)
@@ -37,12 +67,12 @@ def get_backbone(model_type, model_name_or_path, tokenizer_name, markers,
         model = CNN(model_args, len(tokenizer))
     elif model_type == 'lstm':
         tokenizer = WordLevelTokenizer.from_pretrained(model_args.vocab_file)
-        model = LSTM(model_args, len(tokenizer))        
+        model = LSTM(model_args, len(tokenizer))
     else:
         raise ValueError("No such model. %s" % model_type)
-    
+
     for token in new_tokens:
-        tokenizer.add_tokens(token, special_tokens = True)
+        tokenizer.add_tokens(token, special_tokens=True)
     if len(new_tokens) > 0:
         model.resize_token_embeddings(len(tokenizer))
 
@@ -51,10 +81,24 @@ def get_backbone(model_type, model_name_or_path, tokenizer_name, markers,
 
 
 class WordEmbedding(nn.Module):
-    def __init__(self, config, vocab_size) -> None:
+    """Base class for word embedding.
+
+    Base class for word embedding, in which the word embeddings are loaded from a pre-trained word embedding file.
+
+    Attributes:
+        word_embeddings (`torch.Tensor`):
+            The word embedding matrix, whose dimension is (number of tokens) * (embedding dimension).
+        position_embeddings (`torch.Tensor`):
+            The position embedding matrix, whose dimension is (number of position) * (embedding dimension).
+    """
+    def __init__(self,
+                 config,
+                 vocab_size: int) -> None:
+        """Constructs a `WordEmbedding`."""
         super(WordEmbedding, self).__init__()
         if not os.path.exists(os.path.join(config.vocab_file, VOCAB_FILES_NAMES["vocab_file"].replace("txt", "npy"))):
-            embeddings = load_vocab(os.path.join(config.vocab_file, VOCAB_FILES_NAMES["vocab_file"]), return_embeddings=True)
+            embeddings = load_vocab(os.path.join(config.vocab_file, VOCAB_FILES_NAMES["vocab_file"]),
+                                    return_embeddings=True)
             np.save(os.path.join(config.vocab_file, VOCAB_FILES_NAMES["vocab_file"].replace("txt", "npy")), embeddings)
         else:
             embeddings = np.load(os.path.join(config.vocab_file, VOCAB_FILES_NAMES["vocab_file"].replace("txt", "npy")))
@@ -64,26 +108,28 @@ class WordEmbedding(nn.Module):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.resize_token_embeddings(vocab_size)
 
-    def resize_token_embeddings(self, vocab_size):
+    def resize_token_embeddings(self,
+                                vocab_size: int) -> None:
+        """Resizes the token embeddings from the pre-trained embedding dimension to vocab_size."""
         if len(self.word_embeddings.weight) > vocab_size:
             raise ValueError("Invalid vocab_size %d < original vocab size." % vocab_size)
         elif len(self.word_embeddings.weight) == vocab_size:
-            pass 
+            pass
         else:
             num_added_token = vocab_size - len(self.word_embeddings.weight)
             embedding_dim = self.word_embeddings.weight.shape[1]
             average_embedding = torch.mean(self.word_embeddings.weight, dim=0).expand(1, -1)
             self.word_embeddings.weight = nn.Parameter(torch.cat(
-                    (
-                        self.word_embeddings.weight.data, 
-                        average_embedding.expand(num_added_token, embedding_dim)
-                    )
-                ))
+                (
+                    self.word_embeddings.weight.data,
+                    average_embedding.expand(num_added_token, embedding_dim)
+                )
+            ))
 
-    def forward(self, 
-                input_ids, 
-                position_ids=None
-        ):
+    def forward(self,
+                input_ids,
+                position_ids=None) -> torch.Tensor:
+        """The forward propagation of `WordEmbedding`."""
         input_shape = input_ids.size()
         batch_size, seq_length = input_shape[0], input_shape[1]
         if position_ids is None:
@@ -91,88 +137,124 @@ class WordEmbedding(nn.Module):
         # input embeddings & position embeddings 
         inputs_embeds = self.word_embeddings(input_ids)
         position_embeds = self.position_embeddings(position_ids)
-        embeds = torch.cat((inputs_embeds, position_embeds), dim=-1)    
+        embeds = torch.cat((inputs_embeds, position_embeds), dim=-1)
         embeds = self.dropout(embeds)
         return embeds
 
 
 class Output(ModelOutput):
-    last_hidden_state: torch.Tensor = None 
+    """A class of dictionary for model's output."""
+    last_hidden_state: torch.Tensor = None
 
 
 class CNN(nn.Module):
-    def __init__(self, 
-                 config, 
-                 vocab_size,
-                 kernel_size=3, 
-                 padding_size=1
-        ) -> None:
+    """A Convolutional Neural Network model.
+
+    A Convolutional Neural Network model for backbone, comprises of a 1-d convolutional layer, a relu activation layer,
+    and a dropout layer.
+
+    Attributes:
+        config:
+            The configurations of the model.
+        embedding (`WordEmbedding`):
+            The word embedding matrix of the vocabulary.
+        conv (`nn.Conv1d`):
+            A 1-d convolution layer.
+        dropout (`nn.Dropout`):
+            A dropout layer.
+    """
+    def __init__(self,
+                 config,
+                 vocab_size: int,
+                 kernel_size: int = 3,
+                 padding_size: int = 1) -> None:
+        """Constructs a `CNN`."""
         super(CNN, self).__init__()
         self.config = config
         self.embedding = WordEmbedding(config, vocab_size)
-        self.conv = nn.Conv1d(config.word_embedding_dim+config.position_embedding_dim, 
-                              config.hidden_size, 
-                              kernel_size, 
+        self.conv = nn.Conv1d(config.word_embedding_dim + config.position_embedding_dim,
+                              config.hidden_size,
+                              kernel_size,
                               padding=padding_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
     def resize_token_embeddings(self, vocab_size):
+        """Resizes the token embeddings from the pre-trained embedding dimension to vocab_size."""
         self.embedding.resize_token_embeddings(vocab_size)
 
-    def forward(self, 
+    def forward(self,
                 input_ids,
                 attention_mask,
                 token_type_ids,
-                return_dict=True
-        ):
-        x = self.embedding(input_ids) # (B, L, H)
-        x = x.transpose(1, 2)          # (B, H, L)
-        x = F.relu(self.conv(x).transpose(1, 2))       # (B, H, L)
+                return_dict=True):
+        """Forward propagation of CNN."""
+        x = self.embedding(input_ids)  # (B, L, H)
+        x = x.transpose(1, 2)  # (B, H, L)
+        x = F.relu(self.conv(x).transpose(1, 2))  # (B, H, L)
         x = self.dropout(x)
         if return_dict:
             return Output(
-                    last_hidden_state = x
-                )
+                last_hidden_state=x
+            )
         else:
-            return (x) 
+            return (x)
+
 
 class LSTM(nn.Module):
-    def __init__(self, 
-                 config, 
-                 vocab_size
-        ) -> None:
+    """A Long Short-Term Memory (LSTM) model.
+
+    A bidirectional two-layered Long Short-Term Memory (LSTM) model for backbone.
+
+    Attributes:
+        config:
+            The configurations of the model.
+        embedding (`WordEmbedding`):
+            The word embedding matrix of the vocabulary.
+        rnn (`nn.LSTM`):
+            A bi-directional two-layered LSTM network, which fed the word embedding and position embedding as input.
+        dropout (`nn.Dropout`):
+            A dropout layer.
+       """
+    def __init__(self,
+                 config,
+                 vocab_size) -> None:
+        """Constructs a `LSTM`."""
         super(LSTM, self).__init__()
         self.config = config
         self.embedding = WordEmbedding(config, vocab_size)
-        self.rnn = nn.LSTM(config.word_embedding_dim+config.position_embedding_dim, 
-                            config.hidden_size, 
-                            num_layers=2, 
-                            bidirectional=True, 
-                            batch_first=True, 
-                            dropout=config.hidden_dropout_prob)
+        self.rnn = nn.LSTM(config.word_embedding_dim + config.position_embedding_dim,
+                           config.hidden_size,
+                           num_layers=2,
+                           bidirectional=True,
+                           batch_first=True,
+                           dropout=config.hidden_dropout_prob)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-
-    def resize_token_embeddings(self, vocab_size):
+    def resize_token_embeddings(self,
+                                vocab_size: int):
+        """Resizes the token embeddings from the pre-trained embedding dimension to vocab_size."""
         self.embedding.resize_token_embeddings(vocab_size)
 
-
-    def prepare_pack_padded_sequence(self, input_ids, input_lengths, descending=True):
+    def prepare_pack_padded_sequence(self,
+                                     input_ids,
+                                     input_lengths,
+                                     descending=True):
+        """Sort the sequences based on their length."""
         sorted_input_lengths, indices = torch.sort(input_lengths, descending=descending)
         _, desorted_indices = torch.sort(indices, descending=False)
         sorted_input_ids = input_ids[indices]
         return sorted_input_ids, sorted_input_lengths, desorted_indices
 
-
-    def forward(self, 
+    def forward(self,
                 input_ids,
                 attention_mask,
                 token_type_ids,
-                return_dict=True
-        ):
+                return_dict=True):
+        """Forward propagation of a LSTM network."""
         input_length = torch.sum(attention_mask, dim=-1).to(torch.long)
-        sorted_input_ids, sorted_seq_length, desorted_indices = self.prepare_pack_padded_sequence(input_ids, input_length)
-        x = self.embedding(sorted_input_ids) # (B, L, H)
+        sorted_input_ids, sorted_seq_length, desorted_indices = self.prepare_pack_padded_sequence(input_ids,
+                                                                                                  input_length)
+        x = self.embedding(sorted_input_ids)  # (B, L, H)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(x, sorted_seq_length.cpu(), batch_first=True)
         self.rnn.flatten_parameters()
         packed_output, (hidden, cell) = self.rnn(packed_embedded)
@@ -182,7 +264,7 @@ class LSTM(nn.Module):
         # pdb.set_trace()
         if return_dict:
             return Output(
-                    last_hidden_state = x
-                )
+                last_hidden_state=x
+            )
         else:
-            return (x) 
+            return (x)

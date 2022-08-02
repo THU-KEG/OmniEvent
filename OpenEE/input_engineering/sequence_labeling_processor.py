@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class EDSLProcessor(EDDataProcessor):
-    """Data processor for sequence labeling.
+    """Data processor for sequence labeling for event detection.
 
-    Data processor for sequence labeling for event detection. The class is inherited from the`EDDataProcessor` class,
+    Data processor for sequence labeling for event detection. The class is inherited from the `EDDataProcessor` class,
     in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
     a new function entitled `get_final_labels()` is defined to obtain final results, and the rest of the attributes and
     functions are multiplexed from the `EDDataProcessor` class.
