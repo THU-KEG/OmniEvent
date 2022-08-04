@@ -248,8 +248,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids,
-                start_positions=start_position,
-                end_positions=end_position
+                argument_left=start_position,
+                argument_right=end_position
             )
             self.input_features.append(features)
 

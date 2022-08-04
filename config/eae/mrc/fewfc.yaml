@@ -17,12 +17,12 @@ train_file: ../../data/processed/FewFC/train_base.unified.json
 validation_file: ../../data/processed/FewFC/dev_base.unified.json
 test_file: ../../data/processed/FewFC/test_base.unified.json
 # event detection predictions
-golden_trigger: True
-train_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese-none/train_preds.json
-validation_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese-none/valid_preds.json
-test_pred_file: output/FewFC/ED/sequence_labeling/bert-base-chinese-none/test_preds.json
+golden_trigger: False
+train_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/train_preds.json
+validation_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/valid_preds.json
+test_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/test_preds.json
 # config for some specific paradigms
-prompt_file: ../../data/processed/ace2005-zh/description_queries.csv # used for MRC paradigm
+prompt_file: ../../data/processed/FewFC/description_queries.csv # used for MRC paradigm
 mrc_template_id: 0
 
 # config for data processor #
@@ -37,7 +37,7 @@ hidden_size: 768
 aggregation: none
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 6
 max_seq_length: 256
 dataloader_num_workers: 2
 
