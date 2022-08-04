@@ -241,10 +241,15 @@ def read_source(documents, source_folder):
             # Delete the url elements from the text.
             text_del = re.sub("http(.*?) ", " ", text_del)
             text_del = re.sub("amp;", " ", text_del)
+            # Delete some special characters.
+            text_del = re.sub("\x92", " ", text_del)
+            text_del = re.sub("\x94", " ", text_del)
+            text_del = re.sub("\x96", " ", text_del)
+            text_del = re.sub("\x97", " ", text_del)
             # Replace the line breaks using spaces.
-            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces within the text.
+            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub(" +", " ", text_del)
             # Delete the spaces before the text.
             xml_char.append(len(text_del.lstrip()))
@@ -258,10 +263,15 @@ def read_source(documents, source_folder):
         # Delete the url elements from the text.
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
         document["text"] = re.sub("amp;", " ", document["text"])
+        # Delete some special characters.
+        document["text"] = re.sub("\x92", " ", document["text"])
+        document["text"] = re.sub("\x94", " ", document["text"])
+        document["text"] = re.sub("\x96", " ", document["text"])
+        document["text"] = re.sub("\x97", " ", document["text"])
         # Replace the line breaks using spaces.
-        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces within the text.
+        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub(" +", " ", document["text"])
         # Delete the spaces before the text.
         document["text"] = document["text"].strip()
@@ -277,6 +287,13 @@ def read_source(documents, source_folder):
                 entity_mention["position"][1] = xml_char[entity_mention["position"][1]]
 
         # Manually fix some errors in entity position.
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                for argument in trigger["arguments"]:
+                    for mention in argument["mentions"]:
+                        if document["id"] == "NYT_ENG_20130422.0048" \
+                                and mention["mention"].startswith("he most senior"):
+                            mention["mention"] = "t" + mention["mention"]
         for entity in document["entities"]:
             for mention in entity["mentions"]:
                 if not document["text"][mention["position"][0]:mention["position"][1]] \
@@ -284,6 +301,9 @@ def read_source(documents, source_folder):
                     if mention["mention"] == "an overwhelmingly Catholic and traditionally Democratic stronghold of " \
                                              "58,000 on the banks of the Mississippi River":
                         mention["position"][1] = mention["position"][0] + len(mention["mention"])
+                if document["id"] == "NYT_ENG_20130422.0048" and mention["mention"].startswith("he most senior"):
+                    mention["position"][0] -= 1
+                    mention["mention"] = document["text"][mention["position"][0]:mention["position"][1]]
 
     assert check_argument(documents)
     return clean_documents(documents)
@@ -478,6 +498,7 @@ def add_spaces(documents_split, documents_without_event):
             text_space = re.sub("\{", " { ", text_space)
             text_space = re.sub("\}", " } ", text_space)
             text_space = re.sub("-", " - ", text_space)
+            text_space = re.sub("=", " = ", text_space)
             text_space = re.sub("/", " / ", text_space)
             text_space = re.sub("_", " _ ", text_space)
             text_space = re.sub("\*", " * ", text_space)
@@ -506,6 +527,7 @@ def add_spaces(documents_split, documents_without_event):
         document["text"] = re.sub("\{", " { ", document["text"])
         document["text"] = re.sub("\}", " } ", document["text"])
         document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub("=", " = ", document["text"])
         document["text"] = re.sub("/", " / ", document["text"])
         document["text"] = re.sub("_", " _ ", document["text"])
         document["text"] = re.sub("\*", " * ", document["text"])
@@ -568,6 +590,7 @@ def add_spaces(documents_split, documents_without_event):
             document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
             document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
             document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
+            document["sentences"][i] = re.sub("=", " = ", document["sentences"][i])
             document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
             document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
             document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])

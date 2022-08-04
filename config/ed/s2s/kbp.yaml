@@ -6,16 +6,16 @@ do_ED_infer: True
 # top-level config #
 paradigm: seq2seq
 task_name: ED
-dataset_name: ACE2005-ZH
-language: Chinese
-test_exists_labels: True 
+dataset_name: TAC-KBP
+language: English
+test_exists_labels: True
 
 # file path # 
-output_dir: output/ACE2005-ZH
-type2id_path: ../../data/processed/ace2005-zh/label2id.json
-train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+output_dir: output/TAC-KBP
+type2id_path: ../../data/processed/TAC-KBP/label2id.json
+train_file: ../../data/processed/TAC-KBP/train.unified.jsonl
+validation_file: ../../data/processed/TAC-KBP/valid.unified.jsonl
+test_file: ../../data/processed/TAC-KBP/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 
@@ -30,7 +30,7 @@ aggregation: none
 
 # training config #
 num_train_epochs: 10
-max_seq_length: 256
+max_seq_length: 128
 max_out_length: 128
 dataloader_num_workers: 2
 
@@ -40,7 +40,7 @@ predict_with_generate: True
 ignore_pad_token_for_loss: True 
 
 per_device_train_batch_size: 8
-per_device_eval_batch_size: 16
+per_device_eval_batch_size: 20
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
 learning_rate: 1.0e-4

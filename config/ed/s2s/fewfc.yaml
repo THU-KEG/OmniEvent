@@ -6,16 +6,16 @@ do_ED_infer: True
 # top-level config #
 paradigm: seq2seq
 task_name: ED
-dataset_name: ACE2005-ZH
+dataset_name: FewFC
 language: Chinese
 test_exists_labels: True 
 
 # file path # 
-output_dir: output/ACE2005-ZH
-type2id_path: ../../data/processed/ace2005-zh/label2id.json
-train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
+output_dir: output/FewFC
+type2id_path: ../../data/processed/FewFC/label2id.json
+train_file: ../../data/processed/FewFC/train_base.unified.jsonl
+validation_file: ../../data/processed/FewFC/dev_base.unified.jsonl
+test_file: ../../data/processed/FewFC/test_base.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 
