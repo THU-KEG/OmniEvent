@@ -2,6 +2,8 @@ import os
 import sys
 import pdb 
 import argparse
+from typing import List
+
 import jsonlines
 import json
 import numpy as np
@@ -53,7 +55,19 @@ def get_sentence_arguments(input_sentence):
     return arguments
 
 
-def get_maven_submission(preds, instance_ids, result_file):
+def get_maven_submission(preds: List[str],
+                         instance_ids: List[str],
+                         result_file: str) -> None:
+    """Converts the predictions to the submission format of the MAVEN dataset.
+
+    Converts the predictions to the submission format of the MAVEN dataset and dumps a prediction json file.
+
+    Args:
+        preds (`List[str]`):
+            A list of strings indicating the predicted type of each instance.
+        instance_ids (`List[str]`):
+            A list of strings containing the id of each instance to be predicted.
+    """
     all_results = defaultdict(list)
     for i, pred in enumerate(preds):
         example_id, candidate_id = instance_ids[i].split("-")
@@ -113,7 +127,19 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
+def get_maven_submission_seq2seq(preds,
+                                 labels,
+                                 save_path,
+                                 type2id,
+                                 tokenizer,
+                                 training_args,
+                                 data_args):
+    """Converts the predictions obtained by the sequence-to-sequence model to the MAVEN dataset's submission format.
+
+    Converts the predictions to the submission format of the MAVEN dataset and dumps a prediction json file.
+
+
+    """
     decoded_preds = compute_seq_F1(preds, labels, 
                                     **{"tokenizer": tokenizer, 
                                        "training_args": training_args, 
@@ -141,7 +167,19 @@ def get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, t
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_leven_submission(preds, instance_ids, result_file):
+def get_leven_submission(preds: List[str],
+                         instance_ids: List[str],
+                         result_file: str) -> None:
+    """Converts the predictions to the submission format of the MAVEN dataset.
+
+    Converts the predictions to the submission format of the MAVEN dataset and dumps a prediction json file.
+
+    Args:
+        preds (`List[str]`):
+            A list of strings indicating the predicted type of each instance.
+        instance_ids (`List[str]`):
+            A list of strings containing the id of each instance to be predicted.
+    """
     return get_maven_submission(preds, instance_ids, result_file)
 
 

@@ -1,8 +1,8 @@
 import pdb
-from numpy import dtype
 import torch 
 import torch.nn as nn 
 
+from numpy import dtype
 from typing import Tuple, Dict, Optional
 
 from OpenEE.aggregation.aggregation import get_aggregation, aggregate
@@ -13,7 +13,21 @@ from OpenEE.head.classification import (
 from OpenEE.head.crf import CRF
 
 
-def get_model(model_args, backbone):
+def get_model(model_args,
+              backbone):
+    """Returns the model to be utilized for training and prediction.
+
+    Returns the model to be utilized for training and prediction based on the pre-defined paradigm.
+
+    Args:
+        model_args:
+            The arguments of the model for training and prediction.
+        backbone:
+            The backbone model obtained from the `get_backbone()` method.
+
+    Returns:
+        The model class of the model to be utilized for training and prediction.
+    """
     if model_args.paradigm == "token_classification":
         return ModelForTokenClassification(model_args, backbone)
     elif model_args.paradigm == "sequence_labeling":
@@ -27,29 +41,47 @@ def get_model(model_args, backbone):
 
 
 class ModelForTokenClassification(nn.Module):
-    """Bert model for token classification."""
+    """Bert model for token classification.
 
-    def __init__(self, config, backbone):
+    Bert model for token classification, which firstly obtains hidden states through the backbone model, then aggregates
+    the hidden states through the aggregation method/class, and finally classifies each token to their corresponding
+    label.
+
+    Attributes:
+        config:
+            The configurations of the model.
+        backbone:
+            The backbone network proposed to output initial hidden states.
+        aggregation:
+            The aggregation method/class for aggregating the hidden states output by the backbone network.
+        cls_head (`ClassificationHead`):
+            A `ClassificationHead` instance classifying each token into its corresponding label.
+    """
+
+    def __init__(self,
+                 config,
+                 backbone) -> None:
+        """Constructs a `ModelForTokenClassification`."""
         super(ModelForTokenClassification, self).__init__()
         self.config = config
         self.backbone = backbone 
         self.aggregation = get_aggregation(config)
         self.cls_head = ClassificationHead(config)
 
-    def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        token_type_ids: Optional[torch.Tensor] = None,
-        trigger_left: Optional[torch.Tensor] = None, 
-        trigger_right: Optional[torch.Tensor] = None, 
-        argument_left: Optional[torch.Tensor] = None, 
-        argument_right: Optional[torch.Tensor] = None, 
-        labels: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor,
+                token_type_ids: Optional[torch.Tensor] = None,
+                trigger_left: Optional[torch.Tensor] = None,
+                trigger_right: Optional[torch.Tensor] = None,
+                argument_left: Optional[torch.Tensor] = None,
+                argument_right: Optional[torch.Tensor] = None,
+                labels: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+        """Manipulates the inputs through a backbone, aggregation, and classification module,
+           returns the predicted and loss."""
         # backbone encode 
-        outputs = self.backbone(input_ids=input_ids, \
-                                attention_mask=attention_mask, \
+        outputs = self.backbone(input_ids=input_ids,
+                                attention_mask=attention_mask,
                                 token_type_ids=token_type_ids,
                                 return_dict=True)   
         hidden_states = outputs.last_hidden_state
@@ -72,24 +104,39 @@ class ModelForTokenClassification(nn.Module):
     
 
 class ModelForSequenceLabeling(nn.Module):
-    """Bert model for token classification."""
+    """Bert model for sequence labeling.
 
-    def __init__(self, config, backbone):
+    Bert model for sequence labeling, which firstly obtains hidden states through the backbone model, then labels each
+    token to their corresponding label, and finally decodes the label through a Conditional Random Field (CRF) module.
+
+    Attributes:
+        config:
+            The configurations of the model.
+        backbone:
+            The backbone network proposed to output initial hidden states.
+        cls_head (`ClassificationHead`):
+            A `ClassificationHead` instance classifying each token into its corresponding label.
+    """
+
+    def __init__(self,
+                 config,
+                 backbone) -> None:
+        """Constructs a `ModelForSequenceLabeling`."""
         super(ModelForSequenceLabeling, self).__init__()
         self.backbone = backbone 
         self.crf = CRF(config.num_labels, batch_first=True)
         self.cls_head = ClassificationHead(config)
 
-    def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        token_type_ids: Optional[torch.Tensor] = None,
-        labels: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor,
+                token_type_ids: Optional[torch.Tensor] = None,
+                labels: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+        """Manipulates the inputs through a backbone, classification, and CRF module,
+           returns the predicted logits and loss."""
         # backbone encode 
-        outputs = self.backbone(input_ids=input_ids, \
-                                attention_mask=attention_mask, \
+        outputs = self.backbone(input_ids=input_ids,
+                                attention_mask=attention_mask,
                                 token_type_ids=token_type_ids,
                                 return_dict=True)   
         hidden_states = outputs.last_hidden_state
@@ -116,24 +163,39 @@ class ModelForSequenceLabeling(nn.Module):
 
 
 class ModelForMRC(nn.Module):
-    """Model for machine reading comprehension"""
+    """Model for Machine Reading Comprehension (MRC).
 
-    def __init__(self, config, backbone) -> None:
+    Bert model for Machine Reading Comprehension (MRC), which firstly obtains hidden states through the backbone model,
+    then predicts the start and end logits through the MRC head.
+
+    Attributes:
+        config:
+            The configurations of the model.
+        backbone:
+            The backbone network proposed to output initial hidden states.
+        mrc_head (`MRCHead`):
+            A `MRCHead` instance classifying the hidden states into start and end logits.
+    """
+
+    def __init__(self,
+                 config,
+                 backbone) -> None:
+        """Constructs a `ModelForMRC`."""
         super(ModelForMRC, self).__init__()
         self.backbone = backbone
         self.mrc_head = MRCHead(config)
     
-    def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor, 
-        token_type_ids: Optional[torch.Tensor] = None,
-        argument_left: Optional[torch.Tensor] = None,
-        argument_right: Optional[torch.Tensor] = None
-    ) -> Dict[str, torch.Tensor]:
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor,
+                token_type_ids: Optional[torch.Tensor] = None,
+                argument_left: Optional[torch.Tensor] = None,
+                argument_right: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
+        """Manipulates the inputs through a backbone, and MRC head module,
+           returns the predicted logits and loss."""
         # backbone encode 
-        outputs = self.backbone(input_ids=input_ids, \
-                                attention_mask=attention_mask, \
+        outputs = self.backbone(input_ids=input_ids,
+                                attention_mask=attention_mask,
                                 token_type_ids=token_type_ids,
                                 return_dict=True)   
         hidden_states = outputs.last_hidden_state
@@ -158,4 +220,3 @@ class ModelForMRC(nn.Module):
         logits = torch.cat((start_logits, end_logits), dim=-1) # [batch_size, seq_length*2]
         
         return dict(loss=total_loss, logits=logits)
-

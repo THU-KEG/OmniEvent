@@ -1,5 +1,5 @@
 import pdb
-from typing import Tuple 
+from typing import Tuple, Dict, List, Optional
 import torch 
 import copy
 import numpy as np
@@ -11,7 +11,22 @@ from ..input_engineering.mrc_converter import make_predictions, compute_mrc_F1_c
 from ..input_engineering.seq2seq_processor import extract_argument
 
 
-def f1_score_overall(preds, labels):
+def f1_score_overall(preds: list,
+                     labels: list):
+    """Computes the overall F1 score of the predictions.
+
+    Computes the overall F1 score of the predictions based on the calculation of the overall precision and recall after
+    counting the true predictions, in which both the prediction of mention and type are correct.
+
+    Args:
+        preds (`list`):
+            A list containing the prediction of labels from the model.
+        labels (`list`):
+            A list containing the actual labels obtained from the annotated dataset.
+
+    Returns:
+        Three integers represents the computation results of precision, recall, and F1 score, respectively.
+    """
     total_true = 0
     for pred in preds:
         if pred in labels:
@@ -22,7 +37,23 @@ def f1_score_overall(preds, labels):
     return precision, recall, f1
 
 
-def compute_seq_F1(logits, labels, **kwargs):
+def compute_seq_F1(logits: List[int],
+                   labels: List[str],
+                   **kwargs) -> Dict[str: int]:
+    """Computes the F1 score of the sequence-to-sequence method.
+
+    Computes the F1 score of the sequence-to-sequence method. The prediction of the model is firstly decoded into
+    strings, then the overall F1 score of the prediction could be calculated.
+
+    Args:
+        logits (`List[int]`):
+            A list of integers containing the predictions from the model to be decoded.
+        labels: (`List[str]`):
+            A list of strings containing the actual labels obtained from the annotated dataset.
+
+    Returns:
+        `Dict[str: int]` containing the calculation result of the F1 score.
+    """
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
@@ -80,7 +111,9 @@ def compute_seq_F1(logits, labels, **kwargs):
 #     return {"micro_f1": micro_f1}
 
 
-def select_start_position(preds, labels, merge=True):
+def select_start_position(preds,
+                          labels,
+                          merge: Optional[bool] = True):
     final_preds = []
     final_labels = []
 
@@ -95,14 +128,31 @@ def select_start_position(preds, labels, merge=True):
     return final_preds, final_labels
 
 
-def convert_to_names(instances, id2label):
+def convert_to_names(instances: List[str],
+                     id2label: Dict[str: str]) -> List[str]:
+    """Converts the given labels from id to their names.
+
+    Converts the given labels from id to their names by obtaining the value based on the given key from `id2label`
+    dictionary, containing the correspondence between the ids and names of each label.
+
+    Args:
+        instances (`List[str]`):
+            A list of strings containing label ids.
+        id2label (`Dict[str: str]`):
+            A dictionary containing the correspondence between the ids and names of each label.
+
+    Returns:
+        A list of strings containing the label names, in which each value corresponds to the id in the input list.
+    """
     name_instances = []
     for instance in instances:
         name_instances.append([id2label[item] for item in instance])
     return name_instances
 
 
-def compute_span_F1(logits, labels, **kwargs):
+def compute_span_F1(logits,
+                    labels,
+                    **kwargs):
     if len(logits.shape) == 3:
         preds = np.argmax(logits, axis=-1)
     else:
@@ -132,7 +182,9 @@ def compute_span_F1(logits, labels, **kwargs):
     return {"micro_f1": micro_f1}
     
 
-def compute_F1(logits, labels, **kwargs):
+def compute_F1(logits,
+               labels,
+               **kwargs):
     predictions = np.argmax(logits, axis=-1)
     training_args = kwargs["training_args"]
     # if the type is wrongly predicted, set arguments NA
@@ -152,18 +204,64 @@ def compute_F1(logits, labels, **kwargs):
     return {"micro_f1": micro_f1}
 
 
-def softmax(logits, dim=-1):
+def softmax(logits: List[int],
+            dim: Optional[int] = -1):
+    """Conducts the softmax operation on the last dimension.
+
+    Conducts the softmax operation on the last dimension and returns a numpy array.
+
+    Args:
+        logits (`List[int]`):
+            A list of integers indicating the type of each logit.
+        dim (`int`, `optional`, defaults to -1):
+            An integer indicating the dimension for the softmax operation.
+
+    Returns:
+        An numpy array represents the normalized probability of each logit corresponding to each type of label.
+    """
     logits = torch.tensor(logits)
     return torch.softmax(logits, dim=dim).numpy()
 
 
-def compute_accuracy(logits, labels, **kwargs):
+def compute_accuracy(logits,
+                     labels,
+                     **kwargs):
+    """Compute the accuracy of the predictions.
+
+    Compute the accuracy of the predictions by calculating the fraction of the true label prediction count and the
+    entire number of data pieces.
+
+    Args:
+        logits:
+            A list of integers containing the predictions from the model to be decoded.
+        labels:
+            A list of strings containing the actual labels obtained from the annotated dataset.
+
+    Returns:
+        `Dict[str: int]` containing the calculation result of the accuracy.
+    """
     predictions = np.argmax(softmax(logits), axis=-1)
     accuracy = (predictions == labels).sum() / labels.shape[0]
     return {"accuracy": accuracy}
 
 
-def compute_mrc_F1(logits, labels, **kwargs):
+def compute_mrc_F1(logits,
+                   labels,
+                   **kwargs):
+    """Computes the F1 score of the Machine Reading Comprehension (MRC) method.
+
+    Computes the F1 score of the Machine Reading Comprehension (MRC) method. The prediction of the model is firstly
+    decoded into strings, then the overall F1 score of the prediction could be calculated.
+
+    Args:
+        logits:
+            A list of integers containing the predictions from the model to be decoded.
+        labels:
+            A list of strings containing the actual labels obtained from the annotated dataset.
+
+    Returns:
+        `Dict[str: int]` containing the calculation result of the F1 score.
+    """
     start_logits, end_logits = np.split(logits, 2, axis=-1)
     training_args = kwargs["training_args"]
     all_predictions, all_labels = make_predictions(start_logits, end_logits, kwargs["training_args"])

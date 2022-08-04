@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 import torch
+
 from dataclasses import dataclass
+from typing import Dict
 
 
 @dataclass
 class SumLabelSmoother:
-    """
-    Adds label-smoothing on a pre-computed output from a Transformers model.
+    """Adds label-smoothing on a pre-computed output from the model.
+
+    Adds label-smoothing on a pre-computed output from the model, a regularization technique that addresses the
+    overfitting and overconfidence problems by adding some noises to decrease the weights of the actual samples when
+    calculating losses.
 
     Args:
         epsilon (:obj:`float`, `optional`, defaults to 0.1):
@@ -19,7 +24,10 @@ class SumLabelSmoother:
     epsilon: float = 0.1
     ignore_index: int = -100
 
-    def __call__(self, model_output, labels):
+    def __call__(self,
+                 model_output: Dict[str, torch.Tensor],
+                 labels: torch.Tensor) -> float:
+        """Conducts the label smoothing process."""
         logits = model_output["logits"] if isinstance(model_output, dict) else model_output[0]
         log_probs = -torch.nn.functional.log_softmax(logits, dim=-1)
         if labels.dim() == log_probs.dim() - 1:

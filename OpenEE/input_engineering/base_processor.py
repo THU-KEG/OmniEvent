@@ -4,7 +4,7 @@ import torch
 import logging
 
 from torch.utils.data import Dataset
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +31,10 @@ class EDInputExample(object):
     def __init__(self,
                  example_id: Union[int, str],
                  text: str,
-                 trigger_left: int = None,
-                 trigger_right: int = None,
-                 labels: str = None):
-        """Constructs an EDInputExample."""
+                 trigger_left: Optional[int] = None,
+                 trigger_right: Optional[int] = None,
+                 labels: Optional[str] = None) -> None:
+        """Constructs an `EDInputExample`."""
         self.example_id = example_id
         self.text = text
         self.trigger_left = trigger_left
@@ -70,11 +70,11 @@ class EDInputFeatures(object):
                  example_id: Union[int, str],
                  input_ids: List[int],
                  attention_mask: List[int],
-                 token_type_ids: List[int] = None,
-                 trigger_left: int = None,
-                 trigger_right: int = None,
-                 labels: str = None):
-        """Constructs an EDInputFeatures."""
+                 token_type_ids: Optional[List[int]] = None,
+                 trigger_left: Optional[int] = None,
+                 trigger_right: Optional[int] = None,
+                 labels: Optional[str] = None) -> None:
+        """Constructs an `EDInputFeatures`."""
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
@@ -108,12 +108,12 @@ class EAEInputExample(object):
                  pred_type,
                  true_type,
                  input_template=None,
-                 trigger_left: int = None,
-                 trigger_right: int = None,
-                 argument_left: int = None,
-                 argument_right: int = None,
-                 argument_role: str = None,
-                 labels: str = None):
+                 trigger_left: Optional[int] = None,
+                 trigger_right: Optional[int] = None,
+                 argument_left: Optional[int] = None,
+                 argument_right: Optional[int] = None,
+                 argument_role: Optional[int] = None,
+                 labels: Optional[str] = None):
         """Constructs a InputExample."""
         self.example_id = example_id
         self.text = text
@@ -160,14 +160,13 @@ class EAEInputFeatures(object):
                  example_id: Union[int, str],
                  input_ids: List[int],
                  attention_mask: List[int],
-                 token_type_ids: List[int] = None,
-                 trigger_left: int = None,
-                 trigger_right: int = None,
-                 argument_left: int = None,
-                 argument_right: int = None,
-                 labels: str = None,
-                 ):
-        """Constructs an EAEInputFeatures."""
+                 token_type_ids: Optional[List[int]] = None,
+                 trigger_left: Optional[int] = None,
+                 trigger_right: Optional[int] = None,
+                 argument_left: Optional[int] = None,
+                 argument_right: Optional[int] = None,
+                 labels: Optional[str] = None) -> None:
+        """Constructs an `EAEInputFeatures`."""
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
@@ -198,7 +197,7 @@ class EDDataProcessor(Dataset):
 
     def __init__(self,
                  config,
-                 tokenizer: str):
+                 tokenizer: str) -> None:
         """Constructs an EDDataProcessor."""
         self.config = config
         self.tokenizer = tokenizer
@@ -304,7 +303,7 @@ class EAEDataProcessor(Dataset):
                  config,
                  tokenizer: str,
                  pred_file: str,
-                 is_training: bool):
+                 is_training: bool) -> None:
         """Constructs a EAEDataProcessor."""
         self.config = config
         self.tokenizer = tokenizer

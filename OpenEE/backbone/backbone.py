@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from audioop import bias
-from typing import List
+from typing import List, Optional
 from unicodedata import bidirectional
 
 from transformers import BertModel, BertTokenizerFast
@@ -22,7 +22,7 @@ def get_backbone(model_type: str,
                  model_name_or_path: str,
                  tokenizer_name: str,
                  markers: List[str],
-                 model_args=None,
+                 model_args: Optional = None,
                  new_tokens: list = []):
     """Obtains the backbone model and tokenizer.
 

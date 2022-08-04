@@ -1,11 +1,25 @@
-import pdb 
-import torch 
+import pdb
+import torch
 import torch.nn as nn 
 import torch.nn.functional as F
 
+from typing import Optional
 
 
 def get_aggregation(config):
+    """Returns the aggregation method to be utilized.
+
+    Returns the aggregation method to be utilized based on the model's configurations. The aggregation methods include
+    selecting the "cls"s' representations, selecting the markers' representations, max-pooling, and dynamic
+    multi-pooling.
+
+    Args:
+        config:
+            The configurations of the model.
+
+    Returns:
+        The proposed method/class for the aggregation process.
+    """
     if config.aggregation == "cls":
         return select_cls
     elif config.aggregation == "marker":
@@ -19,12 +33,33 @@ def get_aggregation(config):
 
 
 def aggregate(config,
-              method, 
-              hidden_states, 
-              trigger_left,
-              trigger_right,
-              argument_left,
-              argument_right):
+              method,
+              hidden_states: torch.Tensor,
+              trigger_left: torch.Tensor,
+              trigger_right: torch.Tensor,
+              argument_left: torch.Tensor,
+              argument_right: torch.Tensor):
+    """Aggregates information to each position.
+
+    Aggregates information to each position. The aggregation methods include selecting the "cls"s' representations,
+    selecting the markers' representations, max-pooling, and dynamic multi-pooling.
+
+    Args:
+        config:
+            The configurations of the model.
+        method:
+            The method proposed for the aggregation process.
+        hidden_states (`torch.Tensor`):
+            A tensor representing the hidden states output by the backbone model.
+        trigger_left (`torch.Tensor`):
+            A tensor indicating the left position of a trigger.
+        trigger_right (`torch.Tensor`):
+            A tensor indicating the right position of a trigger.
+        argument_left (`torch.Tensor`):
+            A tensor indicating the left position of an argument.
+        argument_right (`torch.Tensor`):
+            A tensor indicating the right position of an argument.
+    """
     if config.aggregation == "cls":
         return method(hidden_states)
     elif config.aggregation == "marker":
@@ -41,18 +76,59 @@ def aggregate(config,
 
 
 def max_pooling(hidden_states: torch.Tensor) -> torch.Tensor:
+    """Applies the max-pooling operation over the sentence representation.
+
+    Applies the max-pooling operation over the representation of the entire input sequence to capture the most useful
+    information. The operation processes on the hidden states, which are output by the backbone models.
+
+    Args:
+        hidden_states (`torch.Tensor`):
+            A tensor represents the hidden states output by the backbone models.
+
+    Returns:
+        A tensor represents the max-pooled hidden states, containing the most useful information of the sequence.
+    """
     batch_size, seq_length, hidden_size = hidden_states.size()
     pooled_states = F.max_pool1d(input=hidden_states.transpose(1, 2), kernel_size=seq_length).squeeze(-1)
     return pooled_states
 
 
 def select_cls(hidden_states: torch.Tensor) -> torch.Tensor:
+    """Returns the representations of the `<cls>` token.
+
+    Returns the representations of each sequence's `<cls>` token by slicing the hidden state tensor output by the
+    backbone models, which contains general information about the sequences.
+
+    Args:
+        hidden_states (`torch.Tensor`):
+            A tensor represents the hidden state's output by the backbone models.
+
+    Returns:
+        A tensor containing the representations of each sequence's `<cls>` token.
+    """
     return hidden_states[:, 0, :]
     
 
 def select_marker(hidden_states: torch.Tensor, 
                   left: torch.Tensor,
                   right: torch.Tensor) -> torch.Tensor:
+    """Returns the representations of the marker tokens.
+
+    Returns the representations of each sequence's marker tokens by slicing the hidden state tensor output by the
+    backbone models.
+
+    Args:
+        hidden_states (`torch.Tensor`):
+            A tensor represents the hidden state's output by the backbone models.
+        left (`torch.Tensor`):
+            A tensor indicates the left position of the marker.
+        right (`torch.Tensor`):
+            A tensor indicates the right position of the marker.
+
+    Returns:
+        A tensor containing the representations of each sequence's marker tokens by concatenating their left and right
+        token's representations.
+    """
     batch_size = hidden_states.size(0)
     batch_indice = torch.arange(batch_size)
     left_states = hidden_states[batch_indice, left.to(torch.long), :]
@@ -62,13 +138,33 @@ def select_marker(hidden_states: torch.Tensor,
 
 
 class DynamicPooling(nn.Module):
-    def __init__(self, config) -> None:
+    """Dynamic multi-pooling layer for CNN.
+
+    Dynamic multi-pooling layer for CNN, which is able to capture more valuable information within a sentence,
+    particularly for some cases, such as multiple triggers are within a sentence and different argument candidate may
+    play a different role with a different trigger.
+
+    Arguments:
+        dense:
+        activation (nn.Tanh):
+            A tanh activation function.
+        dropout (nn.Dropout):
+            A dropout function with rate be set as 0.5.
+    """
+    def __init__(self,
+                 config) -> None:
+        """Constructs a `DynamicPooling`."""
         super(DynamicPooling, self).__init__()
         self.dense = nn.Linear(config.hidden_size*config.head_scale, config.hidden_size*config.head_scale)
         self.activation = nn.Tanh()
         self.dropout = nn.Dropout()
     
-    def get_mask(self, position, batch_size, seq_length, device):
+    def get_mask(self,
+                 position: torch.Tensor,
+                 batch_size: int,
+                 seq_length: int,
+                 device: str) -> torch.Tensor:
+        """Returns the mask indicating whether the token is padded or not."""
         all_masks = []
         for i in range(batch_size):
             mask = torch.zeros((seq_length), dtype=torch.int16, device=device)
@@ -77,7 +173,10 @@ class DynamicPooling(nn.Module):
         all_masks = torch.stack(all_masks, dim=0)
         return all_masks
 
-    def max_pooling(self, hidden_states, mask):
+    def max_pooling(self,
+                    hidden_states: torch.Tensor,
+                    mask: torch.Tensor) -> torch.Tensor:
+        """Conducts the max-pooling operation on hidden states."""
         batch_size, seq_length, hidden_size = hidden_states.size()
         conved = hidden_states.transpose(1, 2)
         conved = conved.transpose(0, 1)
@@ -126,7 +225,46 @@ class DynamicPooling(nn.Module):
 # - GCN 
 # - ... 
 class MOGCN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, K, dropout, device, alpha=0.2):
+    """Multi-order Graph Convolutional Network (MOGAN).
+
+    A Multi-order Graph Convolutional Network (MOGAN) class, which simply learns a list of representations over
+    multi-order syntactic graphs by a few parallel Graph Attention Network (GAT) layers, which weights the importance of
+    neighbors of each word in each syntactic graph during convolution.
+
+    Attributes:
+        in_dim (`int`):
+            An integer indicating the dimension of GAT's input features.
+        hidden_dim (`int`):
+            An integer indicating the dimension of GAT's output features.
+        device:
+            The device of the operation, CPU or GPU.
+        in_drop (`int`):
+            An integer indicating the dropout rate.
+        K (`int`):
+            An integer indicating the number of times operating the graph attention convolution process.
+        layers_a (`nn.ModuleList`):
+            A GAT layer operating the first sub-matrix of the adjacency matrix of the first-order syntactic graph,
+            A_along, containing the connection information of the first-order syntactic graph.
+        layers_b (`nn.ModuleList`):
+            A GAT layer operating the second sub-matrix of the adjacency matrix of the first-order syntactic graph,
+            A_rev, which is a transpose matrix of A_along.
+        layers_c (`nn.ModuleList`):
+            A GAT layer operating the third sub-matrix of the adjacency matrix of the first-order syntactic graph,
+            A_loop, which is an identity matrix.
+        Wawa (`nn.Sequential`):
+            An `nn.Sequential` container with a linear transformation and a tanh activation function, which is regarded
+            as a graph attention convolutional function.
+        Ctx (`nn.Linear`):
+            An `nn.Linear` layer for computing the normalized weight of each neighbor when updating a node.
+    """
+    def __init__(self,
+                 in_dim: int,
+                 hidden_dim: int,
+                 K: int,
+                 dropout: int,
+                 device,
+                 alpha: Optional[int] = 0.2) -> None:
+        """Constructs a `MOGCN`."""
         super(MOGCN, self).__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
@@ -151,7 +289,10 @@ class MOGCN(nn.Module):
         )
         self.Ctx = nn.Linear(100, 1, bias=False)
 
-    def forward(self, hidden_states: torch.Tensor, adj: torch.Tensor) -> torch.Tensor:
+    def forward(self,
+                hidden_states: torch.Tensor,
+                adj: torch.Tensor) -> torch.Tensor:
+        """The forward propagation of `NOGCN`."""
         adj_a, adj_b, adj_c = adj[:, 0, :, :], adj[:, 1, :, :], adj[:, 2, :, :]
 
         # The GAC procedures.
@@ -176,10 +317,34 @@ class MOGCN(nn.Module):
 
 
 class GraphAttentionLayer(nn.Module):
+    """Simple graph attention layer.
+
+    A simple graph attention layer for a single graph attention process.
+
+    Attributes:
+        dropout (`int`):
+            An integer indicating the dropout rate.
+        in_features (`int`):
+            An integer indicating the dimension of the input features.
+        out_features (`int`):
+            An integer indicating the dimension of the output features.
+        alpha (`float`):
+            A float indicating the negative slope of the leaky relu activation.
+        W (`nn.Parameter`):
+            The weight of the fully connecting layer, transforming high-dimensional features into low dimensions.
+        a (`nn.Parameter`):
+            The initial attention weight between nodes.
+        leaky_relu (`nn.LeakyReLU`):
+            A leaky relu activation function.
     """
-    Simple GAT layer, similar to https://arxiv.org/abs/1710.10903.
-    """
-    def __init__(self, in_features, out_features, dropout, alpha, device, concat=False):
+    def __init__(self,
+                 in_features: int,
+                 out_features: int,
+                 dropout: int,
+                 alpha: int,
+                 device,
+                 concat: Optional[bool] = False):
+        """Constructs a `GraphAttentionLayer`."""
         super(GraphAttentionLayer, self).__init__()
         self.dropout = dropout
         self.in_features = in_features
@@ -195,6 +360,7 @@ class GraphAttentionLayer(nn.Module):
         self.leaky_relu = nn.LeakyReLU(self.alpha)
 
     def forward(self, adj, input):
+        """The forward propagation of a simple graph attention layer."""
         h = torch.matmul(input, self.W)       # [B, N, D]
         B, N = h.size()[0], h.size()[1]
 
@@ -214,7 +380,22 @@ class GraphAttentionLayer(nn.Module):
             return h_prime
 
 
-def matmuls(a, times):
+def matmuls(a: torch.Tensor,
+            times: int) -> torch.Tensor:
+    """Multiplies the input matrix with itself for `times` times.
+
+    Multiplies the input matrix with itself multiple times, in which each time of multiplication follows matrix-matrix
+    multiplication.
+
+    Args:
+        a (`torch.Tensor`):
+            A tensor representing the input matrix for multiplication.
+        times (`int`):
+            An integer indicating the number of times the matrix would be multiplied.
+
+    Returns:
+        A tensor representing the matrix after `times` times multiplication of the given matrix.
+    """
     res = a
     for i in range(times):
         res = torch.matmul(res, a)

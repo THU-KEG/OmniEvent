@@ -47,7 +47,38 @@ def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
     return output_test_files
 
 
-def predict_ed(trainer, tokenizer, data_class, data_args, data_file):
+def predict_ed(trainer,
+               tokenizer: str,
+               data_class,
+               data_args,
+               data_file: str):
+    """Predicts the test set of the event detection task.
+
+    Predicts the test set of the event detection task. The prediction of logits and labels, evaluation metrics' results,
+    and the dataset would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            The name of the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The arguments of the dataset.
+        data_file (`str`):
+            The path of the dataset file.
+
+    Returns:
+        logits:
+            The logits of the prediction.
+        labels:
+            The labels of the prediction.
+        metrics:
+            The evaluation metric result.
+        dataset:
+            The test dataset.
+    """
     dataset = data_class(data_args, tokenizer, data_file)
     logits, labels, metrics = trainer.predict(
         test_dataset=dataset,
@@ -56,7 +87,40 @@ def predict_ed(trainer, tokenizer, data_class, data_args, data_file):
     return logits, labels, metrics, dataset
 
 
-def predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file):
+def predict_sub_ed(trainer,
+                   tokenizer: str,
+                   data_class,
+                   data_args,
+                   data_file: str):
+    """Predicts the test set of the event detection task of subfile datasets.
+
+    Predicts the test set of the event detection task of a list of datasets. The prediction of logits and labels are
+    conducted separately on each file, and the evaluation metrics' results are calculated after concatenating the
+    predictions together. Finally, the prediction of logits and labels, evaluation metrics' results, and the dataset
+    would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            The name of the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The arguments of the dataset.
+        data_file (`str`):
+            The path of the dataset file.
+
+    Returns:
+        logits:
+            The logits of the prediction.
+        labels:
+            The labels of the prediction.
+        metrics:
+            The evaluation metric result.
+        dataset:
+            The test dataset.
+    """
     data_file_full = data_file
     data_file_list = get_sub_files(input_test_file=data_file_full,
                                    sub_size=data_args.split_infer_size)
@@ -77,7 +141,38 @@ def predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file):
     return logits, labels, metrics, dataset
 
 
-def predict_eae(trainer, tokenizer, data_class, data_args, training_args):
+def predict_eae(trainer,
+                tokenizer: str,
+                data_class,
+                data_args,
+                training_args):
+    """Predicts the test set of the event argument extraction task.
+
+    Predicts the test set of the event argument extraction task. The prediction of logits and labels, evaluation
+    metrics' results, and the dataset would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            The name of the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The arguments of the dataset.
+        training_args:
+            The arguments of the training process.
+
+    Returns:
+        logits:
+            The logits of the prediction.
+        labels:
+            The labels of the prediction.
+        metrics:
+            The evaluation metric result.
+        test_dataset:
+            The test dataset.
+    """
     test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
     training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
     logits, labels, metrics = trainer.predict(test_dataset=test_dataset, ignore_keys=["loss"])
@@ -85,7 +180,40 @@ def predict_eae(trainer, tokenizer, data_class, data_args, training_args):
     return logits, labels, metrics, test_dataset
 
 
-def predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args):
+def predict_sub_eae(trainer,
+                    tokenizer: str,
+                    data_class,
+                    data_args,
+                    training_args):
+    """Predicts the test set of the event detection task of subfile datasets.
+
+    Predicts the test set of the event detection task of a list of datasets. The prediction of logits and labels are
+    conducted separately on each file, and the evaluation metrics' results are calculated after concatenating the
+    predictions together. Finally, the prediction of logits and labels, evaluation metrics' results, and the dataset
+    would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            The name of the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The arguments of the dataset.
+        training_args:
+            The arguments of the training process.
+
+    Returns:
+        logits:
+            The logits of the prediction.
+        labels:
+            The labels of the prediction.
+        metrics:
+            The evaluation metric result.
+        test_dataset:
+            The test dataset.
+    """
     test_file_full, test_pred_file_full = data_args.test_file, data_args.test_pred_file
     test_file_list, test_pred_file_list = get_sub_files(input_test_file=test_file_full,
                                                         input_test_pred_file=test_pred_file_full,
