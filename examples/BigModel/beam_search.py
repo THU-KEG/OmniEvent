@@ -1,6 +1,6 @@
 import torch 
-import torch.distributed as dist
 import torch.nn as nn 
+import bmtrain as bmt 
 
 from abc import ABC
 from typing import Optional, Tuple, Dict, Any
@@ -161,11 +161,14 @@ def validate_stopping_criteria(stopping_criteria: StoppingCriteriaList, max_leng
     return new_stopping_criteria
 
 
-def prepare_inputs_for_generation(self, input_ids: torch.LongTensor, **kwargs) -> Dict[str, Any]:
+def prepare_inputs_for_generation(input_ids: torch.LongTensor, encoder_attention_mask, **kwargs) -> Dict[str, Any]:
         """
         Implement in subclasses of [`PreTrainedModel`] for custom behavior to prepare inputs in the generate method.
         """
-        return {"input_ids": input_ids}
+        length = torch.ones(input_ids.size(0), dtype=torch.long, device=input_ids.device) * input_ids.size(1)
+        return {"decoder_input_ids": input_ids, 
+                "attention_mask": encoder_attention_mask,
+                "decoder_length": length,  "encoder_outputs": kwargs["encoder_outputs"]}
 
 
 def _update_model_kwargs_for_generation(
@@ -199,9 +202,11 @@ def _update_model_kwargs_for_generation(
 
 
 def beam_search(
+    args,
     config, 
     model, 
     input_ids: torch.LongTensor,
+    encoder_attention_mask,
     beam_scorer,
     logits_processor = None,
     stopping_criteria = None,
@@ -211,7 +216,7 @@ def beam_search(
     output_attentions: Optional[bool] = False,
     output_hidden_states: Optional[bool] = False,
     output_scores: Optional[bool] = False,
-    return_dict_in_generate: Optional[bool] = True,
+    return_dict_in_generate: Optional[bool] = False,
     synced_gpus: Optional[bool] = False,
     **model_kwargs,
 ):
@@ -300,7 +305,6 @@ def beam_search(
     ['Wie alt bist du?']
     ```"""
     # init values
-    stopping_criteria = stopping_criteria if stopping_criteria is not None else StoppingCriteriaList()
     if max_length is not None:
         stopping_criteria = validate_stopping_criteria(stopping_criteria, max_length)
     if len(stopping_criteria) == 0:
@@ -344,18 +348,20 @@ def beam_search(
             # The following logic allows an early break if all peers finished generating their sequence
             this_peer_finished_flag = torch.tensor(0.0 if this_peer_finished else 1.0).to(input_ids.device)
             # send 0.0 if we finished, 1.0 otherwise
-            dist.all_reduce(this_peer_finished_flag, op=dist.ReduceOp.SUM)
+            this_peer_finished_flag = bmt.distributed.all_reduce(this_peer_finished_flag, op="sum")
             # did all peers finish? the reduced sum will be 0.0 then
             if this_peer_finished_flag.item() == 0.0:
                 break
 
-        model_inputs = prepare_inputs_for_generation(input_ids, **model_kwargs)
+        model_inputs = prepare_inputs_for_generation(input_ids, encoder_attention_mask, **model_kwargs)
 
         outputs = model(
             **model_inputs,
             return_dict=True,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
+            output_logits=True,
+            decoder_shift_right=False
         )
 
         if synced_gpus and this_peer_finished:

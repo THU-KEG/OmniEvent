@@ -19,10 +19,16 @@ from model_center.dataset.t5dataset import DATASET
 from model_center.utils import print_inspect
 from model_center.dataset import DistributedDataLoader
 
-from OpenEE.input_engineering.seq2seq_processor import EAESeq2SeqProcessor
-from OpenEE.evaluation.metric import compute_seq_F1
+from OpenEE.input_engineering.seq2seq_processor import EAESeq2SeqProcessor, extract_argument
+from OpenEE.evaluation.metric import f1_score_overall
 
-from transformers import LogitsProcessorList, MinLengthLogitsProcessor, BeamSearchScorer
+from transformers import (
+    LogitsProcessorList, 
+    ForcedEOSTokenLogitsProcessor,
+    BeamSearchScorer, 
+    StoppingCriteriaList, 
+    MaxLengthCriteria
+)
 from beam_search import beam_search
 
 
@@ -112,18 +118,119 @@ def prepare_dataset(args, tokenizer):
     return dataset
 
 
+def compute_seq_F1(logits, labels, task_name, **kwargs):
+    tokenizer = kwargs["tokenizer"]
+    training_args = kwargs["training_args"]
+    decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
+    # Replace -100 in the labels as we can't decode them.
+    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+    decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=False)
+    def clean_str(x_str):
+        for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
+            x_str = x_str.replace(to_remove_token, '')
+        return x_str.strip()
+    if task_name == "EAE":
+        pred_arguments, golden_arguments = [], []
+        for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
+            pred = clean_str(pred)
+            label = clean_str(label)
+            pred_arguments.extend(extract_argument(pred, i, "NA"))
+            golden_arguments.extend(extract_argument(label, i, "NA"))
+        # import pdb; pdb.set_trace()
+        precision, recall, micro_f1 = f1_score_overall(pred_arguments, golden_arguments)
+    else:
+        assert len(decoded_preds) == len(decoded_labels)
+        pred_triggers, golden_triggers = [], []
+        for i, (pred, label) in enumerate(zip(decoded_preds, decoded_labels)):
+            pred = clean_str(pred)
+            label = clean_str(label)
+            pred_triggers.extend(extract_argument(pred, i, "NA"))
+            golden_triggers.extend(extract_argument(label, i, "NA"))
+        precision, recall, micro_f1 = f1_score_overall(pred_triggers, golden_triggers)
+    return {"micro_f1": micro_f1*100}
+
+
+def evaluate(args, model, tokenizer, dataloader, epoch, split):
+    model.eval()
+    with torch.no_grad():
+        synced_gpus = True if torch.cuda.device_count() > 1 else False 
+        bmt.print_rank("Synced_gpus: %s" % str(synced_gpus))
+        num_beams = 4
+        model.config.is_encoder_decoder = True 
+        pd = []
+        gt = []
+        for it, data in enumerate(dataloader[split]):
+            enc_input = data["input_ids"].cuda()
+            target = copy.deepcopy(data["labels"]).cuda()
+            # prepare for beam search 
+            batch_size = enc_input.size(0)
+            beam_scorer = BeamSearchScorer(
+                batch_size=batch_size,
+                num_beams=num_beams,
+                device=args.local_rank,
+            )
+            logits_processor = LogitsProcessorList(
+                [
+                    ForcedEOSTokenLogitsProcessor(args.max_out_length, eos_token_id=1),
+                ]
+            )
+            stopping_criteria = StoppingCriteriaList([MaxLengthCriteria(max_length=args.max_out_length)])
+            # input sequence 
+            model_kwargs = {
+                "encoder_outputs": model.encode(
+                    enc_input.repeat_interleave(num_beams, dim=0),
+                    data["attention_mask"].cuda().repeat_interleave(num_beams, dim=0)
+                )
+            }
+            input_ids = torch.zeros((batch_size*num_beams, 1), device=args.local_rank, dtype=torch.long)
+            outputs = beam_search(args=args,
+                        config = model.config,
+                        model = model, 
+                        input_ids = input_ids, 
+                        encoder_attention_mask = data["attention_mask"].cuda().repeat_interleave(num_beams, dim=0).to(torch.bool),
+                        beam_scorer = beam_scorer, 
+                        logits_processor = logits_processor,
+                        stopping_criteria = stopping_criteria,
+                        max_length = args.max_out_length,
+                        synced_gpus = synced_gpus,
+                        **model_kwargs)
+            for sequence in outputs.cpu().tolist(): 
+                while len(sequence) < args.max_out_length:
+                    sequence.append(0)
+                pd.append(sequence)
+            gt.extend(target.cpu().tolist())
+
+            bmt.print_rank(
+                "{} | epoch {:3d} | Iter: {:6d}/{:6d} |".format(
+                    split,
+                    epoch,
+                    it,
+                    len(dataloader[split]),
+                )
+            )
+        pd = bmt.gather_result(torch.tensor(pd).int()).cpu().tolist()
+        gt = bmt.gather_result(torch.tensor(gt).int()).cpu().tolist()
+        
+        bmt.print_rank(f"{split} epoch {epoch}:")
+        mirco_f1 = compute_seq_F1(np.array(pd), np.array(gt), "EAE", **{"tokenizer": tokenizer, "training_args": args})
+        bmt.print_rank(mirco_f1)
+
+        return mirco_f1 
+
+
+
 def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
     loss_func = bmt.loss.FusedCrossEntropy(ignore_index=-100)
 
-    # print_inspect(model, '*')
-
-    # bmt.print_rank(verbalizer)
-
     dataloader_num_workers = 2
-    for epoch in range(10):
+    best_f1 = 0
+    start_dev_epoch = 3
+    dev_epoch_step = 1
+    for epoch in range(20):
         dataloader = {
             "train": DistributedDataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True, **{"num_workers": dataloader_num_workers}),
-            "dev": DistributedDataLoader(dataset['dev'], batch_size=args.batch_size, shuffle=False, **{"num_workers": dataloader_num_workers}),
+            "dev": DistributedDataLoader(dataset['dev'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers}),
+            "test": DistributedDataLoader(dataset['test'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers})
         }
 
         model.train()
@@ -162,63 +269,20 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
                     grad_norm,
                 )
             )
-            # if it % args.inspect_iters == 0: print_inspect(model, "*")
-            # if args.save != None and it % args.save_iters == 0:
-                # bmt.save(model, os.path.join(args.save, args.save_name+("-%d.pt" % it)))
+
+        if epoch < start_dev_epoch or epoch % dev_epoch_step != 0:
+            continue
+        micro_f1 = evaluate(args, model, tokenizer, dataloader, epoch, "dev")
+        if micro_f1["micro_f1"] > best_f1:
+            best_f1 = micro_f1["micro_f1"]
+            bmt.print_rank("Best dev score. Saving...")
+            # save 
+            bmt.save(model, os.path.join(args.save, args.save_name+"-best.pt"))
+    model.load_state_dict(torch.load(os.path.join(args.save, args.save_name+"-best.pt")))
+    bmt.print_rank("Best Dev F1: %.2f, Testing..." % best_f1)
+    evaluate(args, model, tokenizer, dataloader, epoch, "test")
 
 
-        model.eval()
-        with torch.no_grad():
-            num_beams = 3
-            beam_scorer = BeamSearchScorer(
-                batch_size=1,
-                num_beams=num_beams,
-                device=model.device,
-            )
-            logits_processor = LogitsProcessorList(
-                [
-                    MinLengthLogitsProcessor(5, eos_token_id=1),
-                ]
-            )
-            model.config.is_encoder_decoder = True 
-            for split in ["dev"]:
-                pd = []
-                gt = []
-                for it, data in enumerate(dataloader[split]):
-                    enc_input = data["input_ids"].cuda()
-                    enc_length = data["attention_mask"].cuda().sum(-1).to(torch.int32)
-                    target = copy.deepcopy(data["labels"]).cuda()
-                    dec_input = data["labels"].cuda()
-                    dec_length = (data["labels"]!=-100).cuda().sum(-1).to(torch.int32)
-                    dec_input = (dec_input!=-100) * dec_input
-
-                    model_kwargs = {}
-                    beam_search(model.config, model, enc_input, beam_scorer, 
-                                logits_processor=logits_processor, **model_kwargs)
-
-                    generated_tokens = model.generate(enc_input, enc_length, dec_input, dec_length, return_logits=True)                
-                    pd.extend(generated_tokens.cpu().tolist())
-                    gt.extend(target.cpu().tolist())
-
-                    bmt.print_rank(
-                        "{} | epoch {:3d} | Iter: {:6d}/{:6d} |".format(
-                            split,
-                            epoch,
-                            it,
-                            len(dataloader[split]),
-                        )
-                    )
-                pd = bmt.gather_result(torch.tensor(pd).int()).cpu().tolist()
-                gt = bmt.gather_result(torch.tensor(gt).int()).cpu().tolist()
-                bmt.print_rank(pd)
-                bmt.print_rank(gt)
-                
-                bmt.print_rank(f"{split} epoch {epoch}:")
-                mirco_f1 = compute_seq_F1(pd, gt, {"tokenizer": tokenizer, "training_args": args})
-                bmt.print_rank(mirco_f1)
-
-    # save 
-    bmt.save(model, os.path.join(args.save, args.save_name+("-%d.pt" % epoch)))
 
 def main():
     args = initialize()

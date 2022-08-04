@@ -4,7 +4,7 @@ MASTER_ADDR=localhost
 MASTER_PORT=1234
 NNODES=1
 NODE_RANK=0
-GPUS_PER_NODE=4
+GPUS_PER_NODE=8
 
 DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --nnodes $NNODES \
@@ -13,12 +13,12 @@ DISTRIBUTED_ARGS="--nproc_per_node $GPUS_PER_NODE \
                   --master_port $MASTER_PORT"
 
 BASE_PATH=$PWD
-VERSION="large"
+VERSION="xxl"
 
 OPTS=""
 OPTS+=" --base-path ${BASE_PATH}"
-OPTS+=" --model-config configs/mt5-${VERSION}"
-OPTS+=" --batch-size 64"
+OPTS+=" --model-config configs/mt5-${VERSION}/"
+OPTS+=" --batch-size 32"
 OPTS+=" --train-iters 1500"
 OPTS+=" --save-iters 1000"
 # OPTS+=" --max-encoder-length 512"
@@ -27,14 +27,14 @@ OPTS+=" --save ${BASE_PATH}/results"
 OPTS+=" --save-name finetune-mt5-${VERSION}-ckpt"
 OPTS+=" --lr 0.00001"
 OPTS+=" --inspect-iters 100"
-OPTS+=" --warmup-iters 70"
+OPTS+=" --warmup-iters 263"
 OPTS+=" --lr-decay-style constant"
 OPTS+=" --weight-decay 1e-2"
 OPTS+=" --clip-grad 100.0"
 OPTS+=" --loss-scale 128"
-OPTS+=" --train_file ../../data/processed/all-eae/train.unified.jsonl"
-OPTS+=" --validation_file ../../data/processed/all-eae/dev.unified.jsonl"
-OPTS+=" --test_file ../../data/processed/all-eae/test.unified.jsonl"
+OPTS+=" --train_file ../../data/processed/ace2005-dygie/train.unified.jsonl"
+OPTS+=" --validation_file ../../data/processed/ace2005-dygie/dev.unified.jsonl"
+OPTS+=" --test_file ../../data/processed/ace2005-dygie/test.unified.jsonl"
 OPTS+=" --language English"
 OPTS+=" --golden_trigger"
 OPTS+=" --max_seq_length 160"

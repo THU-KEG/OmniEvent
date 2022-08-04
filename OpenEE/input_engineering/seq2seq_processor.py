@@ -123,7 +123,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 if "source" in item:
                     kwargs = {"source": [item["source"]]}
                 else:
-                    kwargs = {"source": ["<fewfc>"]}
+                    kwargs = {"source": []}
                 if self.config.language == "English":
                     words = item["text"].split()
                     whitespace = " "
@@ -257,6 +257,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                            truncation=True,
                                            max_length=self.config.max_out_length,
                                            is_split_into_words=True)
+            # import pdb; pdb.set_trace()
             # set -100 to unused token 
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:
