@@ -12,6 +12,7 @@ from .base_processor import (
     EAEInputExample,
     EAEInputFeatures
 )
+from transformers import BartTokenizerFast
 
 type_start = "<"
 type_end = ">"
@@ -47,7 +48,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
     def read_examples(self, input_file):
         self.examples = []
         with open(input_file, "r", encoding="utf-8") as f:
-            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+            for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
                 if self.config.language == "English":
                     words = item["text"].split()
@@ -69,7 +70,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                         labels = ""
                         # labels = f"{type_start}{type_end}"
                     example = EDInputExample(
-                        example_id=item["id"],
+                        example_id=idx,
                         text=words,
                         labels=labels
                     )
@@ -119,12 +120,15 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-                prefix = []
+                if "source" in item:
+                    kwargs = {"source": [item["source"]]}
+                else:
+                    kwargs = {"source": []}
                 if self.config.language == "English":
-                    words = prefix + item["text"].split()
+                    words = item["text"].split()
                     whitespace = " "
                 elif self.config.language == "Chinese":
-                    words = prefix + list(item["text"])
+                    words = list(item["text"])
                     whitespace = ""
                 else:
                     raise NotImplementedError
@@ -156,13 +160,14 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 labels = ""
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
-                                example_id=trigger["id"],
+                                example_id=trigger_idx-1,
                                 text=words,
                                 pred_type=pred_event_type,
                                 true_type=event["type"],
                                 trigger_left=trigger["position"][0],
                                 trigger_right=trigger["position"][1],
-                                labels=labels
+                                labels=labels,
+                                **kwargs
                             )
                             self.examples.append(example)
                     # negative triggers 
@@ -188,7 +193,8 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                     true_type="NA",
                                     trigger_left=neg_trigger["position"][0],
                                     trigger_right=neg_trigger["position"][1],
-                                    labels=labels
+                                    labels=labels,
+                                    **kwargs
                                 )
                                 self.examples.append(example)
                         else:
@@ -203,13 +209,14 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             arguments_per_trigger = {}
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
-                                example_id=item["id"],
+                                example_id=trigger_idx-1,
                                 text=words,
                                 pred_type=pred_event_type,
                                 true_type="NA",   # true type not given, set to NA.
                                 trigger_left=candi["position"][0],
                                 trigger_right=candi["position"][1],
                                 labels=labels,
+                                **kwargs
                             )
                             self.examples.append(example)
             if self.event_preds is not None:
@@ -239,7 +246,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                       [example.trigger_left, example.trigger_right],
                                       self.config.markers,
                                       whitespace)
-            input_context = self.tokenizer(words,
+            input_context = self.tokenizer(example.kwargs["source"]+words,
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length,
@@ -250,6 +257,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                            truncation=True,
                                            max_length=self.config.max_out_length,
                                            is_split_into_words=True)
+            # import pdb; pdb.set_trace()
             # set -100 to unused token 
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:

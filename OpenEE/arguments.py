@@ -271,6 +271,12 @@ class TrainingArguments(TrainingArguments):
             "help": "The maximum output length for encoder-decoder architecture (BART, T5)."
         }
     )
+    pipeline: bool = field(
+        default=False,
+        metadata={
+            "help": "Model parallerism."
+        }
+    )
 
 
 class ArgumentParser(HfArgumentParser):
