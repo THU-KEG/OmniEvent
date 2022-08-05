@@ -22,7 +22,7 @@ return_token_type_ids: True
 truncate_seq2seq_output: False
 
 # model config #
-model_type: bert
+model_type: roberta
 model_name_or_path: roberta-large
 hidden_size: 1024
 aggregation: marker
@@ -34,8 +34,8 @@ max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2
 
-per_device_train_batch_size: 32
-per_device_eval_batch_size: 64
+per_device_train_batch_size: 16
+per_device_eval_batch_size: 32
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5

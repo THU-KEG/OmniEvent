@@ -1,6 +1,6 @@
-import os 
-import torch 
-import torch.nn as nn 
+import os
+import torch
+import torch.nn as nn
 
 from typing import Tuple, Dict, Optional, Union
 
@@ -70,31 +70,31 @@ class ModelForTokenClassification(BaseModel):
     def __init__(self, config, backbone):
         super(ModelForTokenClassification, self).__init__()
         self.config = config
-        self.backbone = backbone 
+        self.backbone = backbone
         self.aggregation = get_aggregation(config)
         self.cls_head = get_head(config)
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        token_type_ids: Optional[torch.Tensor] = None,
-        trigger_left: Optional[torch.Tensor] = None, 
-        trigger_right: Optional[torch.Tensor] = None, 
-        argument_left: Optional[torch.Tensor] = None, 
-        argument_right: Optional[torch.Tensor] = None, 
-        labels: Optional[torch.Tensor] = None
+            self,
+            input_ids: torch.Tensor,
+            attention_mask: torch.Tensor,
+            token_type_ids: Optional[torch.Tensor] = None,
+            trigger_left: Optional[torch.Tensor] = None,
+            trigger_right: Optional[torch.Tensor] = None,
+            argument_left: Optional[torch.Tensor] = None,
+            argument_right: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None
     ) -> Dict[str, torch.Tensor]:
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids, \
                                 attention_mask=attention_mask, \
                                 token_type_ids=token_type_ids,
-                                return_dict=True)   
+                                return_dict=True)
         hidden_states = outputs.last_hidden_state
         # aggregation 
-        hidden_state = aggregate(self.config, 
-                                 self.aggregation, 
-                                 hidden_states, 
+        hidden_state = aggregate(self.config,
+                                 self.aggregation,
+                                 hidden_states,
                                  trigger_left,
                                  trigger_right,
                                  argument_left,
@@ -102,40 +102,40 @@ class ModelForTokenClassification(BaseModel):
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 
-        loss = None 
+        loss = None
         if labels is not None:
             loss_fn = nn.CrossEntropyLoss()
             loss = loss_fn(logits, labels)
         return dict(loss=loss, logits=logits)
-    
+
 
 class ModelForSequenceLabeling(BaseModel):
     """Bert model for token classification."""
 
     def __init__(self, config, backbone):
         super(ModelForSequenceLabeling, self).__init__()
-        self.config = config 
-        self.backbone = backbone 
+        self.config = config
+        self.backbone = backbone
         self.cls_head = LinearHead(config)
         self.head = get_head(config)
 
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor,
-        token_type_ids: Optional[torch.Tensor] = None,
-        labels: Optional[torch.Tensor] = None
+            self,
+            input_ids: torch.Tensor,
+            attention_mask: torch.Tensor,
+            token_type_ids: Optional[torch.Tensor] = None,
+            labels: Optional[torch.Tensor] = None
     ) -> Dict[str, torch.Tensor]:
         # backbone encode 
-        outputs = self.backbone(input_ids=input_ids, \
-                                attention_mask=attention_mask, \
+        outputs = self.backbone(input_ids=input_ids,
+                                attention_mask=attention_mask,
                                 token_type_ids=token_type_ids,
-                                return_dict=True)   
+                                return_dict=True)
         hidden_states = outputs.last_hidden_state
         # classification
-        logits = self.cls_head(hidden_states) # [batch_size, seq_length, num_labels]
+        logits = self.cls_head(hidden_states)  # [batch_size, seq_length, num_labels]
         # compute loss 
-        loss = None 
+        loss = None
         if labels is not None:
             if self.config.head_type != "crf":
                 loss_fn = nn.CrossEntropyLoss()
@@ -144,13 +144,15 @@ class ModelForSequenceLabeling(BaseModel):
                 # CRF
                 labels[:, 0] = 0
                 mask = labels != -100
-                labels = labels * mask.to(torch.long)
-                loss = -self.crf(emissions=logits, 
-                                tags=labels,
-                                mask=mask,
-                                reduction = "token_mean")
+                tags = labels * mask.to(torch.long)
+                loss = -self.crf(emissions=logits,
+                                 tags=tags,
+                                 mask=mask,
+                                 reduction="token_mean")
+                labels[:, 0] = -100
         else:
             if self.config.head_type == "crf":
+                mask = torch.ones_like(logits[:, 0])
                 preds = self.crf.decode(emissions=logits, mask=mask)
                 logits = torch.LongTensor(preds)
 
@@ -164,20 +166,20 @@ class ModelForMRC(BaseModel):
         super(ModelForMRC, self).__init__()
         self.backbone = backbone
         self.mrc_head = get_head(config)
-    
+
     def forward(
-        self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor, 
-        token_type_ids: Optional[torch.Tensor] = None,
-        argument_left: Optional[torch.Tensor] = None,
-        argument_right: Optional[torch.Tensor] = None
+            self,
+            input_ids: torch.Tensor,
+            attention_mask: torch.Tensor,
+            token_type_ids: Optional[torch.Tensor] = None,
+            argument_left: Optional[torch.Tensor] = None,
+            argument_right: Optional[torch.Tensor] = None
     ) -> Dict[str, torch.Tensor]:
         # backbone encode 
-        outputs = self.backbone(input_ids=input_ids, \
-                                attention_mask=attention_mask, \
+        outputs = self.backbone(input_ids=input_ids,
+                                attention_mask=attention_mask,
                                 token_type_ids=token_type_ids,
-                                return_dict=True)   
+                                return_dict=True)
         hidden_states = outputs.last_hidden_state
         start_logits, end_logits = self.mrc_head(hidden_states)
         total_loss = None
@@ -197,7 +199,6 @@ class ModelForMRC(BaseModel):
             start_loss = loss_fct(start_logits, argument_left)
             end_loss = loss_fct(end_logits, argument_right)
             total_loss = (start_loss + end_loss) / 2
-        logits = torch.cat((start_logits, end_logits), dim=-1) # [batch_size, seq_length*2]
-        
-        return dict(loss=total_loss, logits=logits)
+        logits = torch.cat((start_logits, end_logits), dim=-1)  # [batch_size, seq_length*2]
 
+        return dict(loss=total_loss, logits=logits)

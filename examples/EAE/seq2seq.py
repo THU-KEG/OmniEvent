@@ -123,28 +123,20 @@ if training_args.do_train:
     trainer.train()
 
 if training_args.do_predict:
-    if not data_args.split_infer:
-        logits, labels, metrics, test_dataset = predict_eae(trainer, tokenizer, data_class, data_args, training_args)
-    else:
-        logits, labels, test_dataset = predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args)
+    pred_func = predict_sub_eae if data_args.split_infer else predict_eae
 
-    # pdb.set_trace()
-    preds = np.argmax(logits, axis=-1)
     if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
-        print(metrics)
-        if model_args.paradigm == "sequence_labeling":
-            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-        else:
-            pass
-    else:
-        # save name
-        aggregation = model_args.aggregation
-        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
-        if model_args.paradigm == "token_classification":
-            pass
+        # use gold triggers
+        data_args.golden_trigger = True
+        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
+        print("\n" + "-" * 50 + '\n')
+        print("Test File: {}, \nUse_Gold_Trigger, \nMetrics: {}".format(data_args.test_file, metrics))
 
-        elif model_args.paradigm == "sequence_labeling":
-            if data_args.dataset_name == "DuEE1.0":
-                print("Start get duee submission++++++++++++++++++")
-                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+    for eval_mode in ['default', 'loose', 'strict']:
+        print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
+        data_args.eae_eval_mode = eval_mode
+        data_args.golden_trigger = False
+
+        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
+        print("\n" + "-" * 50 + '\n')
+        print("Test File: {}, \nUse_Pred_Trigger, \nMetrics: {}".format(data_args.test_file, metrics))

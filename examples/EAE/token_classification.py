@@ -89,7 +89,7 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
 
 # model 
 backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
-                                           model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
+                                           model_args.model_name_or_path, insert_markers, model_args, new_tokens=insert_markers)
 model = get_model(model_args, backbone)
 model.cuda()
 data_class = EAETCProcessor
