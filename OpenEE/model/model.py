@@ -152,7 +152,7 @@ class ModelForSequenceLabeling(BaseModel):
                 labels[:, 0] = -100
         else:
             if self.config.head_type == "crf":
-                mask = torch.ones_like(logits[:, 0])
+                mask = torch.ones_like(logits[:, :, 0])
                 preds = self.crf.decode(emissions=logits, mask=mask)
                 logits = torch.LongTensor(preds)
 
