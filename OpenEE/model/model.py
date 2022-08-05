@@ -1,16 +1,21 @@
-import pdb
-from numpy import dtype
+import os 
 import torch 
 import torch.nn as nn 
 
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Union
+
+from transformers import BartForConditionalGeneration, MT5ForConditionalGeneration, T5ForConditionalGeneration
 
 from OpenEE.aggregation.aggregation import get_aggregation, aggregate
-from OpenEE.head.classification import (
-    ClassificationHead,
-    MRCHead
+from OpenEE.head.head import get_head
+from OpenEE.head.classification import LinearHead
+from OpenEE.arguments import (
+    ModelArguments,
+    DataArguments,
+    TrainingArguments,
+    ArgumentParser
 )
-from OpenEE.head.crf import CRF
+from OpenEE.utils import check_web_and_convert_path
 
 
 def get_model(model_args, backbone):
@@ -26,7 +31,40 @@ def get_model(model_args, backbone):
         raise ValueError("No such paradigm")
 
 
-class ModelForTokenClassification(nn.Module):
+def get_model_cls(model_args):
+    if model_args.paradigm == "token_classification":
+        return ModelForTokenClassification
+    elif model_args.paradigm == "sequence_labeling":
+        return ModelForSequenceLabeling
+    elif model_args.paradigm == "seq2seq":
+        if model_args.model_type == "bart":
+            return BartForConditionalGeneration
+        elif model_args.model_type == "t5":
+            return T5ForConditionalGeneration
+        elif model_args.model_type == "mt5":
+            return MT5ForConditionalGeneration
+        else:
+            raise ValueError("Invalid model_type %s" % model_args.model_type)
+    elif model_args.paradigm == "mrc":
+        return ModelForMRC
+    else:
+        raise ValueError("No such paradigm")
+
+
+class BaseModel(nn.Module):
+
+    @classmethod
+    def from_pretrained(cls, model_name_or_path: Union[str, os.PathLike], config=None, **kwargs):
+        if config is None:
+            parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
+            model_args, _, _ = parser.from_pretrained(model_name_or_path, **kwargs)
+        path = check_web_and_convert_path(model_name_or_path, 'model')
+        model = get_model(model_args)
+        model.load_state_dict(torch.load(path), strict=False)
+        return model
+
+
+class ModelForTokenClassification(BaseModel):
     """Bert model for token classification."""
 
     def __init__(self, config, backbone):
@@ -34,7 +72,7 @@ class ModelForTokenClassification(nn.Module):
         self.config = config
         self.backbone = backbone 
         self.aggregation = get_aggregation(config)
-        self.cls_head = ClassificationHead(config)
+        self.cls_head = get_head(config)
 
     def forward(
         self,
@@ -71,14 +109,15 @@ class ModelForTokenClassification(nn.Module):
         return dict(loss=loss, logits=logits)
     
 
-class ModelForSequenceLabeling(nn.Module):
+class ModelForSequenceLabeling(BaseModel):
     """Bert model for token classification."""
 
     def __init__(self, config, backbone):
         super(ModelForSequenceLabeling, self).__init__()
+        self.config = config 
         self.backbone = backbone 
-        self.crf = CRF(config.num_labels, batch_first=True)
-        self.cls_head = ClassificationHead(config)
+        self.cls_head = LinearHead(config)
+        self.head = get_head(config)
 
     def forward(
         self,
@@ -98,30 +137,33 @@ class ModelForSequenceLabeling(nn.Module):
         # compute loss 
         loss = None 
         if labels is not None:
-            loss_fn = nn.CrossEntropyLoss()
-            loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
-            # CRF
-            # mask = labels != -100
-            # labels = labels * mask.to(torch.long)
-            # loss = -self.crf(emissions=logits, 
-            #                 tags=labels,
-            #                 mask=mask,
-            #                 reduction = "token_mean")
+            if self.config.head_type != "crf":
+                loss_fn = nn.CrossEntropyLoss()
+                loss = loss_fn(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
+            else:
+                # CRF
+                labels[:, 0] = 0
+                mask = labels != -100
+                labels = labels * mask.to(torch.long)
+                loss = -self.crf(emissions=logits, 
+                                tags=labels,
+                                mask=mask,
+                                reduction = "token_mean")
         else:
-            # preds = self.crf.decode(emissions=logits, mask=mask)
-            # logits = torch.LongTensor(preds)
-            pass 
+            if self.config.head_type == "crf":
+                preds = self.crf.decode(emissions=logits, mask=mask)
+                logits = torch.LongTensor(preds)
 
         return dict(loss=loss, logits=logits)
 
 
-class ModelForMRC(nn.Module):
+class ModelForMRC(BaseModel):
     """Model for machine reading comprehension"""
 
     def __init__(self, config, backbone) -> None:
         super(ModelForMRC, self).__init__()
         self.backbone = backbone
-        self.mrc_head = MRCHead(config)
+        self.mrc_head = get_head(config)
     
     def forward(
         self,

@@ -1,5 +1,4 @@
-from curses import meta
-import json 
+import os
 import yaml 
 import dataclasses
 
@@ -8,6 +7,8 @@ from dataclasses import dataclass, field
 from typing import Optional, Tuple
 from argparse import Namespace
 from transformers import TrainingArguments, HfArgumentParser
+
+from .utils import check_web_and_convert_path
 
 
 @dataclass
@@ -152,6 +153,10 @@ class ModelArguments:
         default=768,
         metadata={"help": "hidden size"}
     )
+    head_type: int = field(
+        default="linear",
+        metadata={"help": "head type"}
+    )
     head_scale: int = field(
         default=1,
         metadata={"help": "Head scale"}
@@ -293,3 +298,7 @@ class ArgumentParser(HfArgumentParser):
             obj = dtype(**inputs)
             outputs.append(obj)
         return (*outputs,)
+
+    def from_pretrained(self, yaml_file_name_or_path: str):
+        path = check_web_and_convert_path(yaml_file_name_or_path, 'config')
+        return self.parse_yaml_file(os.path.join(path, 'config.yaml'))

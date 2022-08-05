@@ -4,9 +4,9 @@ import torch.nn as nn
 
 
 
-class ClassificationHead(nn.Module):
+class LinearHead(nn.Module):
     def __init__(self, config):
-        super(ClassificationHead, self).__init__()
+        super(LinearHead, self).__init__()
         self.classifier = nn.Linear(config.hidden_size*config.head_scale, config.num_labels)
 
     def forward(self, hidden_state: torch.Tensor) -> torch.Tensor:

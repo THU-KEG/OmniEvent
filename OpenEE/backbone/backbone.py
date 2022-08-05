@@ -14,7 +14,7 @@ from transformers import MT5ForConditionalGeneration
 from transformers import BartForConditionalGeneration, BartTokenizerFast
 from transformers.utils import ModelOutput 
 
-from ..input_engineering.tokenizer import WordLevelTokenizer, load_vocab, VOCAB_FILES_NAMES
+from ..input_engineering.whitespace_tokenizer import WordLevelTokenizer, load_vocab, VOCAB_FILES_NAMES
 
 
 def get_backbone(model_type, model_name_or_path, tokenizer_name, markers, 
