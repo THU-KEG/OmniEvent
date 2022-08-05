@@ -89,8 +89,19 @@ def split_training_data(train_file: str,
 
 
 def detect_nested(input_data: List[dict]) -> List[dict]:
-    """
-    Detect the nested trigger annotations in FewFC dataset in order to manually clean those wrong annotations
+    """Detects the nested trigger annotations in FewFC.
+
+    Some FewFC trigger and entity annotations are nested. The method detects and returns the nested annotations for
+    further check and cleaning.
+
+    Args:
+        input_data (`List[dict]`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+
+    Returns:
+        A list of dictionaries containing the nested event triggers accompanied with their corresponding source texts
+        within the FewFC datasets.
     """
     nested_list = []
     for sent in input_data:
@@ -114,7 +125,23 @@ def detect_nested(input_data: List[dict]) -> List[dict]:
     return nested_list
 
 
-def chinese_tokenizer(input_text: str, tokenizer="jieba") -> List[str]:
+def chinese_tokenizer(input_text: str,
+                      tokenizer="jieba") -> List[str]:
+    """Tokenizes the Chinese input sequence into tokens.
+
+    Tokenizes the Chinese sequence into tokens by calling the relevant packages. The `chinese_tokenizer()` method
+    integrates four commonly-used tokenizers, including Jieba, LTP, THULAC, and HanLP. The tokenized tokens are stored
+    as a list for return.
+
+    Args:
+        input_text (`str`):
+            A string representing the input text for tokenization.
+        tokenizer (`str`):
+            A string indicating the tokenizer utilized for the tokenization process, such as Jieba, LTP, etc.
+
+    Returns:
+        A list of strings representing the tokens after the tokenization of the Chinese input sequence.
+    """
     token_list = []
     if tokenizer == "jieba":
         token_list = jieba.lcut(input_text)

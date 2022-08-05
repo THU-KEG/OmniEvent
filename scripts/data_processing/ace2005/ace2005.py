@@ -1,4 +1,5 @@
 import os
+from typing import List, Optional
 from xml.dom.minidom import parse
 from tqdm import tqdm
 from stanfordcorenlp import StanfordCoreNLP
@@ -39,7 +40,10 @@ class Extractor():
         self.Entities = []
         self.args = args
 
-    def find_index(self, offsets, offset):  # offsets [) offset []
+    def find_index(self,
+                   offsets: List[List[int]],
+                   offset: List[int]):  # offsets [) offset []
+        """Finds the actual word-level offset of the mention."""
         idx_start = -1
         idx_end = -1
         for j, _offset in enumerate(offsets):
@@ -104,6 +108,7 @@ class Extractor():
         return sents, new_offsets
 
     def Files_Extract(self):
+        """Extracts the filenames containing events, source texts, and amps."""
         self.event_files = {}
         self.source_files = {}
         self.amp_files = []
@@ -127,6 +132,7 @@ class Extractor():
         assert evtlen == 599
 
     def Entity_Extract(self):
+        """Extracts the entity annotations from the dataset."""
         all_ents = 0
         for dir in self.dirs:
             path = self.args.ACE_FILES + '/' + dir + '/timex2norm'
@@ -160,6 +166,7 @@ class Extractor():
         print("Total %d mentions, %d entities." % (len(self.Entities), all_ents))
 
     def Event_Extract(self):
+        """Extracts the event annotations from the dataset."""
         nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         offsets2idx = {}
         for dir in self.dirs:
@@ -261,6 +268,7 @@ class Extractor():
         nlp.close()
 
     def None_event_Extract(self):
+        """Extract negative event mentions from the dataset."""
         nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         for dir in self.dirs:
             path = self.args.ACE_FILES + '/' + dir + '/timex2norm'
@@ -479,7 +487,23 @@ class Extractor():
             json.dump(test_set, f, indent=4)
 
 
-def token_pos_to_char_pos(tokens, token_pos):
+def token_pos_to_char_pos(tokens: List[str],
+                          token_pos: List[int]) -> List[int]:
+    """Converts the token-level position of a mention into character-level.
+
+    Converts the token-level position of a mention into character-level by counting the number of characters before the
+    start position of the mention. The end position could then be derived by adding the character-level start position
+    and the length of the mention's span.
+
+    Args:
+        tokens (`List[str]`):
+            A list of strings representing the tokens within the source text.
+        token_pos (`List[int]`):
+            A list of integers indicating the word-level start and end position of the mention.
+
+    Returns:
+        A list of integers representing the character-level start and end position of the mention.
+    """
     word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
     curr_pos = 0
@@ -495,7 +519,22 @@ def token_pos_to_char_pos(tokens, token_pos):
     return [char_start, char_end]
 
 
-def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> dict:
+def convert_ace2005_to_unified(output_dir: str,
+                               file_name: str,
+                               dump: Optional[bool] = True) -> None:
+    """Convert ACE2005 dataset to the unified format.
+
+    Extract the information from the original ACE2005 dataset and convert the format to a unified OpenEE dataset. The
+    converted dataset is written to a json file.
+
+    Args:
+        output_dir (`str`):
+            A string indicating the output directory of the output file.
+        file_name (`str`):
+            A string indicating the filename of the output file.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether to write the manipulated dataset into a json file.
+    """
     data = json.load(open(os.path.join(output_dir, file_name)))
     label2id = dict(NA=0)
     role2id = dict(NA=0)
