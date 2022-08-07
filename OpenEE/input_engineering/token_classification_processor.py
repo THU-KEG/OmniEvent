@@ -2,7 +2,7 @@ import json
 import logging
 
 from tqdm import tqdm
-from typing import List
+from typing import List, Optional, Dict
 
 from .base_processor import (
     EDDataProcessor,
@@ -27,14 +27,14 @@ class EDTCProcessor(EDDataProcessor):
     def __init__(self,
                  config,
                  tokenizer: str,
-                 input_file: str):
+                 input_file: str) -> None:
         """Constructs an EDTCProcessor."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
     def read_examples(self,
-                      input_file: str):
+                      input_file: str) -> None:
         """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         with open(input_file, "r") as f:
@@ -78,7 +78,7 @@ class EDTCProcessor(EDDataProcessor):
                         #     example.labels = candidate["type"]
                         self.examples.append(example)
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
         """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         # merge and then tokenize
         self.input_features = []
@@ -133,14 +133,14 @@ class EAETCProcessor(EAEDataProcessor):
                  tokenizer: str,
                  input_file: str,
                  pred_file: str,
-                 is_training: bool = False):
-        """Constructs a EAETCProcessor."""
+                 is_training: Optional[bool] = False):
+        """Constructs a `EAETCProcessor`."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
     def read_examples(self,
-                      input_file):
+                      input_file: str) -> None:
         """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         trigger_idx = 0
@@ -319,8 +319,8 @@ class EAETCProcessor(EAEDataProcessor):
                       type: str,
                       trigger_position: List[int],
                       argument_position: List[int],
-                      markers: dict,
-                      whitespace: bool = True):
+                      markers: Dict[str, str],
+                      whitespace: Optional[bool] = True) -> str:
         """Adds a marker at the start and end position of event triggers and argument mentions."""
         markered_text = ""
         for i, char in enumerate(text):
@@ -339,7 +339,7 @@ class EAETCProcessor(EAEDataProcessor):
                 markered_text += markers["argument"][1]
         return markered_text
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
         """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         # merge and then tokenize
         self.input_features = []

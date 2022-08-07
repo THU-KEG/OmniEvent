@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Union, Any
+from typing import List, Union, Any, Optional
 
 from tqdm import tqdm
 from .base_processor import (
@@ -27,7 +27,7 @@ class EDSLProcessor(EDDataProcessor):
     def __init__(self,
                  config,
                  tokenizer: str,
-                 input_file: str):
+                 input_file: str) -> None:
         """Constructs a EDSLProcessor."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
@@ -35,7 +35,7 @@ class EDSLProcessor(EDDataProcessor):
         self.convert_examples_to_features()
 
     def read_examples(self,
-                      input_file: str):
+                      input_file: str) -> None:
         """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         with open(input_file, "r", encoding="utf-8") as f:
@@ -73,7 +73,10 @@ class EDSLProcessor(EDDataProcessor):
                 )
                 self.examples.append(example)
 
-    def get_final_labels(self, example, word_ids_of_each_token, label_all_tokens=False):
+    def get_final_labels(self,
+                         example: EDInputExample,
+                         word_ids_of_each_token: List[int],
+                         label_all_tokens: Optional[bool] = False) -> List[Union[str, int]]:
         """Obtains the final label of each token."""
         final_labels = []
         pre_word_id = None
@@ -88,7 +91,7 @@ class EDSLProcessor(EDDataProcessor):
 
         return final_labels
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
         """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         self.input_features = []
 
@@ -132,7 +135,7 @@ class EAESLProcessor(EAEDataProcessor):
                  tokenizer: str,
                  input_file: str,
                  pred_file: str,
-                 is_training: bool = False):
+                 is_training: Optional[bool] = False) -> None:
         """Constructs an EAESLProcessor/"""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.positive_candidate_indices = []
@@ -142,7 +145,7 @@ class EAESLProcessor(EAEDataProcessor):
         self.convert_examples_to_features()
 
     def read_examples(self,
-                      input_file: str):
+                      input_file: str) -> None:
         """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         trigger_idx = 0
@@ -283,7 +286,11 @@ class EAESLProcessor(EAEDataProcessor):
         return final_labels
 
     @staticmethod
-    def insert_marker(text, event_type, labels, trigger_pos, markers):
+    def insert_marker(text: str,
+                      event_type: str,
+                      labels,
+                      trigger_pos: List[int],
+                      markers):
         """Adds a marker at the start and end position of event triggers and argument mentions."""
         left, right = trigger_pos
 
@@ -294,7 +301,7 @@ class EAESLProcessor(EAEDataProcessor):
         assert len(marked_text) == len(marked_labels)
         return marked_text, marked_labels
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
         """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         self.input_features = []
         self.is_overflow = []

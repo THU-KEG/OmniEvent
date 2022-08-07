@@ -1,7 +1,7 @@
 import re
 import json
 import logging
-from typing import List, Union
+from typing import List, Union, Tuple, Optional
 
 from tqdm import tqdm 
 from collections import defaultdict
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def extract_argument(raw_text: str,
                      instance_id: Union[int, str],
                      event_type: str,
-                     template=re.compile(f"[{type_start}{type_end}]")):
+                     template=re.compile(f"[{type_start}{type_end}]")) -> List[Tuple]:
     """Extracts the arguments from the raw text.
 
     Args:
@@ -145,7 +145,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                  tokenizer: str,
                  input_file: str,
                  pred_file: str,
-                 is_training: bool = False):
+                 is_training: Optional[bool] = False) -> None:
         """Constructs a `EAESeq2SeqProcessor`."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
@@ -262,7 +262,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                       tokens: List[str],
                       trigger_pos: List[int],
                       markers: List,
-                      whitespace: bool = True) -> List:
+                      whitespace: Optional[bool] = True) -> List[str]:
         """Adds a marker at the start and end position of event triggers and argument mentions."""
         space = " " if whitespace else ""
         markered_words = []

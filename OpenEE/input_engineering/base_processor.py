@@ -13,19 +13,19 @@ class EDInputExample(object):
     """A single training/test example for event detection.
 
     A single training/test example for event detection, representing the basic information of an event trigger,
-    including its example id, the source text it is within, its start and end position, and its event type.
+    including its example id, the source text it is within, its start and end position, and the label of the event.
 
     Attributes:
         example_id (`Union[int, str]`):
             A string or an integer for the unique id of the example.
-        text (`int`):
+        text (`str`):
             A string representing the source text the event trigger is within.
-        trigger_left (`int`):
-            An integer for the left position of the event trigger.
-        trigger_right (`int`):
-            An integer for the right position of the event trigger.
-        labels (`int`):
-            A string indicating the type of the event trigger.
+        trigger_left (`int`, `optional`, defaults to `None`):
+            An integer indicating the left position of the event trigger.
+        trigger_right (`int`, `optional`, defaults to `None`):
+            An integer indicating the right position of the event trigger.
+        labels (`int`, `optional`, defaults to `None`):
+            A string indicating the label of the event.
     """
 
     def __init__(self,
@@ -45,9 +45,9 @@ class EDInputExample(object):
 class EDInputFeatures(object):
     """Input features of an instance for event detection.
 
-    A single training/test example for event detection, representing the basic features of an event trigger,
-    including its example id, the indices of tokens in the vocabulary, the attention mask, segment token indices, the
-    start and end position, and its event type.
+    Input features of an instance for event detection, representing the basic features of an event trigger, including
+    its example id, the indices of tokens in the vocabulary, attention masks, segment token indices, start and end
+    position, and the label of the event.
 
     Attributes:
         example_id (`Union[int, str]`):
@@ -59,11 +59,11 @@ class EDInputFeatures(object):
         token_type_ids (`List[int]`, `optional`, defaults to `None`):
             A list of integers indicating the first and second portions of the inputs.
         trigger_left (`int`, `optional`, defaults to `None`):
-            An integer for the left position of the event trigger.
+            An integer indicating the left position of the event trigger.
         trigger_right (`int`, `optional`, defaults to `None`):
-            An integer for the right position of the event trigger.
+            An integer indicating the right position of the event trigger.
         labels (`str`, `optional`, defaults to `None`):
-            A string indicating the type of the event trigger.
+            A string indicating the label of the event.
     """
 
     def __init__(self,
@@ -88,33 +88,48 @@ class EAEInputExample(object):
     """A single training/test example for event argument extraction.
 
     A single training/test example for event argument extraction, representing the basic information of an event
-    trigger, including its example id, the source text it is within, its start and end position, and its event type.
+    trigger, including its example id, the source text it is within, the predicted and actual event type, the input
+    template for the Machine Reading Comprehension (MRC) paradigm, the start and end position of the event trigger and
+    argument, and the label of the event.
 
     Attributes:
-        example_id: A string for the unique id of the example.
-        text: A string representing the source text the event trigger is within.
-
-        trigger_left: An integer for the left position of the event trigger.
-        trigger_right: An integer for the right position of the event trigger.
-        argument_left: An integer for the left position of the argument mention.
-        argument_right: An integer for the right position of the argument mention.
-        argument_role: A string indicating the argument role of the argument mention.
-        labels: A string indicating the type of the event trigger.
+        example_id (`Union[int, str]`):
+            A string or an integer for the unique id of the example.
+        text (`str`):
+            A string representing the source text the event trigger and argument is within.
+        pred_type (`str`):
+            A string indicating the event type predicted by the model.
+        true_type (`str`):
+            A string indicating the actual event type from the annotation.
+        input_template:
+            The input template for the MRC paradigm.
+        trigger_left (`int`, `optional`, defaults to `None`):
+            An integer indicating the left position of the event trigger.
+        trigger_right (`int`, `optional`, defaults to `None`):
+            An integer indicating the right position of the event trigger.
+        argument_left (`int`, `optional`, defaults to `None`):
+            An integer indicating the left position of the argument mention.
+        argument_right (`int`, `optional`, defaults to `None`):
+            An integer indicating the right position of the argument mention.
+        argument_role (`str`, `optional`, defaults to `None`):
+            A string indicating the argument role of the argument mention.
+        labels (`str`, `optional`, defaults to `None`):
+            A string indicating the label of the event.
     """
 
     def __init__(self,
                  example_id: Union[int, str],
                  text: str,
-                 pred_type,
-                 true_type,
+                 pred_type: str,
+                 true_type: str,
                  input_template=None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
                  argument_left: Optional[int] = None,
                  argument_right: Optional[int] = None,
-                 argument_role: Optional[int] = None,
+                 argument_role: Optional[str] = None,
                  labels: Optional[str] = None):
-        """Constructs a InputExample."""
+        """Constructs a `EAEInputExample`."""
         self.example_id = example_id
         self.text = text
         self.pred_type = pred_type
@@ -131,9 +146,9 @@ class EAEInputExample(object):
 class EAEInputFeatures(object):
     """Input features of an instance for event argument extraction.
 
-    A single training/test example for event argument extraction, representing the basic features of an argument
-    mention, including its example id, the indices of tokens in the vocabulary, the attention mask, segment token
-    indices, the start and end position of the event trigger and argument mention, and its event type.
+    Input features of an instance for event argument extraction, representing the basic features of an argument mention,
+    including its example id, the indices of tokens in the vocabulary, the attention mask, segment token indices, the
+    start and end position of the event trigger and argument mention, and the label of the event.
 
     Attributes:
         example_id (`Union[int, str]`):
@@ -153,7 +168,7 @@ class EAEInputFeatures(object):
         argument_right (`int`, `optional`, defaults to `None`):
             An integer for the right position of the argument mention.
         labels (`str`, `optional`, defaults to `None`):
-            A string indicating the type of the event trigger.
+            A string indicating the label of the event.
     """
 
     def __init__(self,
@@ -188,7 +203,7 @@ class EDDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string represents the tokenizer utilized for tokenization.
+            A string representing the tokenizer to be utilized for the tokenization process.
         examples (`List[EDInputExample]`):
             A list of `EDInputExample`s constructed based on the input dataset.
         input_features (`List[EDInputFeatures]`):
@@ -198,7 +213,7 @@ class EDDataProcessor(Dataset):
     def __init__(self,
                  config,
                  tokenizer: str) -> None:
-        """Constructs an EDDataProcessor."""
+        """Constructs an `EDDataProcessor`."""
         self.config = config
         self.tokenizer = tokenizer
         self.examples = []
@@ -216,7 +231,7 @@ class EDDataProcessor(Dataset):
     def _truncate(self,
                   outputs: dict,
                   max_seq_length: int):
-        """Truncate sthe sequences that exceed the maximum length."""
+        """Truncates the sequences that exceed the maximum length."""
         is_truncation = False
         if len(outputs["input_ids"]) > max_seq_length:
             print("An instance exceeds the maximum length.")
@@ -240,7 +255,7 @@ class EDDataProcessor(Dataset):
 
     def __getitem__(self,
                     index: int) -> Dict[str, torch.Tensor]:
-        """Returns the features of a given example index in a dictionary."""
+        """Obtains the features of a given example index and converts them into a dictionary."""
         features = self.input_features[index]
         data_dict = dict(
             input_ids=torch.tensor(features.input_ids, dtype=torch.long),
@@ -286,7 +301,7 @@ class EAEDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string represents the tokenizer utilized for tokenization.
+            A string representing the tokenizer to be utilized for the tokenization process.
         is_training (`bool`):
             A boolean variable indicating the state is training or not.
         examples (`List[EDInputExample]`):
@@ -334,7 +349,7 @@ class EAEDataProcessor(Dataset):
         """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         raise NotImplementedError
 
-    def get_data_for_evaluation(self) -> dict:
+    def get_data_for_evaluation(self) -> Dict[str, Union[int, str]]:
         """Obtains the data for evaluation."""
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()
@@ -343,27 +358,29 @@ class EAEDataProcessor(Dataset):
             self.data_for_evaluation["roles"] = self.get_roles()
         return self.data_for_evaluation
 
-    def get_pred_types(self):
+    def get_pred_types(self) -> List[str]:
+        """Obtains the event type predicted by the model."""
         pred_types = []
         for example in self.examples:
             pred_types.append(example.pred_type)
         return pred_types
 
-    def get_true_types(self):
+    def get_true_types(self) -> List[str]:
+        """Obtains the actual event type from the annotation."""
         true_types = []
         for example in self.examples:
             true_types.append(example.true_type)
         return true_types
 
     def get_roles(self) -> List[str]:
-        """Obtains the role of each argument mention (for MRC)."""
+        """Obtains the role of each argument mention."""
         roles = []
         for example in self.examples:
             roles.append(example.argument_role)
         return roles
 
     def _truncate(self,
-                  outputs: dict,
+                  outputs: Dict[str, List[int]],
                   max_seq_length: int):
         """Truncates the sequences that exceed the maximum length."""
         is_truncation = False
@@ -409,7 +426,7 @@ class EAEDataProcessor(Dataset):
             data_dict["labels"] = torch.tensor(features.labels, dtype=torch.long)
         return data_dict
 
-    def collate_fn(self, batch) -> dict:
+    def collate_fn(self, batch) -> Dict[str, torch.Tensor]:
         """Collates the samples in batches."""
         output_batch = dict()
         for key in batch[0].keys():
