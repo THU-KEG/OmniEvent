@@ -26,6 +26,7 @@ class EDInputExample(object):
             An integer indicating the right position of the event trigger.
         labels (`int`, `optional`, defaults to `None`):
             A string indicating the label of the event.
+            TODO: The explanation of the variable `labels` should be checked.
     """
 
     def __init__(self,
@@ -103,6 +104,7 @@ class EAEInputExample(object):
             A string indicating the actual event type from the annotation.
         input_template:
             The input template for the MRC paradigm.
+            TODO: The data type of the variable `input_template` should be configured.
         trigger_left (`int`, `optional`, defaults to `None`):
             An integer indicating the left position of the event trigger.
         trigger_right (`int`, `optional`, defaults to `None`):
@@ -122,7 +124,7 @@ class EAEInputExample(object):
                  text: str,
                  pred_type: str,
                  true_type: str,
-                 input_template=None,
+                 input_template: Optional = None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
                  argument_left: Optional[int] = None,
@@ -203,7 +205,7 @@ class EDDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string representing the tokenizer to be utilized for the tokenization process.
+            A string representing the tokenizer proposed to be utilized for the tokenization process.
         examples (`List[EDInputExample]`):
             A list of `EDInputExample`s constructed based on the input dataset.
         input_features (`List[EDInputFeatures]`):
@@ -231,7 +233,7 @@ class EDDataProcessor(Dataset):
     def _truncate(self,
                   outputs: dict,
                   max_seq_length: int):
-        """Truncates the sequences that exceed the maximum length."""
+        """Truncates the sequence that exceeds the maximum length."""
         is_truncation = False
         if len(outputs["input_ids"]) > max_seq_length:
             print("An instance exceeds the maximum length.")
@@ -301,7 +303,7 @@ class EAEDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string representing the tokenizer to be utilized for the tokenization process.
+            A string representing the tokenizer proposed to be utilized for the tokenization process.
         is_training (`bool`):
             A boolean variable indicating the state is training or not.
         examples (`List[EDInputExample]`):
@@ -382,7 +384,7 @@ class EAEDataProcessor(Dataset):
     def _truncate(self,
                   outputs: Dict[str, List[int]],
                   max_seq_length: int):
-        """Truncates the sequences that exceed the maximum length."""
+        """Truncates the sequence that exceeds the maximum length."""
         is_truncation = False
         if len(outputs["input_ids"]) > max_seq_length:
             print("An instance exceeds the maximum length.")

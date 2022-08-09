@@ -1,10 +1,26 @@
 import os 
 import json 
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
-def get_bio_labels(original_labels, labels_to_exclude=["NA"]) -> Dict[str, int]:
+def get_bio_labels(original_labels: List[str],
+                   labels_to_exclude: Optional[List[str]] = ["NA"]) -> Dict[str, int]:
+    """Generates the id of the BIO labels corresponding to the original label.
+
+    Generates the id of the BIO labels corresponding to the original label. The correspondences between the BIO labels
+    and their ids are saved in a dictionary.
+
+    Args:
+        original_labels (`List[str]`):
+            A list of strings representing the original labels within the dataset.
+        labels_to_exclude (`List[str]`, `optional`, defaults to ["NA"]):
+            A list of strings indicating the labels excluded to use, the id of which would not be generated.
+
+    Returns:
+        bio_labels (`Dict[str, int]`):
+            A dictionary containing the correspondence the BIO labels and their ids.
+    """
     bio_labels = {"O": 0}
     for label in original_labels:
         if label in labels_to_exclude:
@@ -17,15 +33,16 @@ def get_bio_labels(original_labels, labels_to_exclude=["NA"]) -> Dict[str, int]:
 def get_start_poses(sentence: str) -> List[int]:
     """Obtains the start position of each word within the sentence.
 
-    Obtains the start position of each word within the sentence. The character-level start positions are stored in a
-    list.
+    Obtains the start position of each word within the sentence. The character-level start positions of each word are
+    stored in a list.
 
     Args:
         sentence (`str`):
             A string representing the input sentence.
 
     Returns:
-        A list of integers representing the character-level start position of each word.
+        start_poses (`List[int]`):
+            A list of integers representing the character-level start position of each word within the sentence.
     """
     words = sentence.split()
     start_pos = 0
@@ -38,9 +55,9 @@ def get_start_poses(sentence: str) -> List[int]:
 
 def check_if_start(start_poses: List[int],
                    char_pos: List[int]) -> bool:
-    """Check whether the start position of a mention is the beginning of a word.
+    """Check whether the start position of the mention is the beginning of a word.
 
-    Check whether the start position of a mention is the beginning of a word, that is, check whether a trigger or an
+    Check whether the start position of the mention is the beginning of a word, that is, check whether a trigger or an
     argument is a sub-word.
 
     Args:
@@ -59,19 +76,20 @@ def check_if_start(start_poses: List[int],
 
 def get_word_position(start_poses: List[int],
                       char_pos: List[int]) -> int:
-    """Returns the word-level position of a mention.
+    """Returns the word-level position of a given mention.
 
-    Returns the word-level position of a mention by matching the index of the start position of the mention in the list
-    containing the start position of each word within the sentence.
+    Returns the word-level position of a given mention by matching the index of its character-level start position in
+    the list containing the start position of each word within the sentence.
 
     Args:
         start_poses (`List[int]`):
             A list of integers representing the character-level start position of each word within the sentence.
         char_pos (`List[int]`)
-            A list of integers indicating the start and end position of a mention.
+            A list of integers indicating the start and end position of a given mention.
 
     Returns:
-        An integer indicating the word-level position of the mention.
+        `int`:
+            An integer indicating the word-level position of the given mention.
     """
     return start_poses.index(char_pos[0])
 
@@ -81,16 +99,17 @@ def get_words(text: str,
     """Obtains the words within the given text.
 
     Obtains the words within the source text. The recognition of words differs according to language. The words are
-    obtained through splitting white spaces in English, while each character is regarded as a word in Chinese.
+    obtained through splitting white spaces in English, while each Chinese character is regarded as a word in Chinese.
 
     Args:
         text (`str`):
-            A string representing the source text.
+            A string representing the input source text.
         language (`str`):
             A string indicating the language of the source text, English or Chinese.
 
     Returns:
-        A list of strings containing the words within the source text.
+        words (`List[str]`):
+            A list of strings containing the words within the source text.
     """
     if language == "English":
         words = text.split()
