@@ -1,15 +1,38 @@
 import os 
 import json
 import random 
-from pathlib import Path 
+from pathlib import Path
+from typing import Dict, List
 
 
-def save_jsonl(data, path):
+def save_jsonl(data: List[Dict],
+               path: str) -> None:
+    """Write the manipulated dataset into a jsonl file.
+
+    Write the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
+
+    Args:
+        data (`Dic`):
+            A list of dictionaries indicating the manipulated dataset.
+        path (`str`):
+            A string indicating the path to place the written jsonl file.
+    """
     with open(path, "w") as f:
         for item in data:
             f.write(json.dumps(item)+"\n")
-    
-def merge(data_dir):
+
+
+def merge(data_dir: str) -> None:
+    """Merges the processed event argument extraction datasets into larger datasets.
+
+    Merges the processed event argument extraction datasets into larger datasets. The merged training dataset includes
+    the pieces from LDC2015E29, LDC2015E68, LDC2015E78, and TAC KBP 2016, and the merged testing dataset includes the
+    ACE2005-DyGIE and TAC KBP 2017 dataset. The merged datasets are stored into jsonl files.
+
+    Args:
+        data_dir (`str`):
+            A string indicating the directory to place the written jsonl file.
+    """
     all_train = []
     with open(os.path.join(data_dir, "ace2005-dygie/train.unified.jsonl")) as f:
         for line in f.readlines():

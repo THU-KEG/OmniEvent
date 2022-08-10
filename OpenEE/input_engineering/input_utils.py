@@ -1,7 +1,7 @@
 import os 
 import json 
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 
 def get_bio_labels(original_labels: List[str],
@@ -121,7 +121,7 @@ def get_words(text: str,
 
 
 def get_left_and_right_pos(text: str,
-                           trigger: Dict,
+                           trigger: Dict[str, Union[int, str, List[int], List[Dict]]],
                            language: str):
     """Obtains the word-level position of the trigger word's start and end position.
 
@@ -132,14 +132,14 @@ def get_left_and_right_pos(text: str,
     Args:
         text (`str`):
             A string representing the source text that the trigger word is within.
-        trigger (`Dict`):
-            A dictionary containing the trigger word, position, and arguments of a trigger.
+        trigger (`Dict[str, Union[int, str, List[int], List[Dict]]]`):
+            A dictionary containing the trigger word, position, and arguments of an event trigger.
         language (`str`):
             A string indicating the language of the source text and trigger word, English or Chinese.
 
     Returns:
-        Two strings indicating the number of words before the left and right character-level position of the trigger
-        word.
+        left_pos (`str`), right_pos (`str`):
+            Two strings indicating the number of words before the start and end position of the trigger word.
     """
     if language == "English":
         left_pos = len(text[:trigger["position"][0]].split())

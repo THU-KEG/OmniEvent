@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 
 def read_query_templates(prompt_file: str,
-                         translate: Optional[bool] = False) -> Dict[str, Dict[str, str]]:
+                         translate: Optional[bool] = False) -> Dict[str, Dict[str, List[str]]]:
     """Loads query templates from a prompt file.
 
     Loads query templates from a prompt file. If a translation is required, the query templates would be translated from
@@ -21,7 +21,8 @@ def read_query_templates(prompt_file: str,
             A boolean variable indicating whether or not to translate the query templates into Chinese.
 
     Returns:
-        A dictionary containing the query templates applicable for every event type and argument role.
+        query_templates (`Dict[str, Dict[str, List[str]]]`)
+            A dictionary containing the query templates applicable for every event type and argument role.
     """
     et_translation = dict()
     ar_translation = dict()

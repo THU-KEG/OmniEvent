@@ -15,9 +15,11 @@ from OpenEE.head.crf import CRF
 
 def get_model(model_args,
               backbone):
-    """Returns the model to be utilized for training and prediction.
+    """Returns the model proposed to be utilized for training and prediction.
 
-    Returns the model to be utilized for training and prediction based on the pre-defined paradigm.
+    Returns the model proposed to be utilized for training and prediction based on the pre-defined paradigm. The
+    paradigms of training and prediction include token classification, sequence labeling, Sequence-to-Sequence
+    (Seq2Seq), and Machine Reading Comprehension (MRC).
 
     Args:
         model_args:
@@ -26,7 +28,7 @@ def get_model(model_args,
             The backbone model obtained from the `get_backbone()` method.
 
     Returns:
-        The model class of the model to be utilized for training and prediction.
+        The model method/class proposed to be utilized for training and prediction.
     """
     if model_args.paradigm == "token_classification":
         return ModelForTokenClassification(model_args, backbone)
@@ -41,21 +43,22 @@ def get_model(model_args,
 
 
 class ModelForTokenClassification(nn.Module):
-    """Bert model for token classification.
+    """BERT model for token classification.
 
-    Bert model for token classification, which firstly obtains hidden states through the backbone model, then aggregates
+    BERT model for token classification, which firstly obtains hidden states through the backbone model, then aggregates
     the hidden states through the aggregation method/class, and finally classifies each token to their corresponding
-    label.
+    label through token-wise linear transformation.
 
     Attributes:
         config:
             The configurations of the model.
         backbone:
-            The backbone network proposed to output initial hidden states.
+            The backbone network obtained from the `get_backbone()` method to output initial hidden states.
         aggregation:
             The aggregation method/class for aggregating the hidden states output by the backbone network.
         cls_head (`ClassificationHead`):
-            A `ClassificationHead` instance classifying each token into its corresponding label.
+            A `ClassificationHead` instance classifying each token into its corresponding label through a token-wise
+            linear transformation.
     """
 
     def __init__(self,
@@ -78,7 +81,7 @@ class ModelForTokenClassification(nn.Module):
                 argument_right: Optional[torch.Tensor] = None,
                 labels: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """Manipulates the inputs through a backbone, aggregation, and classification module,
-           returns the predicted and loss."""
+           returns the predicted logits and loss."""
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids,
                                 attention_mask=attention_mask,
@@ -104,18 +107,19 @@ class ModelForTokenClassification(nn.Module):
     
 
 class ModelForSequenceLabeling(nn.Module):
-    """Bert model for sequence labeling.
+    """BERT model for sequence labeling.
 
-    Bert model for sequence labeling, which firstly obtains hidden states through the backbone model, then labels each
+    BERT model for sequence labeling, which firstly obtains hidden states through the backbone model, then labels each
     token to their corresponding label, and finally decodes the label through a Conditional Random Field (CRF) module.
 
     Attributes:
         config:
             The configurations of the model.
         backbone:
-            The backbone network proposed to output initial hidden states.
+            The backbone network obtained from the `get_backbone()` method to output initial hidden states.
         cls_head (`ClassificationHead`):
-            A `ClassificationHead` instance classifying each token into its corresponding label.
+            A `ClassificationHead` instance classifying each token into its corresponding label through a token-wise
+            linear transformation.
     """
 
     def __init__(self,
@@ -163,18 +167,19 @@ class ModelForSequenceLabeling(nn.Module):
 
 
 class ModelForMRC(nn.Module):
-    """Model for Machine Reading Comprehension (MRC).
+    """BERT Model for Machine Reading Comprehension (MRC).
 
-    Bert model for Machine Reading Comprehension (MRC), which firstly obtains hidden states through the backbone model,
-    then predicts the start and end logits through the MRC head.
+    BERT model for Machine Reading Comprehension (MRC), which firstly obtains hidden states through the backbone model,
+    then predicts the start and end logits of each mention type through an MRC head.
 
     Attributes:
         config:
             The configurations of the model.
         backbone:
-            The backbone network proposed to output initial hidden states.
+            The backbone network obtained from the `get_backbone()` method to output initial hidden states.
         mrc_head (`MRCHead`):
-            A `MRCHead` instance classifying the hidden states into start and end logits.
+            A `ClassificationHead` instance classifying the hidden states into start and end logits of each mention type
+            through token-wise linear transformations.
     """
 
     def __init__(self,
@@ -191,8 +196,8 @@ class ModelForMRC(nn.Module):
                 token_type_ids: Optional[torch.Tensor] = None,
                 argument_left: Optional[torch.Tensor] = None,
                 argument_right: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
-        """Manipulates the inputs through a backbone, and MRC head module,
-           returns the predicted logits and loss."""
+        """Manipulates the inputs through a backbone and a MRC head module,
+           returns the predicted start and logits and loss."""
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids,
                                 attention_mask=attention_mask,

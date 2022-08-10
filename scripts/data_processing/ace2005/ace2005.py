@@ -15,10 +15,16 @@ from collections import defaultdict
 
 
 class StanfordCoreNLPv2(StanfordCoreNLP):
+    """StanfordCoreNLP toolkit for sentence tokenization.
+
+    StanfordCoreNLP toolkit for sentence tokenization, tokenizing the input sentence into a list of sentences to
+    satisfy the sentence-level event extraction.
+    """
     def __init__(self, path):
         super(StanfordCoreNLPv2, self).__init__(path)  # assign port and comment line84-85 in corenlp.py on MacOS
 
-    def sent_tokenize(self, sentence):
+    def sent_tokenize(self,
+                      sentence: str):
         r_dict = self._request('ssplit,tokenize', sentence)
         tokens = [[token['originalText'] for token in s['tokens']] for s in r_dict['sentences']]
         spans = [[(token['characterOffsetBegin'], token['characterOffsetEnd']) for token in s['tokens']] for s in
@@ -27,7 +33,27 @@ class StanfordCoreNLPv2(StanfordCoreNLP):
 
 
 class Extractor():
-    def __init__(self, args):
+    """An extractor that extracts events triggers, entities, and negative triggers from the dataset.
+
+    An extractor that extracts event triggers, entities, and negative triggers from the dataset, returning the
+    annotations in lists of dictionaries, respectively.
+
+    Attributes:
+        dirs (`List[str]`):
+            A list of strings indicating the subdirectories of the ACE2005 dataset.
+        split_tags (`Dict[str, List[str]]`):
+            A dictionary indicating the special tokens within each subdirectory, which are regarded as split tags.
+        Events (`List[Dict]`):
+            A list of dictionaries representing the event trigger annotations within the dataset.
+        None_events (`List[Dict]`):
+            A list of dictionaries representing the negative event mention annotations within the dataset.
+        Entities (`List[Dict]`):
+            A list of dictionaries representing the entity annotations within the dataset.
+    """
+
+    def __init__(self,
+                 args) -> None:
+        """Constructs an `Extractor`."""
         self.dirs = ['bc', 'bn', 'cts', 'nw', 'un', 'wl']
         self.split_tags = {'bc': ["</SPEAKER>", '</TURN>', '<HEADLINE>', '</HEADLINE>'],
                            'bn': ["<TURN>", "</TURN>"],
@@ -55,7 +81,11 @@ class Extractor():
         assert idx_start != -1 and idx_end != -1
         return idx_start, idx_end
 
-    def sentence_distillation(self, sents, offsets, dir):
+    def sentence_distillation(self,
+                              sents: List[str],
+                              offsets,
+                              dir: str):
+        """Remove the xml elements within the source text."""
         mark_split_tag = self.split_tags[dir]
 
         new_sents = []
@@ -91,7 +121,10 @@ class Extractor():
                 new_offsets.append(suboffset)
         return new_sents, new_offsets
 
-    def correct_offsets(self, sents, offsets):
+    def correct_offsets(self,
+                        sents: List[str],
+                        offsets):
+        """Corrects the offsets of sentences after removing xml elements."""
         new_offsets = []
         minus = 0
         for i, offsets_per_sentence in enumerate(offsets):
@@ -107,7 +140,7 @@ class Extractor():
             new_offsets.append(new_offsets_per_sentence)
         return sents, new_offsets
 
-    def Files_Extract(self):
+    def Files_Extract(self) -> None:
         """Extracts the filenames containing events, source texts, and amps."""
         self.event_files = {}
         self.source_files = {}
@@ -131,7 +164,7 @@ class Extractor():
         assert evtlen == srclen
         assert evtlen == 599
 
-    def Entity_Extract(self):
+    def Entity_Extract(self) -> None:
         """Extracts the entity annotations from the dataset."""
         all_ents = 0
         for dir in self.dirs:
@@ -165,7 +198,7 @@ class Extractor():
                           'file': e[3], 'dir': e[4], 'role': 'None'} for e in self.Entities]
         print("Total %d mentions, %d entities." % (len(self.Entities), all_ents))
 
-    def Event_Extract(self):
+    def Event_Extract(self) -> None:
         """Extracts the event annotations from the dataset."""
         nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         offsets2idx = {}
@@ -267,7 +300,7 @@ class Extractor():
                         self.Events.append(event_summary)
         nlp.close()
 
-    def None_event_Extract(self):
+    def None_event_Extract(self) -> None:
         """Extract negative event mentions from the dataset."""
         nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         for dir in self.dirs:
@@ -345,7 +378,9 @@ class Extractor():
                     self.None_events.append(none_event_summary)
         nlp.close()
 
-    def process(self):
+    def process(self) -> None:
+        """Converts the word-level position annotations of event triggers, entities, and none trigger mentions into
+           character-level position annotations."""
         Events = []
         # convert to sentence level
         events_in_sens = defaultdict(list)
@@ -442,7 +477,9 @@ class Extractor():
         # record
         self.Events = Events
 
-    def Extract(self):
+    def Extract(self) -> None:
+        """Extracts the entities, events and negative mentions, splits the training, validation, and testing set,
+           and writes the datasets into json files."""
         if os.path.exists(os.path.join(self.args.ACE_DUMP, 'train.json')):
             print('--Already Exists Files--')
             return
@@ -502,7 +539,8 @@ def token_pos_to_char_pos(tokens: List[str],
             A list of integers indicating the word-level start and end position of the mention.
 
     Returns:
-        A list of integers representing the character-level start and end position of the mention.
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
     """
     word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
@@ -533,7 +571,7 @@ def convert_ace2005_to_unified(output_dir: str,
         file_name (`str`):
             A string indicating the filename of the output file.
         dump (`bool`, `optional`, defaults to `True`):
-            A boolean variable indicating whether to write the manipulated dataset into a json file.
+            A boolean variable indicating whether or not to write the manipulated dataset into a json file.
     """
     data = json.load(open(os.path.join(output_dir, file_name)))
     label2id = dict(NA=0)

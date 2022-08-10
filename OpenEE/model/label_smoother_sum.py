@@ -8,17 +8,17 @@ from typing import Dict
 
 @dataclass
 class SumLabelSmoother:
-    """Adds label-smoothing on a pre-computed output from the model.
+    """A label-smoothing sum module operated on the pre-computed output from the model.
 
-    Adds label-smoothing on a pre-computed output from the model, a regularization technique that addresses the
-    overfitting and overconfidence problems by adding some noises to decrease the weights of the actual samples when
-    calculating losses.
+    A label-smoothing sum module operated on the pre-computed output from the model, which is a regularization technique
+    that addresses the overfitting and overconfidence problems by adding some noises to decrease the weights of the
+    actual samples when calculating losses.
 
-    Args:
-        epsilon (:obj:`float`, `optional`, defaults to 0.1):
-            The label smoothing factor.
-        ignore_index (:obj:`int`, `optional`, defaults to -100):
-            The index in the labels to ignore when computing the loss.
+    Attributes:
+        epsilon (`float`, `optional`, defaults to 0.1):
+            A float variable indicating the label smoothing factor.
+        ignore_index (`int`, `optional`, defaults to -100):
+            An integer representing the index in the labels to ignore when computing the loss.
     """
 
     epsilon: float = 0.1

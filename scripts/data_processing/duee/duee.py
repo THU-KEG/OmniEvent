@@ -7,20 +7,21 @@ import random
 import jsonlines
 
 from tqdm import tqdm
-from typing import List
+from typing import List, Optional, Dict, Union
 
 random.seed(42)
 
 
-def generate_label2id_role2id(data_path: str):
-    """Allocate an id for event types and roles within the event schema.
+def generate_label2id_role2id(data_path: str) -> None:
+    """Allocates an id for event types and roles within the event schema.
 
-    Allocate an id for event types and roles within the event schema. The id of event types and roles start from 0.
-    Finally, the correspondence of each event type/role and their id are stored in a dictionary, in which the key of
-    each element is the event type/role, and the value is their id.
+    Allocates an id for event types and roles within the event schema. The id of event types and roles start from 0.
+    Finally, the correspondence of each event type/role and their id are stored in a dictionary and dumped into json
+    files, in which the key of each element is the event type/role, and the value is their corresponding id.
 
     Args:
-        data_path: The path of the `duee_event_schema.json` schema file.
+        data_path (`str`):
+            A string indicating the path of the `duee_event_schema.json` schema file.
     """
     label2id, role2id = dict(NA=0), dict(NA=0)
 
@@ -40,21 +41,23 @@ def generate_label2id_role2id(data_path: str):
 
 
 def chinese_tokenizer(input_text: str,
-                      tokenizer="jieba") -> List[str]:
-    """Tokenize the Chinese input sequence into tokens.
+                      tokenizer: Optional[str] = "jieba") -> List[str]:
+    """Tokenizes the Chinese input sequence into tokens.
 
-    Tokenize the Chinese sequence into tokens by calling the relevant packages. The `chinese_tokenizer()` function
-    integrates four commonly-used tokenizers, including Jieba, LTP, THULAC, and HanLP. The tokenized tokens are stored
-    as a list for return.
+    Tokenizes the Chinese input sequence into tokens by calling the relevant packages. The function integrates four
+    commonly-used tokenizers, including Jieba, LTP, THULAC, and HanLP. The tokenized tokens are stored as a list for
+    return.
 
     Args:
-        input_text: The input text for tokenization.
-        tokenizer: The tokenizer utilized for the tokenization process, such as Jieba, LTP, etc.
+        input_text (`str`):
+            A string indicating the input text for tokenization.
+        tokenizer (`str`, `optional`, defaults to "jieba"):
+            A string indicating the tokenizer proposed to be utilized for the tokenization process, selected from
+            "jieba", "ltp", "thulac", and "hanlp".
 
     Returns:
-        A list of tokens after the tokenization of a Chinese input sequence. For example:
-
-        ["雀巢", "裁员", "4000", "人", "：", "时代", "抛弃", "你", "时", "，", "连", "招呼", "都", "不会", "打", "！"]
+        token_list (`List[str]`):
+            A list of strings representing the tokens within the given Chinese input sequence.
     """
     token_list = []
     if tokenizer == "jieba":
@@ -72,7 +75,7 @@ def chinese_tokenizer(input_text: str,
 
 
 def re_tokenize(token_list: List[str],
-                event: dict) -> List[str]:
+                event: Dict) -> List[str]:
     trigger = event["trigger"]
     offset = [event["trigger_start_index"], event["trigger_start_index"]+len(trigger)]
 
@@ -100,32 +103,49 @@ def re_tokenize(token_list: List[str],
 
 
 def convert_duee_to_unified(data_path: str,
-                            dump=True, tokenizer="jieba") -> list:
-    """Convert DuEE 1.0 dataset to the unified format.
+                            dump: Optional[bool] = True,
+                            tokenizer: Optional[str] = "jieba") -> List[Dict[str, Union[str, List[Dict]]]]:
+    """Converts the DuEE 1.0 dataset to the unified format.
 
-    Extract the information from the original DuEE 1.0 dataset and convert the format to a unified OpenEE dataset. The
+    Extracts the information from the original DuEE 1.0 dataset and convert the format to a unified OpenEE dataset. The
     tokens not annotated as triggers are also regarded as negative triggers. The converted dataset is written to a json
     file.
 
     Args:
-        data_path: The path of the original DuEE 1.0 dataset.
-        dump: The setting of whether to write the manipulated dataset into a json file.
-        tokenizer: The tokenizer utilized for the tokenization process, such as Jieba, LTP, etc.
+        data_path (`str`):
+            A string representing the path of the original DuEE 1.0 dataset.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether or not to write the manipulated dataset into a json file.
+        tokenizer (`str`, `optional`, defaults to `jieba`):
+            A string indicating the tokenizer proposed to be utilized for the tokenization process, selected from
+            "jieba", "ltp", "thulac", and "hanlp".
 
     Returns:
-        The manipulated dataset of DuEE 1.0 after converting its format into a unified OpenEE dataset. For example:
+        formatted_data (`List[Dict[str, Union[str, List[Dict]]]]`)
+            A list of dictionary indicating the manipulated dataset of DuEE 1.0 after converting its format into a
+            unified OpenEE dataset. For example:
 
-        {"id": "409389c96efe78d6af1c86e0450fd2d7", "text": "雀巢裁员4000人：时代抛弃你时，连招呼都不会打！",
-         "events": [
-            {"type": "组织关系-裁员",
-             "triggers": [{"id": "409389c96efe78d6af1c86e0450fd2d7-17fc695a07a0ca6e0822e8f36c031199",
-                           "trigger_word": "裁员", "position": [2, 4],
-                           "arguments": [{"id": "bdd640fb06671ad11c80317fa3b1799d", "role": "裁员方", "mentions": [
-                            {"mention_id": "23b8c1e9392456de3eb13b9046685257", "mention": "雀巢",
-                             "position": [0, 2]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         "negative_triggers": [{"id": "409389c96efe78d6af1c86e0450fd2d7-9215ce3e90dd4507a282e59ca06a63eb",
-                                "trigger_word": "雀巢", "position": [0, 2]}, ... ]}
+            {
+                "id": "409389c96efe78d6af1c86e0450fd2d7",
+                "text": "雀巢裁员4000人：时代抛弃你时，连招呼都不会打！",
+                "events": [{
+                    "type": "组织关系-裁员",
+                    "triggers": [{
+                        "id": "409389c96efe78d6af1c86e0450fd2d7-17fc695a07a0ca6e0822e8f36c031199",
+                        "trigger_word": "裁员",
+                        "position": [2, 4]}, ...]}, ...]},
+                        "arguments": [{
+                            "id": "bdd640fb06671ad11c80317fa3b1799d",
+                            "role": "裁员方",
+                            "mentions": [{
+                                "mention_id": "23b8c1e9392456de3eb13b9046685257",
+                                "mention": "雀巢",
+                                "position": [0, 2]}, ... ]}, ... ]}, ... ]}, ... ]},
+                "negative_triggers": [{
+                    "id": "409389c96efe78d6af1c86e0450fd2d7-9215ce3e90dd4507a282e59ca06a63eb",
+                    "trigger_word": "雀巢",
+                    "position": [0, 2]}, ...]
+            }
     """
     duee_data = list(jsonlines.open(data_path))
 

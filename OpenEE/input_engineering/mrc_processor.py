@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 
 class EAEMRCProcessor(EAEDataProcessor):
-    """Data processor for machine reading comprehension for event argument extraction.
+    """Data processor for Machine Reading Comprehension (MRC) for event argument extraction.
 
-    Data processor for machine reading comprehension for event argument extraction. The class is inherited from the
-    `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
-    `convert_examples_to_features()` are  implemented; a new function entitled `remove_sub_word()` is defined to remove
-    the annotations whose word is a sub-word, and the rest of the attributes and functions are multiplexed from the
+    Data processor for Machine Reading Comprehension (MRC) for event argument extraction. The class is inherited from
+    the `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are implemented; a new function entitled `remove_sub_word()` is defined to remove
+    the annotations whose word is a sub-word, the rest of the attributes and functions are multiplexed from the
     `EAEDataProcessor` class.
     """
 

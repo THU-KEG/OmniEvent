@@ -4,10 +4,10 @@ import torch.nn as nn
 
 
 class ClassificationHead(nn.Module):
-    """A classification head for classifying hidden states to label distributions.
+    """A token-wise classification head for classifying the hidden states to label distributions.
 
-    A classification head for classifying hidden states to label distributions by selecting the label with the highest
-    probability corresponding to each logit.
+    A token-wise classification head for classifying hidden states to label distributions through a linear
+    transformation, selecting the label with the highest probability corresponding to each logit.
 
     Attributes:
         classifier (`nn.Linear`):
@@ -20,28 +20,22 @@ class ClassificationHead(nn.Module):
 
     def forward(self,
                 hidden_state: torch.Tensor) -> torch.Tensor:
-        """Classifies hidden_state to label distribution.
-        
-        Args:
-            hidden_state: Aggregated textual information. shape: [batch_size, ..., hidden_size]
-        
-        Returns:
-            logits: Raw, unnormalized scores for each label. shape: [batch_size, ..., num_labels]
-        """
+        """Classifies hidden states to label distribution."""
         logits = self.classifier(hidden_state)
         return logits
 
 
 class MRCHead(nn.Module):
-    """A classification head for the Machine Reading Comprehension (MRC) model.
+    """A token-wise classification head for the Machine Reading Comprehension (MRC) paradigm.
 
-    A classification head for the Machine Reading Comprehension (MRC) model by predicting the answer of each question
+    A classification head for the Machine Reading Comprehension (MRC) paradigm, predicting the answer of each question
     corresponding to a mention type. The classifier returns two logits indicating the start and end position of each
-    mention.
+    mention corresponding to the question.
 
     Attributes:
         qa_outputs (`nn.Linear`):
-            An `nn.Linear` layer indicates the start and end position of each mention corresponding to the question.
+            An `nn.Linear` layer transforming the hidden states to two logits, indicating the start and end position
+            of a given mention type.
     """
     def __init__(self,
                  config) -> None:

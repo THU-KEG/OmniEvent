@@ -53,11 +53,12 @@ def extract_argument(raw_text: str,
 
 
 class EDSeq2SeqProcessor(EDDataProcessor):
-    """Data processor for sequence to sequence for event detection.
+    """Data processor for Sequence-to-Sequence (Seq2Seq) for event detection.
 
-    Data processor for token classification for event detection. The class is inherited from the`EDDataProcessor` class,
-    in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
-    the rest of the attributes and functions are multiplexed from the `EDDataProcessor` class.
+    Data processor for Sequence-to-Sequence (Seq2Seq) for event detection. The class is inherited from the
+    `EDDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are  implemented; the rest of the attributes and functions are multiplexed from the
+    `EDDataProcessor` class.
     """
 
     def __init__(self,

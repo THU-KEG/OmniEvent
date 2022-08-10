@@ -1,5 +1,6 @@
 from typing import Dict, List, Union
 
+
 def token_pos_to_char_pos(tokens: List[str],
                           token_pos: List[int]) -> List[int]:
     """Converts the token-level position of a mention into character-level.

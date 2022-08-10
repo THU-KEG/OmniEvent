@@ -6,25 +6,23 @@ import torch.nn as nn
 
 
 class CRF(nn.Module):
-    """Conditional random field.
+    """Conditional Random Field (CRF) module.
 
-    This module implements a conditional random field . The forward computation of this class computes the log
-    likelihood of the given sequence of tags and emission score tensor. This class also has `CRF.decode` method which
-    finds the best tag sequence given an emission score tensor using `Viterbi algorithm`.
-
-    Args:
-        num_tags:
-            Number of tags.
-        batch_first:
-            Whether the first dimension corresponds to the size of a minibatch.
+    This module implements a Conditional Random Field (CRF). The forward computation of this class computes the log
+    likelihood of the given sequence of tags and emission score tensor. This class also has `CRF.decode()` method which
+    finds the best tag sequence given an emission score tensor using Viterbi algorithm.
 
     Attributes:
+        num_tags (`int`):
+            An integer indicating the number of tags to be predicted.
+        batch_first (`bool`):
+            A boolean variable indicating whether or not splitting the data in batches.
         start_transitions (`nn.Parameter`):
-            Start transition score tensor of size `(num_tags,)`.
+            An `nn.Parameter` matrix containing the start transition score tensor of size `(num_tags,)`.
         end_transitions (`nn.Parameter`):
-            End transition score tensor of size `(num_tags,)`.
+            An `nn.Parameter` matrix containing the end transition score tensor of size `(num_tags,)`.
         transitions (`nn.Parameter`):
-            Transition score tensor of size ``(num_tags, num_tags)``.
+            An `nn.Parameter` matrix indicating the score tensor of size `(num_tags, num_tags)`.
     """
 
     def __init__(self,
@@ -59,30 +57,7 @@ class CRF(nn.Module):
                 tags: torch.LongTensor,
                 mask: Optional[torch.ByteTensor] = None,
                 reduction: str = 'sum') -> torch.Tensor:
-        """Compute the conditional log likelihood of a sequence of tags given emission scores.
-
-        Args:
-            emissions (`torch.Tensor`):
-                Emission score tensor of size.
-                `(seq_length, batch_size, num_tags)` if `batch_first` is `False`,
-                `(batch_size, seq_length, num_tags)` otherwise.
-            tags (`torch.LongTensor`):
-                Sequence of tags tensor of size.
-                `(seq_length, batch_size)` if `batch_first` is `False`,
-                `(batch_size, seq_length)` otherwise.
-            mask (`torch.ByteTensor`)::
-                Mask tensor of size `(seq_length, batch_size)` if `batch_first`` is `False`,
-                `(batch_size, seq_length)` otherwise.
-            reduction:
-                Specifies the reduction to apply to the output:
-                `none|sum|mean|token_mean`. `none`: no reduction will be applied.
-                `sum`: the output will be summed over batches. `mean`: the output will be averaged over batches.
-                `token_mean`: the output will be averaged over tokens.
-
-        Returns:
-            `torch.Tensor`: The log likelihood. This will have size `(batch_size,)` if reduction is `none`,
-            `()` otherwise.
-        """
+        """Compute the conditional log likelihood of a sequence of tags given emission scores."""
         self._validate(emissions, tags=tags, mask=mask)
         if reduction not in ('none', 'sum', 'mean', 'token_mean'):
             raise ValueError(f'invalid reduction: {reduction}')
@@ -112,20 +87,7 @@ class CRF(nn.Module):
 
     def decode(self, emissions: torch.Tensor,
                mask: Optional[torch.ByteTensor] = None) -> List[List[int]]:
-        """Find the most likely tag sequence using Viterbi algorithm.
-        Args:
-            emissions (`torch.Tensor`):
-                Emission score tensor of size.
-                `(seq_length, batch_size, num_tags)` if `batch_first` is `False`,
-                `(batch_size, seq_length, num_tags)` otherwise.
-            mask (`torch.ByteTensor`):
-                Mask tensor of size.
-                `(seq_length, batch_size)` if `batch_first` is `False`,
-                `(batch_size, seq_length)` otherwise.
-
-        Returns:
-            List of list containing the best tag sequence for each batch.
-        """
+        """Find the most likely tag sequence using Viterbi algorithm."""
         self._validate(emissions, mask=mask)
         if mask is None:
             mask = emissions.new_ones(emissions.shape[:2], dtype=torch.uint8)
