@@ -2,29 +2,26 @@ import os
 import json
 import jsonlines
 from tqdm import tqdm
+from typing import Dict, List
 
 
 def convert_leven_to_unified(data_path: str,
-                             dump=True) -> list:
+                             dump=True) -> List[Dict]:
     """Convert LEVEN dataset to the unified format.
 
     Extract the information from the original LEVEN dataset and convert the format to a unified OpenEE dataset. The
     converted dataset is written to a json file.
 
     Args:
-        data_path: The path of the original LEVEN dataset.
-        dump: The setting of whether to write the manipulated dataset into a json file.
+        data_path (`str`):
+            A string indicating the path of the original LEVEN dataset.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether or not writing the manipulated dataset to a json file.
 
     Returns:
-        The manipulated dataset of LEVEN after converting its format into a unified OpenEE dataset. For example:
-
-        {"id": "c6663b3c88ed4826a4b1b22b1ef8370a", "text": "2011年7月至2012年7月间，被告人王师才为非法获利，...",
-         "events": [
-            {"type": "获利",
-             "triggers": [{"id": "c6663b3c88ed4826a4b1b22b1ef8370a-c42390c4d1cb4b65a8329199c639ded0",
-                           "trigger_word": "获利", "position": [26, 28]}, ... ]
-         "negative_triggers": [{"id": "c6663b3c88ed4826a4b1b22b1ef8370a-f44294881cc34f8fb5c75dc98367e174",
-                                "trigger_word": "月间", "position": [14, 16]}, ... ]}
+        formatted_data (`List[Dict]`):
+            A list of dictionaries representing the manipulated dataset of LEVEN after converting its format into a
+            unified OpenEE dataset.
     """
     leven_data = list(jsonlines.open(data_path))
 

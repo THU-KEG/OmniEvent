@@ -16,7 +16,8 @@ def token_pos_to_char_pos(tokens: List[str],
             A list of integers indicating the word-level start and end position of the mention.
 
     Returns:
-        A list of integers representing the character-level start and end position of the mention.
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
     """
     word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
@@ -46,7 +47,8 @@ def generate_negative_trigger_per_item(item: Dict):
             argument, and entity annotations of the sentence.
 
     Returns:
-         A dictionary similar to the input dictionary but added the negative triggers annotations.
+        item (`Dict`):
+            A dictionary similar to the input dictionary but added the negative triggers annotations.
     """
     tokens = item["text"].split()
     trigger_position = {i: False for i in range(len(tokens))}
@@ -84,7 +86,8 @@ def generate_negative_trigger(data: Dict,
             A list of dictionaries containing the sentences that do not contain any event triggers and entities.
 
     Returns:
-        A dictionary similar to the input dictionary but added the negative triggers annotations.
+        all_data (`Dict`)
+            A dictionary similar to the input dictionary but added the negative triggers annotations.
     """
     for item in data:
         tokens = item["text"].split()

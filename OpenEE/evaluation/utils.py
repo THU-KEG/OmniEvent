@@ -61,23 +61,23 @@ def predict_ed(trainer,
         trainer:
             The trainer for event detection.
         tokenizer (`str`):
-            The name of the tokenizer proposed for the tokenization process.
+            A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
         data_args:
-            The arguments of the dataset.
+            The pre-defined arguments for data processing.
         data_file (`str`):
-            The path of the dataset file.
+            A string representing the file path of the dataset.
 
     Returns:
-        logits:
-            The logits of the prediction.
-        labels:
-            The labels of the prediction.
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
         metrics:
-            The evaluation metric result.
+            The evaluation metrics result based on the predictions and annotations.
         dataset:
-            The test dataset.
+            An instance of the testing dataset.
     """
     dataset = data_class(data_args, tokenizer, data_file)
     logits, labels, metrics = trainer.predict(
@@ -103,23 +103,23 @@ def predict_sub_ed(trainer,
         trainer:
             The trainer for event detection.
         tokenizer (`str`):
-            The name of the tokenizer proposed for the tokenization process.
+            A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
         data_args:
-            The arguments of the dataset.
+            The pre-defined arguments for data processing.
         data_file (`str`):
-            The path of the dataset file.
+            A string representing the file path of the dataset.
 
     Returns:
-        logits:
-            The logits of the prediction.
-        labels:
-            The labels of the prediction.
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
         metrics:
-            The evaluation metric result.
+            The evaluation metrics result based on the predictions and annotations.
         dataset:
-            The test dataset.
+            An instance of the testing dataset.
     """
     data_file_full = data_file
     data_file_list = get_sub_files(input_test_file=data_file_full,
@@ -155,23 +155,23 @@ def predict_eae(trainer,
         trainer:
             The trainer for event detection.
         tokenizer (`str`):
-            The name of the tokenizer proposed for the tokenization process.
+            A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
         data_args:
-            The arguments of the dataset.
+            The pre-defined arguments for data processing.
         training_args:
-            The arguments of the training process.
+            The pre-defined arguments for the training process.
 
     Returns:
-        logits:
-            The logits of the prediction.
-        labels:
-            The labels of the prediction.
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
         metrics:
-            The evaluation metric result.
+            The evaluation metrics result based on the predictions and annotations.
         test_dataset:
-            The test dataset.
+            An instance of the testing dataset.
     """
     test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
     training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
@@ -196,23 +196,23 @@ def predict_sub_eae(trainer,
         trainer:
             The trainer for event detection.
         tokenizer (`str`):
-            The name of the tokenizer proposed for the tokenization process.
+            A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
         data_args:
-            The arguments of the dataset.
+            The pre-defined arguments for data processing.
         training_args:
-            The arguments of the training process.
+            The pre-defined arguments for the training process.
 
     Returns:
-        logits:
-            The logits of the prediction.
-        labels:
-            The labels of the prediction.
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
         metrics:
-            The evaluation metric result.
+            The evaluation metrics result based on the predictions and annotations.
         test_dataset:
-            The test dataset.
+            An instance of the testing dataset.
     """
     test_file_full, test_pred_file_full = data_args.test_file, data_args.test_pred_file
     test_file_list, test_pred_file_list = get_sub_files(input_test_file=test_file_full,

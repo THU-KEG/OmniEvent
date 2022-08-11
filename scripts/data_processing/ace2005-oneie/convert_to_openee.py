@@ -29,7 +29,8 @@ def token_pos_to_char_pos(token_list: List[str],
             A string representing the mention.
 
     Returns:
-        A list of integers representing the character-level start and end position of the mention.
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
     """
     char_start = len(" ".join(token_list[:start]))
     char_start += 0 if start == 0 else 1

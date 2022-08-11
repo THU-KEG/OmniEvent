@@ -1,5 +1,7 @@
 import copy
 import json
+from typing import List, Dict, Union
+
 import jsonlines
 import os
 import re
@@ -12,9 +14,33 @@ from utils import token_pos_to_char_pos, generate_negative_trigger
 
 
 class Config(object):
+    """The configurations of this project.
+
+    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
+    path of the evaluation dataset.
+
+    Attributes:
+        DATA_FOLDER (`str`):
+            A string indicating the folder containing all the datasets.
+        EVAL_DATA_FOLDER (`str`):
+            A string indicating the folder containing the annotation folder and source text folder of the evaluation
+            data.
+        EVAL_GOLD_FOLDER_DF (`str`):
+            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
+            documents of the evaluation data, in which the source text of the documents are discussion forum texts.
+        EVAL_GOLD_FOLDER_NW (`str`):
+            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
+            documents of the evaluation data, in which the source text of the documents are newswires.
+        EVAL_SOURCE_FOLDER_DF (`str`):
+            A string indicating the folder containing the source texts of the documents, corresponding to the documents
+            under the `EVAL_GOLD_FOLDER_DF` folder of the evaluation data.
+        EVAL_SOURCE_FOLDER_NW (`str`):
+            A string indicating the folder containing the source texts of the documents, corresponding to the documents
+            under the `EVAL_GOLD_FOLDER_NW` folder of the evaluation data.
+        SAVE_DATA_FOLDER (`str`):
+            A string indicating the folder of saving the manipulated dataset.
     """
-    The configurations of this project.
-    """
+
     def __init__(self):
         # The configuration for the project (current) folder.
         self.DATA_FOLDER = "../../../data"
@@ -37,37 +63,29 @@ def read_eval(eval_gold_folder_df: str,
               eval_gold_folder_nw: str,
               eval_source_folder_df: str,
               eval_source_folder_nw: str):
-    """Read the files and construct the evaluation dataset.
+    """Reads the files and construct the evaluation dataset.
 
-    Read the files and construct the evaluation dataset, including the source text from the discussion forum text (df)
+    Reads the files and construct the evaluation dataset, including the source text from the discussion forum text (df)
     and newswire (nw). Construct the df and nw datasets separately and combine them for return.
 
     Args:
-        eval_gold_folder_df: The path of the folder containing the annotations of the df documents.
-        eval_gold_folder_nw: The path of the folder containing the annotations of the nw documents.
-        eval_source_folder_df: The path of the folder containing the source text of the df documents.
-        eval_source_folder_nw: The path of the folder containing the source text of the nw documents.
+        eval_gold_folder_df (`str`):
+            A string representing the path of the folder containing the annotations of the df documents.
+        eval_gold_folder_nw (`str`):
+            A string representing the path of the folder containing the annotations of the nw documents.
+        eval_source_folder_df (`str`):
+            A string representing the path of the folder containing the source text of the df documents.
+        eval_source_folder_nw (`str`):
+            A string representing the path of the folder containing the source text of the nw documents.
 
     Returns:
-        A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
-        annotations of each document in the evaluation dataset. For example:
+        `List[Dict[str, Union[str, List]]]`
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each sentence within each document of the evaluation dataset.
 
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF-0", "text": "Justin Bourque The Moncton shooter is arrested .",
-         "events": [
-            {"type": "attack",
-             "triggers": [{"id": "em-369", "trigger_word": "shooter", "position": [27, 34],
-                           "arguments": [{"role": "attacker", "mentions": [
-                            {"id": "m-27", "mention": "The Moncton shooter", "position": [15, 34]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         ],
-         "negative_triggers": [],
-         "entities": [{"type": "PER",
-                       "mentions": [{"id": "m-36", "mention": "Moncton", "position": [19, 26]}, ... ], ... ]}
-
-        A list of dictionaries containing the sentences that do not contain any trigger words and entities within. For
-        example:
-
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF", "sentences": ["Time will tell .", ... ]}
+        `List[Dict[str, Union[str, List[str]]]]`:
+             A list of dictionaries containing the sentences not contain any triggers and entities within. of the
+             evaluation dataset.
     """
     # Separately construct the df and nw documents.
     eval_documents_df_sent, eval_documents_df_without_event = \
@@ -83,33 +101,25 @@ def read_eval(eval_gold_folder_df: str,
 def read_xml(gold_folder: str,
              source_folder: str,
              mode: str):
-    """Read the annotation files and save the annotation of event triggers, arguments, and entities.
+    """Reads the annotation files and saves the annotation of event triggers, arguments, and entities.
 
-    Read the annotation files and extract the event trigger, argument, and entity annotations and save them to a
+    Reads the annotation files and extracts the event trigger, argument, and entity annotations and saves them to a
     dictionary. Finally, the annotations of each document are stored in a list.
 
     Args:
-        gold_folder: The path of the folder containing the annotations of the documents.
-        source_folder: The path of the folder containing the source text of the documents.
-        mode: The type of the dataset to construct, either "train" or "eval".
+        gold_folder (`str`):
+            A string representing the path of the folder containing the annotations of the documents.
+        source_folder (`str`):
+            A string representing the path of the folder containing the source text of the documents.
+        mode (`str`):
+            A string indicating the type of the dataset to construct, either "train" or "eval".
 
     Returns:
-        A list of dictionaries containing each document's document id and the trigger, argument, and entity annotations.
-        The source text of each document is temporarily left blank, which will be extracted in the `read_source()`
-        function. For example:
-
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF", "text": "",
-         "events": [
-            {"type": "attack",
-             "triggers": [{"id": "em-369", "trigger_word": "shooter", "position": [155, 162],
-                           "arguments": [{"role": "attacker", "mentions": [
-                            {"id": "m-27", "mention": "The Moncton shooter", "position": [143, 162]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         "negative_triggers": [],
-         "entities": [{"type": "PER",
-                       "mentions": [{"id": "m-12", "mention": "Justin Bourque", "position": [55, 69]}, ... ], ... ]}
-
-        The processed `documents` is then sent to the `read_source()` function for source text extraction.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing each document's document id and the trigger, argument, and entity
+            annotations. The source text of each document is temporarily left blank, which will be extracted in the
+            `read_source()` method. The processed `documents` is then sent to the `read_source()` function for source
+            text extraction.
     """
     # Initialise the document list.
     documents = list()
@@ -277,38 +287,29 @@ def read_xml(gold_folder: str,
     return read_source(documents, source_folder, mode)
 
 
-def read_source(documents: list,
+def read_source(documents: List[Dict[str, Union[str, List]]],
                 source_folder: str,
                 mode: str):
-    """Extract the source text of each document and remove the xml elements.
+    """Extracts the source text of each document and removes the xml elements.
 
-    Extract the source text of each document and remove the xml elements (covered by "<>"), url elements (start with
+    Extracts the source text of each document and removes the xml elements (covered by "<>"), url elements (start with
     "http"), and linebreaks within the source text. The position of trigger words, arguments, and entities are also
     amended after removing the xml elements.
 
     Args:
-        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each document.
-        source_folder: The path of the folder containing the source text of the documents.
-        mode: The type of the dataset to construct, either "train" or "eval".
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each document.
+        source_folder (`str`):
+            A string representing the path of the folder containing the source text of the documents.
+        mode (`str`):
+            A string indicating the type of the dataset to construct, either "train" or "eval".
 
     Returns:
-        A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
-        annotations of each document. For example:
-
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF", "text": "Justin Bourque The Moncton shooter is arrested. ...",
-         "events": [
-            {"type": "attack",
-             "triggers": [{"id": "em-369", "trigger_word": "shooter", "position": [27, 34],
-                           "arguments": [{"role": "attacker", "mentions": [
-                            {"id": "m-27", "mention": "The Moncton shooter", "position": [15, 34]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         "negative_triggers": [],
-         "entities": [{"type": "PER",
-                       "mentions": [{"id": "m-12", "mention": "Justin Bourque", "position": [0, 14]}, ... ], ... ]}
-
-        The processed `documents` is then sent to the `clean_documents()` to remove the arguments and entities that
-        within the xml elements of the original source text.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document. The processed `documents` is then sent to the `clean_documents()` to remove
+            the arguments and entities that within the xml elements of the original source text.
     """
     for document in tqdm(documents, desc="Reading source..."):
         # Configure the different file paths for df"s and nw"s.
@@ -413,34 +414,24 @@ def read_source(documents: list,
     return clean_documents(documents)
 
 
-def clean_documents(documents: list):
-    """Remove the entities and arguments within the xml elements of the original source text.
+def clean_documents(documents: List[Dict[str, Union[str, List]]]):
+    """Removes the entities and arguments within the xml elements of the original source text.
 
-    Remove the entities and arguments within the xml elements of the original source text, Considering the xml elements
+    Removes the entities and arguments within the xml elements of the original source text, Considering the xml elements
     have been removed from the source text in the `read_source()` function by constructing a new dataset, in which the
     event trigger, argument, and entity annotations are not within the xml elements.
 
     Args:
-        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each document.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document.
 
     Returns:
-        A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
-        annotations of each document, without the arguments and entities within the xml elements of the original source
-        text. For example:
-
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF", "text": "Justin Bourque The Moncton shooter is arrested. ...",
-         "events": [
-            {"type": "attack",
-             "triggers": [{"id": "em-369", "trigger_word": "shooter", "position": [27, 34],
-                           "arguments": [{"role": "attacker", "mentions": [
-                            {"id": "m-27", "mention": "The Moncton shooter", "position": [15, 34]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         "negative_triggers": [],
-         "entities": [{"type": "PER",
-                       "mentions": [{"id": "m-12", "mention": "Justin Bourque", "position": [0, 14]}, ... ], ... ]}
-
-        The processed `documents_clean` is then sent to the `sentence_tokenize()` function for sentence tokenization.
+        documents_clean (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document, without the arguments and entities within the xml elements of the original
+            source text. The processed `documents_clean` is then sent to the `sentence_tokenize()` function for sentence
+            tokenization.
     """
     # Initialise the structure for the cleaned documents.
     documents_clean = list()
@@ -502,35 +493,23 @@ def clean_documents(documents: list):
     return sentence_tokenize(documents_clean)
 
 
-def sentence_tokenize(documents: list):
-    """Tokenize the source text into sentences and match the corresponding event triggers, arguments, and entities.
+def sentence_tokenize(documents: List[Dict[str, Union[str, List]]]):
+    """Tokenizes the source text into sentences and matches the corresponding event triggers, arguments, and entities.
 
-    Tokenize the source text into sentences, and match the event triggers, arguments, and entities that belong to each
-    sentence. The sentences do not contain any triggers and entities are stored separately.
+    Tokenizes the source text into sentences, and matches the event triggers, arguments, and entities that belong to
+    each sentence. The sentences do not contain any triggers and entities are stored separately.
 
     Args:
-        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each document.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document.
 
     Returns:
-        documents_split: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each sentence within each document.
-
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF-0", "text": "Justin Bourque The Moncton shooter is arrested.",
-         "events": [
-            {"type": "attack",
-             "triggers": [{"id": "em-369", "trigger_word": "shooter", "position": [27, 34],
-                           "arguments": [{"role": "attacker", "mentions": [
-                            {"id": "m-27", "mention": "The Moncton shooter", "position": [15, 34]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         "negative_triggers": [],
-         "entities": [{"type": "PER",
-                       "mentions": [{"id": "m-12", "mention": "Justin Bourque", "position": [0, 14]}, ... ], ... ]}
-
-        documents_without_event: A list of dictionaries containing the sentences not contain any triggers and entities
-        within. For example:
-
-        {"id": "ENG_NW_001278_20130109_F00011TB4", "sentences": ["EnditemRA"]}
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers and entities within.
 
         The processed `documents_split` and `documents_without_event` is then sent to the `add_spaces()` function
         for adding spaces beside punctuations.
@@ -631,40 +610,27 @@ def sentence_tokenize(documents: list):
     return add_spaces(documents_split, documents_without_event)
 
 
-def add_spaces(documents_split: list,
-               documents_without_event: list):
-    """Add a space before and after the punctuations.
+def add_spaces(documents_split: List[Dict[str, Union[str, List]]],
+               documents_without_event: List[Dict[str, Union[str, List[str]]]]):
+    """Adds a space before and after the punctuations.
 
-    Add a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
+    Adds a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
     source texts. The mention and position of the event trigger, argument, and entity annotations are also amended.
 
     Args:
-        documents_split: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each sentence.
-        documents_without_event: A list of dictionaries containing the sentences not contain any triggers and entities
-        within.
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers and entities within.
 
     Returns:
-        documents_split: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each sentence. For example:
-
-        {"id": "ENG_DF_001503_20140607_G00A0AIFF-0", "text": "Justin Bourque The Moncton shooter is arrested .",
-         "events": [
-            {"type": "attack",
-             "triggers": [{"id": "em-369", "trigger_word": "shooter", "position": [27, 34],
-                           "arguments": [{"role": "attacker", "mentions": [
-                            {"id": "m-27", "mention": "The Moncton shooter", "position": [15, 34]}, ... ]}, ... ]},
-                          ... ]}, ... ],
-         "negative_triggers": [],
-         "entities": [{"type": "PER",
-                       "mentions": [{"id": "m-12", "mention": "Justin Bourque", "position": [0, 14]}, ... ], ... ]}
-
-        documents_without_event: A list of dictionaries containing the sentences not contain any triggers and entities
-        within. For example:
-
-        {"id": "ENG_NW_001278_20130109_F00011TB4", "sentences": ["EnditemRA"]}
-
-        The processed `documents_split` and `documents_without_event` are returned as final results.
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers and entities within. The processed
+            `documents_split` and `documents_without_event` are returned as final results.
     """
     for document in tqdm(documents_split, desc="Adding spaces..."):
         punc_char = list()
@@ -795,24 +761,28 @@ def add_spaces(documents_split: list,
     return documents_split, documents_without_event
 
 
-def fix_tokenize(sentence_tokenize: list,
-                 sentence_pos: list):
-    """Fix the wrong sentence tokenizations that affect the mention extraction.
+def fix_tokenize(sentence_tokenize: List[str],
+                 sentence_pos: List[List[str]]):
+    """Fixes the wrong sentence tokenizations that affect the mention extraction.
 
-    Fix the wrong sentence tokenizations caused by `nltk.tokenize.punkt.PunktSentenceTokenizer` due to points (".")
+    Fixes the wrong sentence tokenizations caused by `nltk.tokenize.punkt.PunktSentenceTokenizer` due to points (".")
     existing at the end of abbreviations, which are regarded as the end of a sentence from the sentence tokenization
     algorithm. Fix some wrong tokenizations that split a trigger word, an argument mention, or an entity mention into
     two sentences.
 
     Args:
-        sentence_tokenize: A list of sentences tokenized by `nltk.tokenize.punkt.PunktSentenceTokenizer`.
-        sentence_pos: A list of lists containing each sentence's start and end character positions, corresponding to the
-        sentences in `sentence_tokenize`.
+        sentence_tokenize (`List[str]`):
+            A list of strings indicating the sentences tokenized by `nltk.tokenize.punkt.PunktSentenceTokenizer`.
+        sentence_pos (`List[List[int]]`):
+            A list of lists containing each sentence's start and end character positions, corresponding to the sentences
+            in `sentence_tokenize`.
 
     Returns:
-        new_sentence_tokenize: A list of sentences after fixing the wrong tokenizations.
-        new_sentence_pos: A list of lists containing each sentence's start and end character positions, corresponding
-        to the sentences in `sentence_tokenize`.
+        sentence_tokenize (`List[str]`):
+            A list of strings indicating the sentences after fixing the wrong tokenizations.
+        sentence_pos (`List[List[int]]`):
+            A list of lists containing each sentence's start and end character positions, corresponding to the sentences
+            in `sentence_tokenize`.
     """
     # Set a list for the deleted indexes.
     del_index = list()
@@ -846,19 +816,20 @@ def fix_tokenize(sentence_tokenize: list,
     return new_sentence_tokenize, new_sentence_pos
 
 
-def check_argument(documents: list) -> bool:
-    """Check whether the argument and entity mentions with the same id are consistent.
+def check_argument(documents: List[Dict[str, Union[str, List]]]) -> bool:
+    """Checks whether the argument and entity mentions with the same id are consistent.
 
-    Check whether the argument and entity mentions with the same id are consistent, considering various operations are
+    Checks whether the argument and entity mentions with the same id are consistent, considering various operations are
     conducted in each function.
 
     Args:
-        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotations of each document/sentence.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each document/sentence.
 
     Returns:
-        True/False: Returns `False` if an inconsistency is found between the argument and entity mentions with the same
-        id; otherwise returns `True`.
+        Returns `False` if an inconsistency is found between the argument and entity mentions with the same id;
+        otherwise returns `True`.
     """
     for document in documents:
         for event in document["events"]:
@@ -873,19 +844,19 @@ def check_argument(documents: list) -> bool:
     return True
 
 
-def check_position(documents: list) -> bool:
-    """Check whether the start and end positions correspond to the mention.
+def check_position(documents: List[Dict[str, Union[str, List]]]) -> bool:
+    """Checks whether the start and end positions correspond to the mention.
 
-    Check whether the string sliced from the source text based on the start and end positions corresponds to the
+    Checks whether the string sliced from the source text based on the start and end positions corresponds to the
     mention.
 
     Args:
-        documents: A list of dictionaries containing the document id and the event trigger, argument, and entity
-        annotation of each document/sentence.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each document/sentence.
 
     Returns:
-        True/False: Returns `False` if an inconsistency is found between the positions and the mention; otherwise,
-        returns `True`.
+        Returns `False` if an inconsistency is found between the positions and the mention; otherwise, returns `True`.
     """
     for document in documents:
         # Check the positions of the events.
@@ -910,15 +881,18 @@ def check_position(documents: list) -> bool:
 
 def to_jsonl(filename: str,
              save_dir: str,
-             documents: list):
-    """Write the manipulated dataset into a jsonl file.
+             documents: List[Dict[str, Union[str, List]]]):
+    """Writes the manipulated dataset into a jsonl file.
 
-    Write the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
+    Writes the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
 
     Args:
-        filename: The filename of the saved jsonl file.
-        save_dir: The directory to place the jsonl file.
-        documents: The `document_split` or the `document_without_event` dataset.
+        filename (`str`):
+            A string indicating the filename of the saved jsonl file.
+        save_dir (`str`):
+            A string indicating the directory to place the jsonl file.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries indicating the `document_split` or the `document_without_event` dataset.
     """
     label2id = dict(NA=0)
     role2id = dict(NA=0)

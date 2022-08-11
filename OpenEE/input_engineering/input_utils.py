@@ -63,7 +63,7 @@ def check_if_start(start_poses: List[int],
     Args:
         start_poses (`List[int]`):
             A list of integers representing the character-level start position of each word within the sentence.
-        char_pos (`List[int]`)
+        char_pos (`List[int]`):
             A list of integers indicating the start and end position of a mention.
 
     Returns:

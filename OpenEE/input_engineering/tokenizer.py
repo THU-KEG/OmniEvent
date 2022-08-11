@@ -56,10 +56,11 @@ def whitespace_tokenize(text: str) -> List[str]:
 
     Args:
         text (`str`):
-            The input text to be processed.
+            A string representing the input text to be processed.
 
     Returns:
-        A list of strings in which each element represents a word within the input text.
+        tokens (`List[str]`):
+            A list of strings in which each element represents a word within the input text.
     """
     text = text.strip()
     if not text:
@@ -85,11 +86,11 @@ class WordLevelTokenizer(PreTrainedTokenizer):
 
     Attributes:
         vocab (`Dict[str, int]`):
-            A dictionary indicates the correspondence between words and ids within the vocabulary.
+            A dictionary indicating the correspondence between words and ids within the vocabulary.
         ids_to_tokens (`Dict[int, str]`):
-            A dictionary indicates the correspondence between ids and words within the vocabulary.
+            A dictionary indicating the correspondence between ids and words within the vocabulary.
         whitespace_tokenizer (`WhitespaceTokenizer`):
-            A tokenizer to conduct word piece tokenization.
+            A `WhitespaceTokenizer` instance for word piece tokenization.
     """
 
     vocab_files_names = VOCAB_FILES_NAMES
@@ -202,21 +203,7 @@ class WordLevelTokenizer(PreTrainedTokenizer):
                                 token_ids_0: List[int],
                                 token_ids_1: Optional[List[int]] = None,
                                 already_has_special_tokens: bool = False) -> List[int]:
-        """Retrieve sequence ids from a token list that has no special tokens added.
-        Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
-        special tokens using the tokenizer `prepare_for_model` method.
-
-        Args:
-            token_ids_0 (`List[int]`):
-                List of IDs.
-            token_ids_1 (`List[int]`, `optional`):
-                Optional second list of IDs for sequence pairs.
-            already_has_special_tokens (`bool`, `optional`, defaults to `False`):
-                Whether or not the token list is already formatted with special tokens for the model.
-
-        Returns:
-            `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
-        """
+        """Retrieve sequence ids from a token list that has no special tokens added."""
 
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
@@ -230,26 +217,7 @@ class WordLevelTokenizer(PreTrainedTokenizer):
     def create_token_type_ids_from_sequences(self,
                                              token_ids_0: List[int],
                                              token_ids_1: Optional[List[int]] = None) -> List[int]:
-        """
-        Create a mask from the two sequences passed to be used in a sequence-pair classification task. A BERT sequence
-        pair mask has the following format:
-
-        ```
-        0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
-        | first sequence    | second sequence |
-        ```
-
-        If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
-
-        Args:
-            token_ids_0 (`List[int]`):
-                List of IDs.
-            token_ids_1 (`List[int]`, `optional`):
-                Optional second list of IDs for sequence pairs.
-
-        Returns:
-            `List[int]`: List of [token type IDs](../glossary#token-type-ids) according to the given sequence(s).
-        """
+        """Create a mask from the two sequences passed to be used in a sequence-pair classification task."""
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
         if token_ids_1 is None:
@@ -289,32 +257,23 @@ class WhitespaceTokenizer(object):
         vocab (`Dict[str, int]`):
             A dictionary indicates the correspondence between words and ids within the vocabulary.
         do_lower_case (`bool`):
-            Whether or not to lowercase the input when tokenizing.
+            A boolean variable indicating Whether or not to lowercase the input when tokenizing.
         unk_token (`str`):
-            The representation of the unknown token.
+            A string representing the unknown token.
     """
 
     def __init__(self,
                  vocab: Dict[str, int],
                  do_lower_case: bool,
                  unk_token: str):
+        """Constructs a `WhitespaceTokenizer`."""
         self.vocab = vocab
         self.do_lower_case = do_lower_case
         self.unk_token = unk_token
 
     def tokenize(self,
                  text: str) -> List[str]:
-        """Tokenizes a piece of text into its word pieces.
-        Tokenizes a piece of text into its word pieces by matching whether the token is in the vocabulary.
-
-        Args:
-            text:
-                A single token or white space separated tokens. This should have already been passed through
-                `BasicTokenizer`.
-
-        Returns:
-            A list of wordpiece tokens.
-        """
+        """Tokenizes a piece of text into its word pieces."""
 
         output_tokens = []
         for token in whitespace_tokenize(text):

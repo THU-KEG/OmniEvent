@@ -205,7 +205,7 @@ class EDDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string representing the tokenizer proposed to be utilized for the tokenization process.
+            A string representing the tokenizer proposed for the tokenization process.
         examples (`List[EDInputExample]`):
             A list of `EDInputExample`s constructed based on the input dataset.
         input_features (`List[EDInputFeatures]`):
@@ -303,7 +303,7 @@ class EAEDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string representing the tokenizer proposed to be utilized for the tokenization process.
+            A string representing the tokenizer proposed for the tokenization process.
         is_training (`bool`):
             A boolean variable indicating the state is training or not.
         examples (`List[EDInputExample]`):

@@ -2,7 +2,7 @@ import os
 import sys
 import pdb 
 import argparse
-from typing import List
+from typing import List, Dict, Union
 
 import jsonlines
 import json
@@ -60,13 +60,15 @@ def get_maven_submission(preds: List[str],
                          result_file: str) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset.
 
-    Converts the predictions to the submission format of the MAVEN dataset and dumps a prediction json file.
+    Converts the predictions to the submission format of the MAVEN dataset and dumps the predictions into a json file.
 
     Args:
         preds (`List[str]`):
-            A list of strings indicating the predicted type of each instance.
+            A list of strings indicating the predicted types of the instances.
         instance_ids (`List[str]`):
             A list of strings containing the id of each instance to be predicted.
+        result_file (`str`):
+            A string indicating the path to place the written json file.
     """
     all_results = defaultdict(list)
     for i, pred in enumerate(preds):
@@ -83,7 +85,32 @@ def get_maven_submission(preds: List[str],
             f.write(json.dumps(format_result) + "\n")
 
 
-def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config):
+def get_maven_submission_sl(preds: List[str],
+                            labels: List[str],
+                            is_overflow,
+                            result_file: str,
+                            type2id: Dict[str, int],
+                            config) -> None:
+    """Converts the predictions to the submission format of the MAVEN dataset based on the sequence labeling paradigm.
+
+    Obtains the instances' predictions in the test file of the MAVEN dataset based on the sequence labeling paradigm and
+    converts the predictions to the dataset's submission format. The converted predictions are dumped into a json file
+    for submission.
+
+    Args:
+        preds (`List[str]`):
+            A list of strings indicating the predicted types of the instances.
+        labels (`List[str]`):
+            A list of strings indicating the actual labels of the instances.
+        is_overflow:
+
+        result_file (`str`):
+            A string indicating the path to place the written json file.
+        type2id (`Dict[str, int]`):
+            A dictionary containing the correspondences between event types and ids.
+        config:
+            The configurations of the model.
+    """
     # get per-word predictions
     preds, _ = select_start_position(preds, labels, False)
     results = defaultdict(list)
@@ -127,18 +154,34 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds,
-                                 labels,
-                                 save_path,
-                                 type2id,
-                                 tokenizer,
+def get_maven_submission_seq2seq(preds: List[int],
+                                 labels: List[str],
+                                 save_path: str,
+                                 type2id: Dict[str, int],
+                                 tokenizer: str,
                                  training_args,
-                                 data_args):
-    """Converts the predictions obtained by the sequence-to-sequence model to the MAVEN dataset's submission format.
+                                 data_args) -> None:
+    """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
 
-    Converts the predictions to the submission format of the MAVEN dataset and dumps a prediction json file.
+    Obtains the instances' predictions in the test file of the MAVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
+    paradigm and converts the predictions to the dataset's submission format. The converted predictions are dumped into
+    a json file for submission.
 
-
+    Args:
+        preds (`List[int]`):
+            A list of integers indicating the predicted type ids of the instances.
+        labels (`List[str]`):
+            A list of strings indicating the actual labels of the instances.
+        save_path (`str`):
+            A string indicating the path to place the written json file.
+        type2id (`Dict[str, int]`):
+            A dictionary containing the correspondences between event types and ids.
+        tokenizer (`str`):
+            A string representing the tokenization proposed for the tokenization process.
+        training_args:
+            The pre-defined arguments for the training process.
+        data_args:
+            The pre-defined arguments for data processing.
     """
     decoded_preds = compute_seq_F1(preds, labels, 
                                     **{"tokenizer": tokenizer, 
@@ -170,32 +213,123 @@ def get_maven_submission_seq2seq(preds,
 def get_leven_submission(preds: List[str],
                          instance_ids: List[str],
                          result_file: str) -> None:
-    """Converts the predictions to the submission format of the MAVEN dataset.
+    """Converts the predictions to the submission format of the LEVEN dataset.
 
-    Converts the predictions to the submission format of the MAVEN dataset and dumps a prediction json file.
+    Converts the predictions to the submission format of the LEVEN dataset and dumps the predictions into a json file.
 
     Args:
         preds (`List[str]`):
-            A list of strings indicating the predicted type of each instance.
+            A list of strings indicating the predicted types of the instances.
         instance_ids (`List[str]`):
             A list of strings containing the id of each instance to be predicted.
+        result_file (`str`):
+            A string indicating the path to place the written json file.
+
+    Returns:
+        The parameters of the input are passed to the `get_maven_submission()` method for further predictions.
     """
     return get_maven_submission(preds, instance_ids, result_file)
 
 
-def get_leven_submission_sl(preds, labels, is_overflow, result_file, type2id, config):
+def get_leven_submission_sl(preds: List[str],
+                            labels: List[str],
+                            is_overflow,
+                            result_file: str,
+                            type2id: Dict[str, int],
+                            config):
+    """Converts the predictions to the submission format of the LEVEN dataset based on the sequence labeling paradigm.
+
+    Obtains the instances' predictions in the test file of the LEVEN dataset based on the sequence labeling paradigm and
+    converts the predictions to the dataset's submission format. The converted predictions are dumped into a json file
+    for submission.
+
+    Args:
+        preds (`List[str]`):
+            A list of strings indicating the predicted type of the instances.
+        labels (`List[str]`):
+            A list of strings indicating the actual label of the instances.
+        is_overflow:
+
+        result_file (`str`):
+            A string indicating the path to place the written json file.
+        type2id (`Dict[str, int]`):
+            A dictionary containing the correspondences between event types and ids.
+        config:
+            The configurations of the model.
+
+    Returns:
+        The parameters of the input are passed to the `get_maven_submission_sl()` method for further predictions.
+    """
     return get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config)
 
 
-def get_leven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
+def get_leven_submission_seq2seq(preds: List[int],
+                                 labels: List[str],
+                                 save_path: str,
+                                 type2id: Dict[str, int],
+                                 tokenizer: str,
+                                 training_args,
+                                 data_args):
+    """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.
+
+    Obtains the instances' predictions in the test file of the LEVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
+    paradigm and converts the predictions to the dataset's submission format. The converted predictions are dumped into
+    a json file for submission.
+
+    Args:
+        preds (`List[int]`):
+            A list of integers indicating the predicted type ids of the instances.
+        labels (`List[str]`):
+            A list of strings indicating the actual labels of the instances.
+        save_path (`str`):
+            A string indicating the path to place the written json file.
+        type2id (`Dict[str, int]`):
+            A dictionary containing the correspondences between event types and ids.
+        tokenizer (`str`):
+            A string representing the tokenization proposed for the tokenization process.
+        training_args:
+            The pre-defined arguments for the training process.
+        data_args:
+            The pre-defined arguments for data processing.
+
+    Returns:
+        The parameters of the input are passed to the `get_maven_submission_seq2seq()` method for further predictions.
+    """
     return get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args)
 
 
 def get_duee_submission():
+    """Converts the predictions to the submission format of the DuEE dataset."""
     pass
 
 
-def get_duee_submission_sl(preds, labels, is_overflow, result_file, config):
+def get_duee_submission_sl(preds: List[str],
+                           labels: List[str],
+                           is_overflow,
+                           result_file: str,
+                           config) -> List[Dict[str, Union[str, Dict]]]:
+    """Converts the predictions to the submission format of the DuEE dataset based on the sequence labeling paradigm.
+
+    Obtains the instances' predictions in the test file of the DuEE dataset based on the sequence labeling paradigm and
+    converts the predictions to the dataset's submission format. The converted predictions are dumped into a json file
+    for submission.
+
+    Args:
+        preds (`List[str]`):
+            A list of strings indicating the predicted types of the instances.
+        labels (`List[str]`):
+            A list of strings indicating the actual labels of the instances.
+        is_overflow:
+
+        result_file (`str`):
+            A string indicating the path to place the written json file.
+        config:
+            The configurations of the model.
+
+    Returns:
+        all_results (`List[Dict[str, Union[str, Dict]]]`):
+            A list of dictionaries containing the predictions of events.
+    """
     # trigger predictions
     ed_preds = json.load(open(config.test_pred_file))
 

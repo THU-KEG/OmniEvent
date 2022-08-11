@@ -119,31 +119,9 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
             "jieba", "ltp", "thulac", and "hanlp".
 
     Returns:
-        formatted_data (`List[Dict[str, Union[str, List[Dict]]]]`)
+        formatted_data (`List[Dict[str, Union[str, List[Dict]]]]`):
             A list of dictionary indicating the manipulated dataset of DuEE 1.0-fin after converting its format into a
-            unified OpenEE dataset. For example:
-
-            {
-                "id": "b2b3d9dc2eb40c41036a1ab12f58de8c",
-                "text": "万讯自控：傅宇晨解除部分股份质押、累计质押比例为39.55% ...",
-                "events": [{
-                    "type": "质押",
-                    "triggers": [{
-                        "id": "b2b3d9dc2eb40c41036a1ab12f58de8c-ec1b8ca1f91e1d4c1ff49b7889463e85",
-                        "trigger_word": "质押",
-                        "position": [14, 16],
-                        "arguments": [{
-                            "id": "bdd640fb06671ad11c80317fa3b1799d",
-                            "role": "披露时间",
-                            "mentions": [{
-                                "mention_id": "23b8c1e9392456de3eb13b9046685257",
-                                "mention": "质押",
-                                "position": [14, 16]}, ... ]}, ... ]}, ... ]}, ... ]},
-                "negative_triggers": [{
-                    "id": "b2b3d9dc2eb40c41036a1ab12f58de8c-4b0dbb418d5288f1142c3fe860e7a113",
-                    "trigger_word": "万讯",
-                    "position": [0, 2]}, ... ]
-            }
+            unified OpenEE dataset.
     """
     dueefin_data = list(jsonlines.open(data_path))
 

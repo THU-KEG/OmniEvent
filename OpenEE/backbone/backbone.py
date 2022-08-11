@@ -47,7 +47,7 @@ def get_backbone(model_type: str,
         model (`Union[BertModel, RobertaModel, T5ForConditionalGeneration, CNN, LSTM]`):
             The backbone model, which is selected from BERT, RoBERTa, T5, MT5, CNN, and LSTM.
         tokenizer (`str`):
-            The tokenizer proposed to be utilized in the tokenization process, corresponds to the backbone model.
+            The tokenizer proposed for the tokenization process, corresponds to the backbone model.
         config:
             The configurations of the model.         TODO: The data type of `config` should be configured.
     """

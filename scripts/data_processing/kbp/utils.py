@@ -16,7 +16,8 @@ def token_pos_to_char_pos(tokens: List[str],
             A list of integers indicating the word-level start and end position of the mention.
 
     Returns:
-        A list of integers representing the character-level start and end position of the mention.
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
     """
     word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
@@ -33,7 +34,7 @@ def token_pos_to_char_pos(tokens: List[str],
     return [char_start, char_end]
 
 
-def generate_negative_trigger_per_item(item: Dict):
+def generate_negative_trigger_per_item(item: Dict[str, Union[str, List]]):
     """Generates negative triggers based on the triggers and source text.
 
     Generates negative triggers based on the triggers and source text. The tokens not within any trigger are regarded
@@ -46,7 +47,8 @@ def generate_negative_trigger_per_item(item: Dict):
             argument, and entity annotations of the sentence.
 
     Returns:
-         A dictionary similar to the input dictionary but added the negative triggers annotations.
+        item (`Dict`):
+            A dictionary similar to the input dictionary but added the negative triggers annotations.
     """
     tokens = item["text"].split()
     trigger_position = {i: False for i in range(len(tokens))}
@@ -69,7 +71,7 @@ def generate_negative_trigger_per_item(item: Dict):
     return item 
 
 
-def generate_negative_trigger(data: Dict,
+def generate_negative_trigger(data: Dict[str, Union[str, List]],
                               none_event_instances: List[Dict[str, Union[str, List[str]]]]):
     """Generates negative triggers from the none-event instances.
 

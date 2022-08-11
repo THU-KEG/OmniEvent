@@ -271,7 +271,7 @@ class EAEMRCProcessor(EAEDataProcessor):
 
     @staticmethod
     def remove_sub_word(inputs):
-        """Remove the annotations whose word is a sub-word."""
+        """Removes the annotations whose word is a sub-word."""
         outputs = defaultdict(list)
         pre_word_id = -1
         for token_id, word_id in enumerate(inputs.word_ids()):

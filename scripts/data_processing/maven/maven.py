@@ -22,31 +22,8 @@ def convert_maven_to_unified(data_path: str,
 
     Returns:
         formatted_data (`List[Dict]`):
-            The manipulated dataset of MAVEN after converting its format into a unified OpenEE dataset. For example:
-
-            {
-                "id": "8307a6b61b84d4eea42c1dd5e6e2cdba",
-                "text": "The 2006 Pangandaran earthquake and tsunami occurred ...",
-                "events": [{
-                    "type": "Catastrophe",
-                    "triggers": [{
-                        "id": "8307a6b61b84d4eea42c1dd5e6e2cdba-1594c4acbc1a8a86554ac030ce128dd9",
-                        "trigger_word": "earthquake",
-                        "position": [21, 31]}, ...]
-                    }
-                "negative_triggers": [{
-                    "id": "8307a6b61b84d4eea42c1dd5e6e2cdba-0d871abd0017f444afc10c4e5c238f8d",
-                    "trigger_word": "populated",
-                    "position": [152, 161]}, ...]
-            }
-        {"id": "8307a6b61b84d4eea42c1dd5e6e2cdba",
-         "text": "The 2006 Pangandaran earthquake and tsunami occurred ...",
-         "events": [
-            {"type": "Catastrophe",
-             "triggers": [{"id": "8307a6b61b84d4eea42c1dd5e6e2cdba-1594c4acbc1a8a86554ac030ce128dd9",
-                           "trigger_word": "earthquake", "position": [21, 31]}, ... ]
-         "negative_triggers": [{"id": "8307a6b61b84d4eea42c1dd5e6e2cdba-0d871abd0017f444afc10c4e5c238f8d",
-                                "trigger_word": "populated", "position": [152, 161]}, ... ]}
+            A list of dictionaries representing the manipulated dataset of MAVEN after converting its format into a
+            unified OpenEE dataset.
     """
     # Load the maven dataset.
     maven_data = []

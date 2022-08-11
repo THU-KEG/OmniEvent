@@ -31,7 +31,8 @@ def get_role2id(train_file: str,
                 output_file: str) -> None:
     """Generates the correspondence between argument roles and ids.
 
-    Generates the correspondence between labels and ids, and roles and ids. Each label/role corresponds to a unique id.
+    Generates the correspondence between labels and ids, and roles and ids and saves them into a dictionary, in which
+    the key of the dictionary is the argument role and the label is it's corresponding id.
 
     Args:
         train_file (`str`):
@@ -88,7 +89,7 @@ def split_training_data(train_file: str,
             jsonlines.Writer.write(f, d)
 
 
-def detect_nested(input_data: List[dict]) -> List[dict]:
+def detect_nested(input_data: List[dict]) -> List[Dict]:
     """Detects the nested trigger annotations in FewFC.
 
     Some FewFC trigger and entity annotations are nested. The method detects and returns the nested annotations for
@@ -100,8 +101,9 @@ def detect_nested(input_data: List[dict]) -> List[dict]:
             event trigger, argument, and entity annotations of the sentences.
 
     Returns:
-        A list of dictionaries containing the nested event triggers accompanied with their corresponding source texts
-        within the FewFC datasets.
+        nested_list (`List[Dict]`)
+            A list of dictionaries containing the nested event triggers accompanied with their corresponding source
+            texts within the FewFC datasets.
     """
     nested_list = []
     for sent in input_data:
@@ -140,7 +142,8 @@ def chinese_tokenizer(input_text: str,
             A string indicating the tokenizer utilized for the tokenization process, such as Jieba, LTP, etc.
 
     Returns:
-        A list of strings representing the tokens after the tokenization of the Chinese input sequence.
+        token_list (`List[str]`):
+            A list of strings representing the tokens after the tokenization of the Chinese input sequence.
     """
     token_list = []
     if tokenizer == "jieba":
@@ -186,7 +189,7 @@ def re_tokenize(token_list: List[str], event: dict) -> List[str]:
 
 def convert_fewfc_to_unified(data_path: str,
                              dump: Optional[bool] = True,
-                             tokenizer: Optional[str] = "jieba") -> list:
+                             tokenizer: Optional[str] = "jieba") -> List[Dict]:
     """Converts FewFC dataset to the unified format.
 
     Extracts the information from the original FewFC dataset and convert the format to a unified OpenEE dataset. The
@@ -201,7 +204,9 @@ def convert_fewfc_to_unified(data_path: str,
             A string indicating the proposed Chinese tokenizer for the tokenization process.
 
     Returns:
-        The manipulated dataset of FewFC after converting its format into a unified OpenEE dataset.
+        formatted_data (`List[Dict]`):
+            A list of dictionaries representing the manipulated dataset of FewFC after converting its format into a
+            unified OpenEE dataset.
     """
     fewfc_data = []
     with open(data_path, 'r', encoding='utf-8') as f:

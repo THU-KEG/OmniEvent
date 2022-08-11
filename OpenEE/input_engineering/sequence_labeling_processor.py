@@ -22,6 +22,9 @@ class EDSLProcessor(EDDataProcessor):
     in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
     a new function entitled `get_final_labels()` is defined to obtain final results, and the rest of the attributes and
     functions are multiplexed from the `EDDataProcessor` class.
+
+    Attributes:
+        is_overflow:
     """
 
     def __init__(self,
@@ -128,6 +131,12 @@ class EAESLProcessor(EAEDataProcessor):
     `convert_examples_to_features()` are  implemented; twp new functions, entitled `get_final_labels()` and
     `insert_markers()` are defined, and the rest of the attributes and functions are multiplexed from the
     `EAEDataProcessor` class.
+
+    Attributes:
+        positive_candidate_indices (`List[int]`):
+            A list of integers indicating the indices of positive trigger candidates.
+        is_overflow:
+
     """
 
     def __init__(self,

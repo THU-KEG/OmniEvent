@@ -23,7 +23,8 @@ def check_unk_in_text(input_text: str,
             The tokenizer proposed for the tokenization process.
 
     Returns:
-        A list of strings indicating the out-of-vocabulary tokens in the original source text.
+        error_tokens (`List[str]`):
+            A list of strings indicating the out-of-vocabulary tokens in the original source text.
     """
     words = input_text.split()
     inputs = input_tokenizer(words, is_split_into_words=True)
@@ -78,7 +79,8 @@ def gen_train_valid_set(input_data: List[Dict]):
             event trigger, argument, and entity annotations of the sentences.
 
     Returns:
-        Two lists of dictionaries containing the training and validation datasets.
+        train_set (`List[Dict]`), valid_set (`List[Dict]`):
+            Two lists of dictionaries containing the training and validation datasets.
     """
     random.seed(42)
     random.shuffle(input_data)
@@ -101,7 +103,8 @@ def detect_sub_word_annotations(input_data: List[Dict]) -> List[Dict[str, Union[
             event trigger, argument, and entity annotations of the sentences.
 
     Returns:
-        A list of dictionaries containing the sub-word triggers, arguments, and source texts.
+        error (`List[Dict[str, Union[int, str]]]`)
+            A list of dictionaries containing the sub-word triggers, arguments, and source texts.
     """
     error = []
     for i, d in enumerate(input_data):
@@ -141,7 +144,8 @@ def remove_sub_word_annotations(input_data: List[Dict]) -> List[Dict]:
             event trigger, argument, and entity annotations of the sentences.
 
     Returns:
-        A list of dictionaries similar to the input dictionary but removed the sub-word annotations.
+        output_data (`List[Dict]`):
+            A list of dictionaries similar to the input dictionary but removed the sub-word annotations.
     """
     random.seed(42)
     del_sentence, del_trigger, del_argument, del_event = 0, 0, 0, 0
@@ -208,7 +212,8 @@ def remove_duplicate_event(input_data: List[Dict]):
             event trigger, argument, and entity annotations of the sentences.
 
     Returns:
-        A list of dictionaries similar to the input dictionary but without duplicate event triggers and mentions.
+        input_data (`List[Dict]`):
+            A list of dictionaries similar to the input dictionary but without duplicate event triggers and mentions.
     """
     for d in input_data:
         clean_events = []

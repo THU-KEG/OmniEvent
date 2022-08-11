@@ -121,31 +121,9 @@ def convert_duee_to_unified(data_path: str,
             "jieba", "ltp", "thulac", and "hanlp".
 
     Returns:
-        formatted_data (`List[Dict[str, Union[str, List[Dict]]]]`)
+        formatted_data (`List[Dict[str, Union[str, List[Dict]]]]`):
             A list of dictionary indicating the manipulated dataset of DuEE 1.0 after converting its format into a
-            unified OpenEE dataset. For example:
-
-            {
-                "id": "409389c96efe78d6af1c86e0450fd2d7",
-                "text": "雀巢裁员4000人：时代抛弃你时，连招呼都不会打！",
-                "events": [{
-                    "type": "组织关系-裁员",
-                    "triggers": [{
-                        "id": "409389c96efe78d6af1c86e0450fd2d7-17fc695a07a0ca6e0822e8f36c031199",
-                        "trigger_word": "裁员",
-                        "position": [2, 4]}, ...]}, ...]},
-                        "arguments": [{
-                            "id": "bdd640fb06671ad11c80317fa3b1799d",
-                            "role": "裁员方",
-                            "mentions": [{
-                                "mention_id": "23b8c1e9392456de3eb13b9046685257",
-                                "mention": "雀巢",
-                                "position": [0, 2]}, ... ]}, ... ]}, ... ]}, ... ]},
-                "negative_triggers": [{
-                    "id": "409389c96efe78d6af1c86e0450fd2d7-9215ce3e90dd4507a282e59ca06a63eb",
-                    "trigger_word": "雀巢",
-                    "position": [0, 2]}, ...]
-            }
+            unified OpenEE dataset.
     """
     duee_data = list(jsonlines.open(data_path))
 
