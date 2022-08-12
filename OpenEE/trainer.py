@@ -29,19 +29,22 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer(Trainer):
-    """Trainer for event extraction."""
+    """Trainer for event extraction.
+
+    Trainer for event extraction, training the model based on the given dataset. The trainer predicts the labels,
+    calculates the loss and metrics, and update the parameters in each iteration.
+    """
 
     def __init__(self, *args, **kwargs):
+        """Constructs a `Trainer`."""
         super().__init__(*args, **kwargs)
 
-    def evaluation_loop(
-        self,
-        dataloader: DataLoader,
-        description: str,
-        prediction_loss_only: Optional[bool] = None,
-        ignore_keys: Optional[List[str]] = None,
-        metric_key_prefix: str = "eval",
-    ) -> EvalLoopOutput:
+    def evaluation_loop(self,
+                        dataloader: DataLoader,
+                        description: str,
+                        prediction_loss_only: Optional[bool] = None,
+                        ignore_keys: Optional[List[str]] = None,
+                        metric_key_prefix: str = "eval") -> EvalLoopOutput:
         """
         Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
         Works both with or without labels.
