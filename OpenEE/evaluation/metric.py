@@ -17,7 +17,7 @@ def f1_score_overall(preds, labels):
         if pred in labels:
             total_true += 1
     precision = total_true / (len(preds)+1e-10)
-    recall = total_true / len(labels)
+    recall = total_true / (len(labels)+1e-10)
     f1 = 2 * precision * recall / (precision + recall + 1e-10)
     return precision, recall, f1
 
@@ -26,6 +26,10 @@ def compute_seq_F1(logits, labels, **kwargs):
     tokenizer = kwargs["tokenizer"]
     training_args = kwargs["training_args"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
+
+    if kwargs.get("return_decoded_preds", False):
+        return decoded_preds
+
     # Replace -100 in the labels as we can't decode them.
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=False)

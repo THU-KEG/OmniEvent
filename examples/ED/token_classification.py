@@ -12,24 +12,13 @@ from transformers import EarlyStoppingCallback
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
 from OpenEE.input_engineering.token_classification_processor import EDTCProcessor
-from OpenEE.input_engineering.sequence_labeling_processor import EDSLProcessor
 
 from OpenEE.model.model import get_model
-from OpenEE.evaluation.metric import (
-    compute_F1,
-    compute_span_F1
-)
-from OpenEE.evaluation.utils import predict, dump_preds
-from OpenEE.evaluation.dump_result import (
-    get_leven_submission,
-    get_leven_submission_sl,
-    get_leven_submission_seq2seq,
-    get_maven_submission,
-    get_maven_submission_sl,
-    get_maven_submission_seq2seq,
-)
 
-from OpenEE.input_engineering.input_utils import get_bio_labels
+from OpenEE.evaluation.metric import compute_F1
+from OpenEE.evaluation.utils import predict, dump_preds
+from OpenEE.evaluation.dump_result import get_leven_submission, get_maven_submission
+
 from OpenEE.trainer import Trainer
 
 # argument parser
@@ -67,14 +56,9 @@ data_args.type2id = json.load(open(type2id_path))
 model_args.num_labels = len(data_args.type2id)
 training_args.label_name = ["labels"]
 
-if model_args.paradigm == "sequence_labeling":
-    data_args.type2id = get_bio_labels(data_args.type2id)
-    model_args.num_labels = len(data_args.type2id)
-
 # used for evaluation
 training_args.type2id = data_args.type2id
 data_args.id2type = {id: type for type, id in data_args.type2id.items()}
-
 
 # markers
 data_args.markers = ["<event>", "</event>"]
@@ -94,17 +78,8 @@ backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.mod
                                            new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
-data_class = None
-metric_fn = None
-
-if model_args.paradigm == "token_classification":
-    data_class = EDTCProcessor
-    metric_fn = compute_F1
-elif model_args.paradigm == "sequence_labeling":
-    data_class = EDSLProcessor
-    metric_fn = compute_span_F1
-else:
-    raise ValueError("No such paradigm.")
+data_class = EDTCProcessor
+metric_fn = compute_F1
 
 # dataset 
 train_dataset = data_class(data_args, tokenizer, data_args.train_file)
@@ -135,26 +110,13 @@ if training_args.do_predict:
         aggregation = model_args.aggregation
         save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
         preds = np.argmax(logits, axis=-1)
-        if model_args.paradigm == "token_classification":
-            if data_args.dataset_name == "MAVEN":
-                get_maven_submission(preds, test_dataset.get_ids(), save_path)
-            elif data_args.dataset_name == "LEVEN":
-                get_leven_submission(preds, test_dataset.get_ids(), save_path)
 
-        elif model_args.paradigm == "sequence_labeling":
-            if data_args.dataset_name == "MAVEN":
-                get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
-                                        json.load(open(type2id_path)), data_args)
-            elif data_args.dataset_name == "LEVEN":
-                get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
-                                        json.load(open(type2id_path)), data_args)
-        elif model_args.paradigm == "seq2seq":
-            if data_args.dataset_name == "MAVEN":
-                get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
-                                             training_args, data_args)
-            elif data_args.dataset_name == "LEVEN":
-                get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
-                                             training_args, data_args)
+        if data_args.dataset_name == "MAVEN":
+            get_maven_submission(preds, test_dataset.get_ids(), save_path)
+        elif data_args.dataset_name == "LEVEN":
+            get_leven_submission(preds, test_dataset.get_ids(), save_path)
+        else:
+            pass
 
 
 if training_args.do_ED_infer:

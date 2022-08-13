@@ -4,11 +4,55 @@ import jsonlines
 import numpy as np
 
 from tqdm import tqdm
+from .convert_format import get_ace2005_trigger_detection_sl
+
+
+def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args, training_args, mode="train"):
+    if mode == "train":
+        data_file = data_args.train_file
+    elif mode == "valid":
+        data_file = data_args.validation_file
+    elif mode == "test":
+        data_file = data_args.test_file
+    else:
+        raise NotImplementedError
+
+    logits, labels, metrics, dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                               data_args=data_args, data_file=data_file,
+                                               training_args=training_args)
+    print("-" * 50)
+    print("Test File: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
+
+    preds = np.argmax(logits, axis=-1)
+    if model_args.paradigm == "token_classification":
+        pred_labels = [data_args.id2type[pred] for pred in preds]
+    elif model_args.paradigm == "sequence_labeling":
+        pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+    else:
+        raise NotImplementedError
+
+    save_path = os.path.join(output_dir, "{}_preds.json".format(mode))
+
+    json.dump(pred_labels, open(save_path, "w", encoding='utf-8'), ensure_ascii=False)
+
+
+def predict(trainer, tokenizer, data_class, data_args, data_file, training_args):
+    if training_args.task_name == "ED":
+        pred_func = predict_sub_ed if data_args.split_infer else predict_ed
+        return pred_func(trainer, tokenizer, data_class, data_args, data_file)
+
+    elif training_args.task_name == 'EAE':
+        pred_func = predict_sub_eae if data_args.split_infer else predict_eae
+        return pred_func(trainer, tokenizer, data_class, data_args, training_args)
+
+    else:
+        raise NotImplementedError
 
 
 def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
     test_data = list(jsonlines.open(input_test_file))
     sub_data_folder = '/'.join(input_test_file.split('/')[:-1]) + '/test_cache/'
+    # TODO: Clear the cache dir every time
     os.makedirs(sub_data_folder, exist_ok=True)
     output_test_files = []
 
@@ -109,7 +153,6 @@ def predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args):
 
     metrics = trainer.compute_metrics(logits=logits, labels=labels,
                                       **{"tokenizer": tokenizer, "training_args": training_args})
-
 
     data_args.test_file = test_file_full
     data_args.test_pred_file = test_pred_file_full

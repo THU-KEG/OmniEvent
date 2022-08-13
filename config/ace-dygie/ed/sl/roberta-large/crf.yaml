@@ -26,6 +26,7 @@ model_type: roberta
 model_name_or_path: roberta-large
 hidden_size: 1024
 aggregation: none
+head_type: crf
 
 # training config #
 num_train_epochs: 20

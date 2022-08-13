@@ -12,7 +12,6 @@ from .base_processor import (
     EAEInputExample,
     EAEInputFeatures
 )
-from transformers import BartTokenizerFast
 
 type_start = "<"
 type_end = ">"
@@ -75,6 +74,10 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                         labels=labels
                     )
                     self.examples.append(example)
+                else:
+                    example = EDInputExample(example_id=idx, text=words, labels="")
+                    self.examples.append(example)
+
 
     def convert_examples_to_features(self):
         self.input_features = []

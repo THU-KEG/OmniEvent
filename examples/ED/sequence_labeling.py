@@ -1,37 +1,26 @@
 import os
 from pathlib import Path
-import pdb
 import sys
 sys.path.append("../../")
 import json
-import torch
 import logging
-
 import numpy as np
 
 from transformers import set_seed
-from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.token_classification_processor import (
-    EDTCProcessor
-)
-from OpenEE.input_engineering.sequence_labeling_processor import (
-    EDSLProcessor
-)
+from OpenEE.input_engineering.token_classification_processor import EDTCProcessor
+from OpenEE.input_engineering.sequence_labeling_processor import EDSLProcessor
 
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
     compute_F1,
-    compute_span_F1,
-    compute_seq_F1
+    compute_span_F1
 )
-from OpenEE.evaluation.utils import (
-    predict_ed,
-    predict_sub_ed,
-)
+from OpenEE.evaluation.utils import predict, dump_preds
+from OpenEE.evaluation.convert_format import get_ace2005_trigger_detection_sl
 from OpenEE.evaluation.dump_result import (
     get_leven_submission,
     get_leven_submission_sl,
@@ -40,14 +29,9 @@ from OpenEE.evaluation.dump_result import (
     get_maven_submission_sl,
     get_maven_submission_seq2seq,
 )
-from OpenEE.evaluation.convert_format import (
-    get_ace2005_trigger_detection_sl
-)
+
 from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
-from OpenEE.trainer_seq2seq import Seq2SeqTrainer
-
-# from torch.utils.tensorboard import SummaryWriter
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -93,7 +77,7 @@ training_args.type2id = data_args.type2id
 data_args.id2type = {id: type for type, id in data_args.type2id.items()}
 
 
-# markers 
+# markers
 data_args.markers = ["<event>", "</event>"]
 
 print(data_args, model_args, training_args)
@@ -106,9 +90,9 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, _ = get_backbone(model_args.model_type, None, None, data_args.markers, 
-                                      model_args, 
-                                      new_tokens=data_args.markers)
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
+                                           model_args.model_name_or_path, data_args.markers, model_args,
+                                           new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
 data_class = None
@@ -142,15 +126,13 @@ trainer.train()
 
 
 if training_args.do_predict:
-    test_dataset = data_class(data_args, tokenizer, data_args.test_file)
-    logits, labels, metrics = trainer.predict(
-        test_dataset=test_dataset,
-        ignore_keys=["loss"]
-    )
-    # pdb.set_trace()
+    logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                                    data_args=data_args, data_file=data_args.test_file,
+                                                    training_args=training_args)
     if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
         print(metrics)
+        preds = np.argmax(logits, axis=-1)
+        pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
     else:
         # save name 
         aggregation = model_args.aggregation
@@ -179,28 +161,5 @@ if training_args.do_predict:
 
 
 if training_args.do_ED_infer:
-    def dump_preds(data_file, save_path, paradigm):
-        pred_func = predict_sub_ed if data_args.split_infer else predict_ed
-
-        logits, labels, metrics, dataset = pred_func(trainer, tokenizer, data_class, data_args, data_file)
-        print("-"*50)
-        print("Test File: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
-
-        preds = np.argmax(logits, axis=-1)
-        if paradigm == "token_classification":
-            pred_labels = [data_args.id2type[pred] for pred in preds]
-        elif paradigm == "sequence_labeling":
-            pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
-        else:
-            raise NotImplementedError
-
-        json.dump(pred_labels, open(save_path, "w", encoding='utf-8'), ensure_ascii=False)
-
-    # dataset
-    if data_args.dataset_name not in ["LEVEN", "MAVEN"]:
-        dump_preds(data_args.train_file, os.path.join(output_dir, "train_preds.json"), model_args.paradigm)
-
-    dump_preds(data_args.validation_file, os.path.join(output_dir, "valid_preds.json"), model_args.paradigm)
-
-    if data_args.dataset_name not in ["LEVEN", "MAVEN"]:
-        dump_preds(data_args.test_file, os.path.join(output_dir, "test_preds.json"), model_args.paradigm)
+    for mode in ["train", "valid", "test"]:
+        dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args, training_args, mode=mode)
