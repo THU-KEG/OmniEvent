@@ -300,5 +300,5 @@ class ArgumentParser(HfArgumentParser):
         return (*outputs,)
 
     def from_pretrained(self, yaml_file_name_or_path: str):
-        path = check_web_and_convert_path(yaml_file_name_or_path, 'config')
-        return self.parse_yaml_file(os.path.join(path, 'config.yaml'))
+        path = check_web_and_convert_path(yaml_file_name_or_path, 'args')
+        return self.parse_yaml_file(os.path.join(path, 'args.yaml'))
