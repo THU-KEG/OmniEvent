@@ -19,7 +19,7 @@ from model_center.dataset.t5dataset import DATASET
 from model_center.utils import print_inspect
 from model_center.dataset import DistributedDataLoader
 
-from OpenEE.input_engineering.seq2seq_processor import EAESeq2SeqProcessor, extract_argument
+from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor, extract_argument
 from OpenEE.evaluation.metric import f1_score_overall
 
 from transformers import (
@@ -89,7 +89,7 @@ def setup_model_and_optimizer(args):
     tokenizer = get_tokenizer(args.model_config)
     # get the model
     model = get_model(args.model_config)
-    model.load_state_dict(torch.load(os.path.join(args.save, args.save_name)))
+    # model.load_state_dict(torch.load(os.path.join(args.save, args.save_name)))
     bmt.synchronize()
     # get the optimizer and lr_scheduler
     optimizer = get_optimizer(args, model)
@@ -113,9 +113,9 @@ def initialize():
 
 def prepare_dataset(args, tokenizer):
     dataset = {}
-    dataset["train"] = EAESeq2SeqProcessor(args, tokenizer, args.train_file, args.train_pred_file, True)
-    dataset["dev"] = EAESeq2SeqProcessor(args, tokenizer, args.validation_file, args.validation_pred_file, True)
-    dataset["test"] = EAESeq2SeqProcessor(args, tokenizer, args.test_file, args.test_pred_file, True)
+    dataset["train"] = EDSeq2SeqProcessor(args, tokenizer, args.train_file)
+    dataset["dev"] = EDSeq2SeqProcessor(args, tokenizer, args.validation_file)
+    dataset["test"] = EDSeq2SeqProcessor(args, tokenizer, args.test_file)
     return dataset
 
 
@@ -225,7 +225,7 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
 
     dataloader_num_workers = 2
     best_f1 = 0
-    start_dev_epoch = 3
+    start_dev_epoch = 1
     dev_epoch_step = 1
     for epoch in range(args.epochs):
         dataloader = {
@@ -282,11 +282,12 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
             bmt.save(model, os.path.join(args.save, args.save_name))
             if args.local_rank == 0:
                 os.system(f"cp {args.model_config}/*.json {args.save}")
-    # model.load_state_dict(torch.load(os.path.join(args.save, args.save_name+"-best.pt")))
-    # model = get_model(args.save)
-    # bmt.synchronize()
-    # bmt.print_rank("Best Dev F1: %.2f, Testing..." % best_f1)
-    # evaluate(args, model, tokenizer, dataloader, epoch, "test")
+    if args.do_test:
+        model.load_state_dict(torch.load(os.path.join(args.save, args.save_name)))
+        model = get_model(args.save)
+        bmt.synchronize()
+        bmt.print_rank("Best Dev F1: %.2f, Testing..." % best_f1)
+        evaluate(args, model, tokenizer, dataloader, epoch, "test")
 
 
 

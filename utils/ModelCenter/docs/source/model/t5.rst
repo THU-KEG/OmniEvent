@@ -1,0 +1,30 @@
+=======================
+T5
+=======================
+
+`T5 <https://arxiv.org/pdf/1910.10683.pdf>`_
+
+We currently support loading the following checkpoint via ``T5.from_pretrained(identifier)``
+
+- t5-small
+- t5-base
+- t5-large
+- t5-3b
+- t5-11b
+
+T5Config
+------------------------------------
+.. autoclass:: model_center.model.T5Config
+   :members:
+
+T5Model
+------------------------------------
+.. autoclass:: model_center.model.T5
+   :members:
+
+T5Tokenizer
+------------------------------------
+.. class:: model_center.tokenizer.T5Tokenizer
+
+The current implementation is mainly an alias to T5Tokenizer of `Hugging Face Transformers <https://huggingface.co/docs/transformers/index>`_.
+we will change to our SAM implementation in the future, which will be a more efficient tokenizer.

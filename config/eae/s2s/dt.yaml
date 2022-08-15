@@ -25,9 +25,9 @@ return_token_type_ids: False
 truncate_seq2seq_output: True
 
 # model config #
-model_type: mt5
-model_name_or_path: google/mt5-large
-checkpoint_path: google/mt5-large
+model_type: t5
+model_name_or_path: t5-11b
+checkpoint_path: t5-11b
 # checkpoint_path: /ldata/ph/OpenEE/examples/BigModel/output/mt5-large
 aggregation: none 
 early_stopping_patience: 100
