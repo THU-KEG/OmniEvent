@@ -116,7 +116,7 @@ model.cuda()
 
 data_class = EAEMRCProcessor
 metric_fn = compute_mrc_F1
-training_args.label_names = ["start_positions", "end_positions"]
+training_args.label_names = ["argument_left", "argument_right"]
 
 # dataset 
 train_dataset = data_class(data_args, tokenizer, data_args.train_file, data_args.train_pred_file, True)
@@ -142,14 +142,22 @@ trainer.train()
 if training_args.do_predict:
     pred_func = predict_sub_eae if data_args.split_infer else predict_eae
 
+    if data_args.test_exists_labels:
+        # use gold triggers
+        data_args.golden_trigger = True
+        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
+        print("\n" + "-" * 50 + '\n')
+        print("Test File: {}, \nUse_Gold_Trigger, \nMetrics: {}".format(data_args.test_file, metrics))
+
+
     for eval_mode in ['default', 'loose', 'strict']:
         print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
         data_args.eae_eval_mode = eval_mode
+        data_args.golden_trigger = False
 
         logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
         print("\n" + "-" * 50 + '\n')
-        print("Test File: {}, \nMetrics: {}, \nSplit_Infer: {}".format(data_args.test_file, metrics,
-                                                                       data_args.split_infer))
+        print("Test File: {}, \nUse_Pred_Trigger,\nMetrics: {}, ".format(data_args.test_file, metrics))
 
         # pdb.set_trace()
         preds = np.argmax(logits, axis=-1)

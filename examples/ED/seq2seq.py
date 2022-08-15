@@ -1,16 +1,11 @@
 import os
 from pathlib import Path
-import pdb
 import sys
 sys.path.append("../../")
 import json
-import torch
 import logging
 
-import numpy as np
-
 from transformers import set_seed
-from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
@@ -18,32 +13,9 @@ from OpenEE.backbone.backbone import get_backbone
 from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
 
 from OpenEE.model.model import get_model
-from OpenEE.evaluation.metric import (
-    compute_F1,
-    compute_span_F1,
-    compute_seq_F1
-)
-from OpenEE.evaluation.utils import (
-    predict_ed,
-    predict_sub_ed,
-)
-from OpenEE.evaluation.dump_result import (
-    get_leven_submission,
-    get_leven_submission_sl,
-    get_leven_submission_seq2seq,
-    get_maven_submission,
-    get_maven_submission_sl,
-    get_maven_submission_seq2seq,
-)
-from OpenEE.evaluation.convert_format import (
-    get_ace2005_trigger_detection_sl
-)
-from OpenEE.input_engineering.input_utils import get_bio_labels
-from OpenEE.trainer import Trainer
-from OpenEE.trainer_seq2seq import Seq2SeqTrainer, ConstrainedSeq2SeqTrainer
+from OpenEE.evaluation.metric import compute_seq_F1
+from OpenEE.trainer_seq2seq import Seq2SeqTrainer
 from OpenEE.model.constraint_decoding import type_start, type_end
-
-# from torch.utils.tensorboard import SummaryWriter
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -64,9 +36,6 @@ output_dir = Path(
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
-# local rank
-# training_args.local_rank = int(os.environ["LOCAL_RANK"])
-
 # logging config 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -86,8 +55,7 @@ data_args.id2type = {id: type for type, id in data_args.type2id.items()}
 all_types_except_na = [type.split(".")[-1] for type in training_args.type2id if type != "NA"]
 
 
-# markers 
-# data_args.markers =  ["[unused0]", "[unused1]"]
+# markers
 data_args.markers = ["<event>", "</event>"] + [type_start, type_end]
 
 print(data_args, model_args, training_args)
@@ -100,7 +68,7 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, "output/ALL-EN/ED/seq2seq/mt5-base-none/checkpoint-54549",
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
                                            model_args.model_name_or_path, data_args.markers,
                                            new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
@@ -123,7 +91,6 @@ trainer = Seq2SeqTrainer(
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
     callbacks=[earlystoppingCallBack],
-    # decoding_type_schema={"role_list": all_types_except_na}
 )
 
 if training_args.do_train:
@@ -136,12 +103,10 @@ if training_args.do_predict:
         test_dataset=test_dataset,
         ignore_keys=["loss"]
     )
-    # pdb.set_trace()
     if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
         print(metrics)
     else:
         pass 
 
 if training_args.do_ED_infer:
-    pass 
+    pass

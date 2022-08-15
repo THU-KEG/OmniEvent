@@ -233,10 +233,15 @@ def read_source(documents, source_folder):
             # Delete the url elements from the text.
             text_del = re.sub("http(.*?) ", " ", text_del)
             text_del = re.sub("amp;", " ", text_del)
+            # Delete some special characters.
+            text_del = re.sub("\x92", " ", text_del)
+            text_del = re.sub("\x94", " ", text_del)
+            text_del = re.sub("\x96", " ", text_del)
+            text_del = re.sub("\x97", " ", text_del)
             # Replace the line breaks using spaces.
-            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub("\n", " ", text_del)
             # Delete extra spaces within the text.
+            text_del = re.sub("\t", " ", text_del)
             text_del = re.sub(" +", " ", text_del)
             # Delete the spaces before the text.
             xml_char.append(len(text_del.lstrip()))
@@ -250,10 +255,15 @@ def read_source(documents, source_folder):
         # Delete the url elements from the text.
         document["text"] = re.sub("http(.*?) ", " ", document["text"])
         document["text"] = re.sub("amp;", " ", document["text"])
+        # Delete some special characters.
+        document["text"] = re.sub("\x92", " ", document["text"])
+        document["text"] = re.sub("\x94", " ", document["text"])
+        document["text"] = re.sub("\x96", " ", document["text"])
+        document["text"] = re.sub("\x97", " ", document["text"])
         # Replace the line breaks using spaces.
-        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub("\n", " ", document["text"])
         # Delete extra spaces within the text.
+        document["text"] = re.sub("\t", " ", document["text"])
         document["text"] = re.sub(" +", " ", document["text"])
         # Delete the spaces before the text.
         document["text"] = document["text"].strip()
@@ -461,6 +471,7 @@ def add_spaces(documents_split, documents_without_event):
             text_space = re.sub("\{", " { ", text_space)
             text_space = re.sub("\}", " } ", text_space)
             text_space = re.sub("-", " - ", text_space)
+            text_space = re.sub("=", " = ", text_space)
             text_space = re.sub("/", " / ", text_space)
             text_space = re.sub("_", " _ ", text_space)
             text_space = re.sub("\*", " * ", text_space)
@@ -489,6 +500,7 @@ def add_spaces(documents_split, documents_without_event):
         document["text"] = re.sub("\{", " { ", document["text"])
         document["text"] = re.sub("\}", " } ", document["text"])
         document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub("=", " = ", document["text"])
         document["text"] = re.sub("/", " / ", document["text"])
         document["text"] = re.sub("_", " _ ", document["text"])
         document["text"] = re.sub("\*", " * ", document["text"])
@@ -551,6 +563,7 @@ def add_spaces(documents_split, documents_without_event):
             document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
             document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
             document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
+            document["sentences"][i] = re.sub("=", " = ", document["sentences"][i])
             document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
             document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
             document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])
