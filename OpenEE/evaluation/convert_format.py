@@ -1,15 +1,9 @@
-import os 
-import pdb 
-import json 
-from collections import defaultdict
+import os
+import json
 from sklearn.metrics import f1_score
-from seqeval.metrics import f1_score as span_f1_score
-from seqeval.metrics import classification_report
-from seqeval.scheme import IOB2
 
 from .metric import select_start_position
 from .dump_result import get_pred_per_mention
-from tqdm import tqdm
 
 
 def get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, is_overflow):

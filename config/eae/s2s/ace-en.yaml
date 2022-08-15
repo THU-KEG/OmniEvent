@@ -14,7 +14,7 @@ output_dir: output/ACE2005-EN
 type2id_path: ../../data/processed/ace2005/label2id.json
 role2id_path: ../../data/processed/ace2005/role2id.json
 train_file: ../../data/processed/ace2005/train.unified.jsonl
-validation_file: ../../data/processed/ace2005/dev.unified.jsonl
+validation_file: ../../data/processed/ace2005/valid.unified.jsonl
 test_file: ../../data/processed/ace2005/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
@@ -47,7 +47,7 @@ predict_with_generate: True
 ignore_pad_token_for_loss: True 
 
 per_device_train_batch_size: 8
-per_device_eval_batch_size: 32
+per_device_eval_batch_size: 20
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
 learning_rate: 1.0e-4

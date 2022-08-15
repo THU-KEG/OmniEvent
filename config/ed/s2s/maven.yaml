@@ -15,7 +15,7 @@ output_dir: output/MAVEN
 type2id_path: ../../data/processed/MAVEN/label2id.json 
 train_file: ../../data/processed/MAVEN/train.unified.jsonl
 validation_file: ../../data/processed/MAVEN/valid.unified.jsonl
-test_file: ../../data/processed/MAVEN/valid.unified.jsonl
+test_file: ../../data/processed/MAVEN/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 

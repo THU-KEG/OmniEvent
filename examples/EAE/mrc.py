@@ -1,18 +1,14 @@
 import os
 from pathlib import Path
-import pdb
 import sys
 sys.path.append("../../")
 import json
-import torch
 import logging
 
 import numpy as np
-from tqdm import tqdm
 from collections import defaultdict
 
 from transformers import set_seed
-from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
@@ -21,36 +17,14 @@ from OpenEE.input_engineering.mrc_processor import (
     EAEMRCProcessor
 )
 from OpenEE.model.model import get_model
-from OpenEE.evaluation.metric import (
-    compute_F1,
-    compute_span_F1,
-    compute_seq_F1,
-    compute_mrc_F1
-)
-from OpenEE.evaluation.dump_result import (
-    get_leven_submission,
-    get_leven_submission_sl,
-    get_leven_submission_seq2seq,
-    get_maven_submission,
-    get_maven_submission_sl,
-    get_maven_submission_seq2seq,
-    get_duee_submission,
-    get_duee_submission_sl,
-)
-from OpenEE.evaluation.convert_format import (
-    get_ace2005_argument_extraction_sl
-)
+from OpenEE.evaluation.metric import compute_mrc_F1
 
 from OpenEE.evaluation.utils import (
     predict_eae,
     predict_sub_eae,
 )
 
-from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
-from OpenEE.trainer_seq2seq import Seq2SeqTrainer
-
-# from torch.utils.tensorboard import SummaryWriter
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -105,11 +79,11 @@ print(data_args, model_args, training_args)
 set_seed(training_args.seed)
 
 # writter 
-earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience, \
+earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience,
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
                                            model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
 model = get_model(model_args, backbone)
 model.cuda()
@@ -148,7 +122,6 @@ if training_args.do_predict:
         logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
         print("\n" + "-" * 50 + '\n')
         print("Test File: {}, \nUse_Gold_Trigger, \nMetrics: {}".format(data_args.test_file, metrics))
-
 
     for eval_mode in ['default', 'loose', 'strict']:
         print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))

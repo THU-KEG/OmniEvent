@@ -14,6 +14,8 @@ from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
 
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import compute_seq_F1
+from OpenEE.evaluation.dump_result import get_leven_submission_seq2seq, get_maven_submission_seq2seq
+
 from OpenEE.trainer_seq2seq import Seq2SeqTrainer
 from OpenEE.model.constraint_decoding import type_start, type_end
 
@@ -53,7 +55,6 @@ training_args.label_name = ["labels"]
 training_args.type2id = data_args.type2id
 data_args.id2type = {id: type for type, id in data_args.type2id.items()}
 all_types_except_na = [type.split(".")[-1] for type in training_args.type2id if type != "NA"]
-
 
 # markers
 data_args.markers = ["<event>", "</event>"] + [type_start, type_end]
@@ -106,7 +107,16 @@ if training_args.do_predict:
     if data_args.test_exists_labels:
         print(metrics)
     else:
-        pass 
+        # save name
+        aggregation = model_args.aggregation
+        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
+
+        if data_args.dataset_name == "MAVEN":
+            get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
+                                         training_args, data_args)
+        elif data_args.dataset_name == "LEVEN":
+            get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
+                                         training_args, data_args)
 
 if training_args.do_ED_infer:
     pass

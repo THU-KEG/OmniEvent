@@ -13,7 +13,7 @@ test_exists_labels: True
 output_dir: output/ACE2005-dygie
 type2id_path: ../../data/processed/ace2005-dygie/label2id.json
 role2id_path: ../../data/processed/ace2005-dygie/role2id.json
-train_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
+train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
 # event detection predictions
@@ -47,7 +47,7 @@ predict_with_generate: True
 ignore_pad_token_for_loss: True 
 
 per_device_train_batch_size: 8
-per_device_eval_batch_size: 32
+per_device_eval_batch_size: 20
 gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
 learning_rate: 1.0e-4

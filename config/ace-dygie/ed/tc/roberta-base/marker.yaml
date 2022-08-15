@@ -22,7 +22,7 @@ return_token_type_ids: True
 truncate_seq2seq_output: False
 
 # model config #
-model_type: bert
+model_type: roberta
 model_name_or_path: roberta-base
 hidden_size: 768
 aggregation: marker

@@ -144,6 +144,11 @@ if training_args.do_predict:
         logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
         print("\n" + "-" * 50 + '\n')
         print("Test File: {}, \nUse_Gold_Trigger, \nMetrics: {}".format(data_args.test_file, metrics))
+        preds = np.argmax(logits, axis=-1)
+        if data_args.test_exists_labels:
+            # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
+            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+            print("Above is the test performance for Gold Sequence-Labeling Paradigm.")
 
     for eval_mode in ['default', 'loose', 'strict']:
         print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
