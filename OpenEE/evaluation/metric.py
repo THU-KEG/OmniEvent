@@ -11,6 +11,13 @@ from ..input_engineering.mrc_converter import make_predictions, compute_mrc_F1_c
 from ..input_engineering.seq2seq_processor import extract_argument
 
 
+def compute_unified_micro_f1(label_names, results):
+    pos_labels = list(set(label_names))
+    pos_labels.remove("NA")
+    micro_f1 = f1_score(label_names, results, labels=pos_labels, average="micro") * 100.0
+    return micro_f1
+
+
 def f1_score_overall(preds, labels):
     total_true = 0
     for pred in preds:

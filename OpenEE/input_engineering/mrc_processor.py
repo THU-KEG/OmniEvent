@@ -33,8 +33,8 @@ class EAEMRCProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
+                words = get_words(text=item["text"], language=self.config.language)
                 if "events" in item:
-                    words = get_words(text=item["text"], language=self.config.language)
                     for event in item["events"]:
                         for trigger in event["triggers"]:
                             if self.is_training or self.config.golden_trigger or self.event_preds is None:

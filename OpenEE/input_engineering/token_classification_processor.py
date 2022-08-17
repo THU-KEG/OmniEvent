@@ -59,10 +59,6 @@ class EDTCProcessor(EDDataProcessor):
                             trigger_right=candidate["position"][1],
                             labels="NA",
                         )
-                        # # if test set has labels
-                        # assert not (self.config.test_exists_labels ^ ("type" in candidate))
-                        # if "type" in candidate:
-                        #     example.labels = candidate["type"]
                         self.examples.append(example)
 
     def convert_examples_to_features(self):
@@ -79,14 +75,12 @@ class EDTCProcessor(EDDataProcessor):
                 text = text_left + self.config.markers[0] + " " + text_mid + " " + self.config.markers[1] + text_right
 
             outputs = self.tokenizer(text, padding="max_length", truncation=True, max_length=self.config.max_seq_length)
-            is_overflow = False
             try:
                 left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
             except:
                 logger.warning("Markers are not in the input tokens.")
                 left, right = 0, 0
-                is_overflow = True
 
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:

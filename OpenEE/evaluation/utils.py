@@ -1,10 +1,13 @@
 import os
 import json
+import logging
 import jsonlines
 import numpy as np
 
 from tqdm import tqdm
 from .convert_format import get_ace2005_trigger_detection_sl
+
+logger = logging.getLogger(__name__)
 
 
 def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args, training_args, mode="train"):
@@ -20,8 +23,9 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
     logits, labels, metrics, dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                data_args=data_args, data_file=data_file,
                                                training_args=training_args)
-    print("-" * 50)
-    print("Test File: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
+    logger.info("\n")
+    logger.info("{}-Dump Preds-{}{}".format("-"*25, mode, "-"*25))
+    logger.info("Test file: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
 
     preds = np.argmax(logits, axis=-1)
     if model_args.paradigm == "token_classification":
@@ -34,6 +38,7 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
     save_path = os.path.join(output_dir, "{}_preds.json".format(mode))
 
     json.dump(pred_labels, open(save_path, "w", encoding='utf-8'), ensure_ascii=False)
+    logger.info("ED {} preds dumped to {}\n ED finished!".format(mode, save_path))
 
 
 def predict(trainer, tokenizer, data_class, data_args, data_file, training_args):

@@ -215,3 +215,12 @@ def get_duee_submission_sl(preds, labels, is_overflow, result_file, config):
 
     return all_results
 
+
+def get_duee_submission_s2s(preds, labels, is_overflow, result_file, config):
+    # TODO: Add seq2seq submission
+    pass
+
+
+def get_duee_submission_mrc(preds, labels, is_overflow, result_file, config):
+    # TODO: Add mrc submission
+    pass

@@ -18,19 +18,15 @@ from OpenEE.input_engineering.mrc_processor import (
 )
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import compute_mrc_F1
-
-from OpenEE.evaluation.utils import (
-    predict_eae,
-    predict_sub_eae,
-)
+from OpenEE.evaluation.dump_result import get_duee_submission_mrc
+from OpenEE.evaluation.convert_format import get_ace2005_argument_extraction_mrc
+from OpenEE.evaluation.utils import predict
 
 from OpenEE.trainer import Trainer
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-    # If we pass only one argument to the script and it's the path to a json file,
-    # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
 elif len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
     model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
@@ -45,8 +41,6 @@ output_dir = Path(
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
-# local rank
-# training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
 # logging config 
 logging.basicConfig(
@@ -73,7 +67,11 @@ for label, id in type2id.items():
 markers["argument"] = ["<argument>", "</argument>"]
 data_args.markers = markers
 insert_markers = [m for ms in data_args.markers.values() for m in ms]
-print(data_args, model_args, training_args)
+
+# logging
+logging.info(data_args)
+logging.info(model_args)
+logging.info(training_args)
 
 # set seed
 set_seed(training_args.seed)
@@ -114,26 +112,24 @@ trainer.train()
 
 
 if training_args.do_predict:
-    pred_func = predict_sub_eae if data_args.split_infer else predict_eae
+    eval_mode = data_args.eae_eval_mode
+    use_gold = data_args.golden_trigger
+    logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                                    data_args=data_args, data_file=data_args.test_file,
+                                                    training_args=training_args)
+    preds = np.argmax(logits, axis=-1)
+
+    logging.info("\n")
+    logging.info("{}-Evaluate Mode: {}, Golden Trigger: {}-{}".format("-" * 25, eval_mode, use_gold, "-" * 25))
 
     if data_args.test_exists_labels:
-        # use gold triggers
-        data_args.golden_trigger = True
-        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
-        print("\n" + "-" * 50 + '\n')
-        print("Test File: {}, \nUse_Gold_Trigger, \nMetrics: {}".format(data_args.test_file, metrics))
+        logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
+        get_ace2005_argument_extraction_mrc(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+    else:
+        # save name
+        aggregation = model_args.aggregation
+        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
 
-    for eval_mode in ['default', 'loose', 'strict']:
-        print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
-        data_args.eae_eval_mode = eval_mode
-        data_args.golden_trigger = False
-
-        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
-        print("\n" + "-" * 50 + '\n')
-        print("Test File: {}, \nUse_Pred_Trigger,\nMetrics: {}, ".format(data_args.test_file, metrics))
-
-        # pdb.set_trace()
-        preds = np.argmax(logits, axis=-1)
-        if data_args.test_exists_labels:
-            assert model_args.paradigm == "mrc"
-            print("Above is the [{}]test performance for MRC Paradigm.".format(eval_mode))
+        if data_args.dataset_name == "DuEE1.0":
+            logging.info("Start to get DuEE Submission"+"-"*25)
+            get_duee_submission_mrc(preds, labels, test_dataset.is_overflow, save_path, data_args)

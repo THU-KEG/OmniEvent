@@ -2,6 +2,7 @@ import json
 import logging
 
 from tqdm import tqdm
+from .input_utils import get_words, get_left_and_right_pos, get_word_ids
 from .base_processor import (
     EDDataProcessor,
     EDInputExample,
@@ -10,7 +11,6 @@ from .base_processor import (
     EAEInputExample,
     EAEInputFeatures
 )
-from .input_utils import get_word_ids
 
 logger = logging.getLogger(__name__)
 
@@ -29,36 +29,19 @@ class EDSLProcessor(EDDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-
-                if self.config.language == "English":
-                    words = item["text"].split()
-                elif self.config.language == "Chinese":
-                    words = list(item["text"])
-                else:
-                    raise NotImplementedError
-
+                words = get_words(text=item["text"], language=self.config.language)
                 labels = ["O"] * len(words)
 
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.config.language == "English":
-                                left_pos = len(item["text"][:trigger["position"][0]].split())
-                                right_pos = len(item["text"][:trigger["position"][1]].split())
-                            elif self.config.language == "Chinese":
-                                left_pos = trigger["position"][0]
-                                right_pos = trigger["position"][1]
-                            else:
-                                raise NotImplementedError
-
+                            left_pos, right_pos = get_left_and_right_pos(text=item["text"], trigger=trigger,
+                                                                         language=self.config.language)
                             labels[left_pos] = f"B-{event['type']}"
                             for i in range(left_pos + 1, right_pos):
                                 labels[i] = f"I-{event['type']}"
-                example = EDInputExample(
-                    example_id=item["id"],
-                    text=words,
-                    labels=labels
-                )
+
+                example = EDInputExample(example_id=item["id"], text=words, labels=labels)
                 self.examples.append(example)
 
     def get_final_labels(self, example, word_ids_of_each_token, label_all_tokens=False):
@@ -87,6 +70,7 @@ class EDSLProcessor(EDDataProcessor):
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
 

@@ -6,14 +6,13 @@ import json
 import logging
 import numpy as np
 
-from transformers import set_seed
-from transformers import EarlyStoppingCallback
+from transformers import set_seed, EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.backbone.backbone import get_backbone
 from OpenEE.input_engineering.token_classification_processor import EDTCProcessor
 
 from OpenEE.model.model import get_model
+from OpenEE.backbone.backbone import get_backbone
 
 from OpenEE.evaluation.metric import compute_F1
 from OpenEE.evaluation.utils import predict, dump_preds
@@ -24,8 +23,6 @@ from OpenEE.trainer import Trainer
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-    # If we pass only one argument to the script and it's the path to a json file,
-    # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
 elif len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
     model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
@@ -40,10 +37,7 @@ output_dir = Path(
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
-# local rank
-# training_args.local_rank = int(os.environ["LOCAL_RANK"])
-
-# logging config 
+# logging config
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
@@ -51,8 +45,7 @@ logging.basicConfig(
 )
 
 # prepare labels
-type2id_path = data_args.type2id_path
-data_args.type2id = json.load(open(type2id_path))
+data_args.type2id = json.load(open(data_args.type2id_path))
 model_args.num_labels = len(data_args.type2id)
 training_args.label_name = ["labels"]
 
@@ -63,7 +56,10 @@ data_args.id2type = {id: type for type, id in data_args.type2id.items()}
 # markers
 data_args.markers = ["<event>", "</event>"]
 
-print(data_args, model_args, training_args)
+# logging
+logging.info(data_args)
+logging.info(model_args)
+logging.info(training_args)
 
 # set seed
 set_seed(training_args.seed)
@@ -103,8 +99,11 @@ if training_args.do_predict:
     logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                     data_args=data_args, data_file=data_args.test_file,
                                                     training_args=training_args)
+    logging.info("\n")
+    logging.info("{}-Predict-{}".format("-"*25, "-"*25))
+
     if data_args.test_exists_labels:
-        print(metrics)
+        logging.info("{} test performance: {}".format(data_args.dataset_name, metrics))
     else:
         # save name 
         aggregation = model_args.aggregation
@@ -116,7 +115,9 @@ if training_args.do_predict:
         elif data_args.dataset_name == "LEVEN":
             get_leven_submission(preds, test_dataset.get_ids(), save_path)
         else:
-            pass
+            raise NotImplementedError
+
+        logging.info("{} submission file generated at {}".format(data_args.dataset_name, save_path))
 
 
 if training_args.do_ED_infer:
