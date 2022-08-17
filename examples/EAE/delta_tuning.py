@@ -67,7 +67,7 @@ logging.basicConfig(
 )
 
 # markers 
-markers = ["<event>", "</event>", "<ace>", "<ere>", "<kbp>", "<duee>", "<fewfc>"]
+markers = ["<event>", "</event>", "<ace>", "<ere>", "<kbp>", "<duee>", "<fewfc>", "<leven>", "<maven>"]
 data_args.markers = markers
 print(data_args, model_args, training_args)
 

@@ -230,8 +230,8 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
     for epoch in range(args.epochs):
         dataloader = {
             "train": DistributedDataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True, **{"num_workers": dataloader_num_workers}),
-            "dev": DistributedDataLoader(dataset['dev'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers}),
-            "test": DistributedDataLoader(dataset['test'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers})
+            "dev": DistributedDataLoader(dataset['dev'], batch_size=32, shuffle=False, **{"num_workers": dataloader_num_workers}),
+            "test": DistributedDataLoader(dataset['test'], batch_size=32, shuffle=False, **{"num_workers": dataloader_num_workers})
         }
 
         if args.do_train:

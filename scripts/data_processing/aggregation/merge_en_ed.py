@@ -3,65 +3,55 @@ import json
 import random 
 from pathlib import Path 
 
+
 def save_jsonl(data, path):
     with open(path, "w") as f:
         for item in data:
             f.write(json.dumps(item)+"\n")
     
 
-def merge(data_dir):
-    all_train = []
-    ere = []
-    with open(os.path.join(data_dir, "ace2005-dygie/train.unified.jsonl")) as f:
-        for line in f.readlines():
-            ere.append(json.loads(line.strip()))
-    ere += json.load(open(os.path.join(data_dir, "ere/LDC2015E29.json")))
-    ere += json.load(open(os.path.join(data_dir, "ere/LDC2015E68.json")))
-    ere += json.load(open(os.path.join(data_dir, "ere/LDC2015E78.json")))
-    ere += json.load(open(os.path.join(data_dir, "TAC-KBP2014/train.json")))
-    ere += json.load(open(os.path.join(data_dir, "TAC-KBP2014/test.json")))
-    ere += json.load(open(os.path.join(data_dir, "TAC-KBP2015/train.json")))
-    ere += json.load(open(os.path.join(data_dir, "TAC-KBP2015/test.json")))
-    ere += json.load(open(os.path.join(data_dir, "TAC-KBP2016/pilot.json")))
-    ere += json.load(open(os.path.join(data_dir, "TAC-KBP2016/test.json")))
-    for item in ere:
-        item["source"] = "<ere>"
-        all_train.append(item)
-    with open(os.path.join(data_dir, "MAVEN/train.unified.jsonl")) as f:
+def load_jsonl(path, prefix):
+    data = []
+    with open(path) as f:
         for line in f.readlines():
             item = json.loads(line.strip())
-            item["source"] = "<maven>"
-            all_train.append(item)
-    
+            item["source"] = prefix 
+            data.append(item)
+    return data
+
+
+def merge(data_dir):
+    # train
+    all_train = []
+    all_train += load_jsonl(os.path.join(data_dir, "ace2005-dygie/train.unified.jsonl"), "<ace>")
+    all_train += load_jsonl(os.path.join(data_dir, "ere/LDC2015E29.unified.jsonl"), "<ere>")
+    all_train += load_jsonl(os.path.join(data_dir, "ere/LDC2015E68.unified.jsonl"), "<ere>")
+    all_train += load_jsonl(os.path.join(data_dir, "ere/LDC2015E78.unified.jsonl"), "<ere>")
+    all_train += load_jsonl(os.path.join(data_dir, "TAC-KBP2014/train.unified.jsonl"), "<kbp>")
+    all_train += load_jsonl(os.path.join(data_dir, "TAC-KBP2014/test.unified.jsonl"), "<kbp>")
+    all_train += load_jsonl(os.path.join(data_dir, "TAC-KBP2015/train.unified.jsonl"), "<kbp>")
+    all_train += load_jsonl(os.path.join(data_dir, "TAC-KBP2015/test.unified.jsonl"), "<kbp>")
+    all_train += load_jsonl(os.path.join(data_dir, "TAC-KBP2016/pilot.unified.jsonl"), "<kbp>")
+    all_train += load_jsonl(os.path.join(data_dir, "TAC-KBP2016/test.unified.jsonl"), "<kbp>")
+    all_train += load_jsonl(os.path.join(data_dir, "MAVEN/train.unified.jsonl"), "<maven>")
+    all_train += load_jsonl(os.path.join(data_dir, "DuEE1.0/duee_train.unified.json"), "<duee>")
+    all_train += load_jsonl(os.path.join(data_dir, "FewFC/train_base.unified.json"), "<fewfc>")
+    all_train += load_jsonl(os.path.join(data_dir, "LEVEN/train.unified.jsonl"), "<leven>")
     # dev
     all_dev = []
-    ere = []
-    with open(os.path.join(data_dir, "ace2005-dygie/dev.unified.jsonl")) as f:
-        for line in f.readlines():
-            ere.append(json.loads(line.strip()))
-    for item in ere:
-        item["source"] = "<ere>"
-        all_dev.append(item)
-    maven_dev_test = []
-    with open(os.path.join(data_dir, "MAVEN/valid.unified.jsonl")) as f:
-        for line in f.readlines():
-            item = json.loads(line.strip())
-            item["source"] = "<maven>"
-            maven_dev_test.append(item)
-    num_maven_dev = len(maven_dev_test)
-    all_dev.extend(maven_dev_test[:num_maven_dev//2])
-    
+    all_dev += load_jsonl(os.path.join(data_dir, "ace2005-dygie/dev.unified.jsonl"), "<ace>")
+    all_dev += load_jsonl(os.path.join(data_dir, "MAVEN/valid.unified.jsonl"), "<maven>")
+    all_dev += load_jsonl(os.path.join(data_dir, "DuEE1.0/duee_dev.unified.json"), "<duee>")
+    all_dev += load_jsonl(os.path.join(data_dir, "FewFC/dev_base.unified.json"), "<fewfc>")
+    all_dev += load_jsonl(os.path.join(data_dir, "LEVEN/valid.unified.jsonl"), "<leven>")
     # test 
     all_test = []
-    ere = json.load(open(os.path.join(data_dir, "TAC-KBP2017/test.json")))
-    with open(os.path.join(data_dir, "ace2005-dygie/test.unified.jsonl")) as f:
-        for line in f.readlines():
-            ere.append(json.loads(line.strip()))
-    for item in ere:
-        item["source"] = "<ere>"
-        all_test.append(item)
-    all_test.extend(maven_dev_test[num_maven_dev//2:])
-
+    all_test += load_jsonl(os.path.join(data_dir, "ace2005-dygie/test.unified.jsonl"), "<ace>")
+    all_test += load_jsonl(os.path.join(data_dir, "MAVEN/valid.unified.jsonl"), "<maven>")
+    all_test += load_jsonl(os.path.join(data_dir, "DuEE1.0/duee_dev.unified.json"), "<duee>")
+    all_test += load_jsonl(os.path.join(data_dir, "FewFC/test_base.unified.json"), "<fewfc>")
+    all_test += load_jsonl(os.path.join(data_dir, "LEVEN/valid.unified.jsonl"), "<leven>")
+    # save 
     print("All train: %d, all dev: %d, all test: %d" % (len(all_train), len(all_dev), len(all_test)))
     save_dir = Path("../../../data/processed/all-ed")
     save_dir.mkdir(exist_ok=True)

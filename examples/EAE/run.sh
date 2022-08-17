@@ -16,5 +16,5 @@
 # deepspeed --include localhost:4,5,6,7 delta_tuning.py \
 #         ../../config/eae/s2s/dt.yaml \
 #         --deepspeed ../../config/deepspeed.json 
-CUDA_VISIBLE_DEVICES=4,5,6,7 python delta_tuning.py \
+CUDA_VISIBLE_DEVICES=4 python delta_tuning.py \
         ../../config/eae/s2s/dt.yaml 

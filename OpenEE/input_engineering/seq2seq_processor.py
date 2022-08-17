@@ -14,8 +14,8 @@ from .base_processor import (
 )
 from transformers import BartTokenizerFast
 
-type_start = "<extra_id_0>"
-type_end = "<extra_id_1>"
+type_start = "<"
+type_end = ">"
 split_word = ":"
 
 logger = logging.getLogger(__name__)
