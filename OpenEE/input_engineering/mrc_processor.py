@@ -9,7 +9,7 @@ from .base_processor import (
     EAEInputFeatures
 )
 from .mrc_converter import read_query_templates
-from .input_utils import get_words, get_left_and_right_pos
+from .input_utils import get_words, get_left_and_right_pos, get_word_ids
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -224,7 +224,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             max_length=self.config.max_seq_length,
                                             is_split_into_words=True)
 
-            input_context = self.remove_sub_word(input_context)
+            input_context = self.remove_sub_word(self.tokenizer, input_context, example.text)
             # concatenate
             input_ids = input_context["input_ids"] + input_template["input_ids"]
             attention_mask = input_context["attention_mask"] + input_template["attention_mask"]
@@ -254,10 +254,10 @@ class EAEMRCProcessor(EAEDataProcessor):
             self.input_features.append(features)
 
     @staticmethod
-    def remove_sub_word(inputs):
+    def remove_sub_word(tokenizer, inputs, word_list):
         outputs = defaultdict(list)
         pre_word_id = -1
-        for token_id, word_id in enumerate(inputs.word_ids()):
+        for token_id, word_id in enumerate(get_word_ids(tokenizer, inputs, word_list)):
             if token_id == 0 or (word_id != pre_word_id and word_id is not None):
                 for key in inputs:
                     outputs[key].append(inputs[key][token_id])

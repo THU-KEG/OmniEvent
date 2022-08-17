@@ -6,7 +6,7 @@ import tqdm
 
 MODEL_NAMES = {
     "s2s-mt5-ed": "https://cloud.tsinghua.edu.cn/f/cdc4b333aff143ff870e/?dl=1",
-    "s2s-mt5-eae": ""
+    "s2s-mt5-eae": "https://cloud.tsinghua.edu.cn/f/f4ac92ac8f2c4e769282/?dl=1"
 }
 
 FILE_NAMES = {
@@ -17,7 +17,7 @@ FILE_NAMES = {
 }
 
 
-def download(path, url):
+def download(path, base_path, url):
     req = requests.get(url, stream=True)
     file = open(path, "wb")
     req.raise_for_status()
@@ -39,7 +39,7 @@ def download(path, url):
             file.write(chunk)
     progress.close()
     file.close()
-    os.system(f"unzip {path}")
+    os.system(f"unzip {path} -d {base_path}")
     os.system(f"rm {path}")
 
 
@@ -62,7 +62,7 @@ def check_web_and_convert_path(path, load_type, base_path="OpenEE-Model"): # TOD
         except:
             raise ValueError(f"'{path}' is not a valid model identifier")
         cache_path = f"{base_path}/{path}"
-        download(cache_path+".zip", url)
+        download(cache_path+".zip", base_path, url)
         return cache_path
 
 

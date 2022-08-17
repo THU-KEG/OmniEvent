@@ -77,6 +77,12 @@ def infer(text, triggers=None, task="ED"):
         eae_model, eae_tokenizer, _ = get_pretrained("s2s-mt5-eae")
         events = do_event_detection(ed_model, ed_tokenizer, [text])
         instances = prepare_for_eae_from_pred([text], events)
+        if len(instances[0]["triggers"]) == 0:
+            results = [{
+                "text": instances[0]["text"],
+                "events": []
+            }]
+            return results
         arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances)
         results = get_eae_result(instances, arguments)
     print(results)

@@ -1,7 +1,5 @@
-import os 
-import json 
-
 from typing import Dict
+from .whitespace_tokenizer import WordLevelTokenizer
 
 
 def get_bio_labels(original_labels, labels_to_exclude=["NA"]) -> Dict[str, int]:
@@ -54,3 +52,26 @@ def get_left_and_right_pos(text, trigger, language):
     else:
         raise NotImplementedError
     return left_pos, right_pos
+
+
+def get_word_ids(tokenizer, outputs, word_list):
+    word_list = [w.lower() for w in word_list]
+    try: 
+        word_ids = outputs.word_ids()
+    except:
+        assert isinstance(tokenizer, WordLevelTokenizer)
+        pass 
+    tokens = tokenizer.convert_ids_to_tokens(outputs["input_ids"])
+    word_ids = []
+    word_idx = 0
+    # import pdb; pdb.set_trace()
+    for token in tokens:
+        if token not in word_list and token != "[UNK]":
+            word_ids.append(None)
+        else:
+            if token != "[UNK]":
+                assert token == word_list[word_idx]
+            word_ids.append(word_idx)
+            word_idx += 1
+    return word_ids
+
