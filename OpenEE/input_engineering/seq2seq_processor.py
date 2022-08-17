@@ -2,8 +2,9 @@ import re
 import json
 import logging
 
-from tqdm import tqdm 
+from tqdm import tqdm
 from collections import defaultdict
+from .input_utils import get_words
 from .base_processor import (
     EDInputExample,
     EDDataProcessor,
@@ -43,18 +44,16 @@ class EDSeq2SeqProcessor(EDDataProcessor):
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
-    
+
     def read_examples(self, input_file):
         self.examples = []
+        language = self.config.language
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
-                if self.config.language == "English":
-                    words = item["text"].split()
-                elif self.config.language == "Chinese":
-                    words = list(item["text"])
-                else:
-                    raise NotImplementedError
+                text = item["text"]
+                words = get_words(text=text, language=language)
+
                 # training and valid set
                 if "events" in item:
                     labels = []
@@ -64,10 +63,9 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                             labels.append(f"{type_start} {type}{split_word} {trigger['trigger_word']} {type_end}")
                     if len(labels) != 0:
                         labels = "".join(labels)
-                        # labels = type_start + labels + type_end 
-                    else:       # no arguments for the trigger
+                    else:  # no arguments for the trigger
                         labels = ""
-                        # labels = f"{type_start}{type_end}"
+
                     example = EDInputExample(
                         example_id=idx,
                         text=words,
@@ -77,7 +75,6 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                 else:
                     example = EDInputExample(example_id=idx, text=words, labels="")
                     self.examples.append(example)
-
 
     def convert_examples_to_features(self):
         self.input_features = []
@@ -99,10 +96,10 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                 if flag == 0:
                     label_outputs["input_ids"][i] = -100
             features = EDInputFeatures(
-                example_id = example.example_id,
-                input_ids = input_context["input_ids"],
-                attention_mask = input_context["attention_mask"],
-                labels = label_outputs["input_ids"]
+                example_id=example.example_id,
+                input_ids=input_context["input_ids"],
+                attention_mask=input_context["attention_mask"],
+                labels=label_outputs["input_ids"]
             )
             self.input_features.append(features)
 
@@ -114,11 +111,12 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
-    
+
     def read_examples(self, input_file):
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
         self.data_for_evaluation["roles"] = []
+        language = self.config.language
         trigger_idx = 0
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
@@ -127,43 +125,40 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                     kwargs = {"source": [item["source"]]}
                 else:
                     kwargs = {"source": []}
-                if self.config.language == "English":
-                    words = item["text"].split()
-                    whitespace = " "
-                elif self.config.language == "Chinese":
-                    words = list(item["text"])
-                    whitespace = ""
-                else:
-                    raise NotImplementedError
+
+                text = item["text"]
+                words = get_words(text=text, language=language)
+                whitespace = " " if language == "English" else ""
+
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.event_preds is not None \
-                                and not self.config.golden_trigger \
-                                and not self.is_training:    
-                                pred_event_type = self.event_preds[trigger_idx] 
-                            else:
+                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
                                 pred_event_type = event["type"]
+                            else:
+                                pred_event_type = self.event_preds[trigger_idx]
                             trigger_idx += 1
+
                             # Evaluation mode for EAE
                             # If the predicted event type is NA, We don't consider the trigger
-                            if self.config.eae_eval_mode in ["default", "loose"]\
-                                and pred_event_type == "NA":
+                            if self.config.eae_eval_mode in ["default", "loose"] and pred_event_type == "NA":
                                 continue
+
                             labels = []
                             arguments_per_trigger = defaultdict(list)
                             for argument in trigger["arguments"]:
                                 role = argument["role"]
                                 for mention in argument["mentions"]:
                                     arguments_per_trigger[argument["role"]].append(mention["mention"])
-                                    labels.append(f"{type_start}{whitespace}{role}{split_word}{whitespace}{mention['mention']}{whitespace}{type_end}")
+                                    labels.append(
+                                        f"{type_start}{whitespace}{role}{split_word}{whitespace}{mention['mention']}{whitespace}{type_end}")
                             if len(labels) != 0:
                                 labels = "".join(labels)
-                            else:       # no arguments for the trigger
+                            else:  # no arguments for the trigger
                                 labels = ""
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
-                                example_id=trigger_idx-1,
+                                example_id=trigger_idx - 1,
                                 text=words,
                                 pred_type=pred_event_type,
                                 true_type=event["type"],
@@ -175,13 +170,12 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             self.examples.append(example)
                     # negative triggers 
                     for neg_trigger in item["negative_triggers"]:
-                        if self.event_preds is not None \
-                            and not self.config.golden_trigger \
-                            and not self.is_training:    
-                            pred_event_type = self.event_preds[trigger_idx]
+                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
+                            pred_event_type = event["type"]
                         else:
-                            pred_event_type = "NA"
-                        trigger_idx += 1         
+                            pred_event_type = self.event_preds[trigger_idx]
+                        trigger_idx += 1
+
                         if self.config.eae_eval_mode == "loose":
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
@@ -190,7 +184,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 arguments_per_trigger = {}
                                 self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                                 example = EAEInputExample(
-                                    example_id=trigger_idx-1,
+                                    example_id=trigger_idx - 1,
                                     text=words,
                                     pred_type=pred_event_type,
                                     true_type="NA",
@@ -212,10 +206,10 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             arguments_per_trigger = {}
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
-                                example_id=trigger_idx-1,
+                                example_id=trigger_idx - 1,
                                 text=words,
                                 pred_type=pred_event_type,
-                                true_type="NA",   # true type not given, set to NA.
+                                true_type="NA",  # true type not given, set to NA.
                                 trigger_left=candi["position"][0],
                                 trigger_right=candi["position"][1],
                                 labels=labels,
@@ -225,31 +219,29 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-
     def insert_marker(self, tokens, trigger_pos, markers, whitespace=True):
         space = " " if whitespace else ""
-        markered_words = []
+        marked_words = []
         char_pos = 0
         for i, token in enumerate(tokens):
             if char_pos == trigger_pos[0]:
-                markered_words.append(markers[0])
+                marked_words.append(markers[0])
             char_pos += len(token) + len(space)
-            markered_words.append(token)
+            marked_words.append(token)
             if char_pos == trigger_pos[1] + len(space):
-                markered_words.append(markers[1])
-        return markered_words
-        
+                marked_words.append(markers[1])
+        return marked_words
 
     def convert_examples_to_features(self):
         self.input_features = []
-        whitespace = True if self.config.language == "English" else False 
-        for example in tqdm(self.examples, desc="Processing features for SL"):
+        whitespace = True if self.config.language == "English" else False
+        for example in tqdm(self.examples, desc="Processing features for Seq2Seq"):
             # context 
-            words = self.insert_marker(example.text, 
-                                      [example.trigger_left, example.trigger_right],
-                                      self.config.markers,
-                                      whitespace)
-            input_context = self.tokenizer(example.kwargs["source"]+words,
+            words = self.insert_marker(example.text,
+                                       [example.trigger_left, example.trigger_right],
+                                       self.config.markers,
+                                       whitespace)
+            input_context = self.tokenizer(example.kwargs["source"] + words,
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length,
@@ -260,15 +252,14 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                            truncation=True,
                                            max_length=self.config.max_out_length,
                                            is_split_into_words=True)
-            # import pdb; pdb.set_trace()
-            # set -100 to unused token 
+            # set -100 to unused token
             for i, flag in enumerate(label_outputs["attention_mask"]):
                 if flag == 0:
                     label_outputs["input_ids"][i] = -100
             features = EAEInputFeatures(
-                example_id = example.example_id,
-                input_ids = input_context["input_ids"],
-                attention_mask = input_context["attention_mask"],
-                labels = label_outputs["input_ids"]
+                example_id=example.example_id,
+                input_ids=input_context["input_ids"],
+                attention_mask=input_context["attention_mask"],
+                labels=label_outputs["input_ids"]
             )
             self.input_features.append(features)
