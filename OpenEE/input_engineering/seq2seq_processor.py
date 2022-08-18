@@ -14,8 +14,8 @@ from .base_processor import (
     EAEInputFeatures
 )
 
-type_start = "<extra_id_0>"
-type_end = "<extra_id_1>"
+type_start = "<"
+type_end = ">"
 split_word = ":"
 
 logger = logging.getLogger(__name__)
@@ -51,9 +51,20 @@ class EDSeq2SeqProcessor(EDDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
-                text = item["text"]
-                words = get_words(text=text, language=language)
-
+                if "source" in item:
+                    kwargs = {"source": [item["source"]]}
+                    if item["source"] in ["<duee>", "<fewfc>", "<leven>"]:
+                        self.config.language = "Chinese"
+                    else:
+                        self.config.language = "English"
+                else:
+                    kwargs = {"source": []}
+                if self.config.language == "English":
+                    words = item["text"].split()
+                elif self.config.language == "Chinese":
+                    words = list(item["text"])
+                else:
+                    raise NotImplementedError
                 # training and valid set
                 if "events" in item:
                     labels = []
@@ -69,7 +80,8 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                     example = EDInputExample(
                         example_id=idx,
                         text=words,
-                        labels=labels
+                        labels=labels,
+                        **kwargs
                     )
                     self.examples.append(example)
                 else:
@@ -80,7 +92,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for SL"):
             # context 
-            input_context = self.tokenizer(example.text,
+            input_context = self.tokenizer(example.kwargs["source"]+example.text,
                                            truncation=True,
                                            padding="max_length",
                                            max_length=self.config.max_seq_length,
@@ -123,6 +135,10 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 item = json.loads(line.strip())
                 if "source" in item:
                     kwargs = {"source": [item["source"]]}
+                    if item["source"] in ["<duee>", "<fewfc>", "<leven>"]:
+                        self.config.language = "Chinese"
+                    else:
+                        self.config.language = "English"
                 else:
                     kwargs = {"source": []}
 
