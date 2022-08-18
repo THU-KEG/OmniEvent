@@ -1,12 +1,12 @@
 seed: 42
-do_train: False
-do_predict: False
+do_train: True
+do_predict: True
 
 # top-level config #
 paradigm: seq2seq
 task_name: EAE
 dataset_name: ALL
-language: English
+# language: English
 test_exists_labels: True
 
 # file path #
@@ -33,7 +33,7 @@ aggregation: none
 early_stopping_patience: 100
 
 # training config #
-num_train_epochs: 20
+num_train_epochs: 10
 max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2
@@ -43,18 +43,19 @@ generation_num_beams: 4
 predict_with_generate: True 
 ignore_pad_token_for_loss: True 
 
-per_device_train_batch_size: 16
-per_device_eval_batch_size: 32
-gradient_accumulation_steps: 1
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 16
+gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
-learning_rate: 1.0e-3
+learning_rate: 5.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1
 max_grad_norm: 1
 optim: adamw_torch
-# deepspeed: ../../config/deepspeed_none_zero.json
+deepspeed: ../../config/deepspeed_zero_2.json
 # pipeline: True 
-fp16: True 
+fp16: False
+# fp16_backend: apex
 fp16_opt_level: O1
 place_model_on_device: False 
 # lr_scheduler_type: constant 

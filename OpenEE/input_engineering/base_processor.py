@@ -16,7 +16,8 @@ class EDInputExample(object):
                  text,
                  trigger_left=None,
                  trigger_right=None,
-                 labels=None):
+                 labels=None,
+                 **kwargs):
         """Constructs a InputExample.
 
         Args:
@@ -31,6 +32,7 @@ class EDInputExample(object):
         self.trigger_left = trigger_left
         self.trigger_right = trigger_right
         self.labels = labels
+        self.kwargs = kwargs
 
 
 class EDInputFeatures(object):
