@@ -3,25 +3,29 @@ from pathlib import Path
 import sys
 sys.path.append("../../")
 import json
+import numpy as np
 import logging
 
 from transformers import set_seed
 from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.backbone.backbone import get_backbone
 from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
 
 from OpenEE.model.model import get_model
+from OpenEE.backbone.backbone import get_backbone
+
 from OpenEE.evaluation.metric import compute_seq_F1
+from OpenEE.evaluation.utils import predict
+from OpenEE.evaluation.convert_format import get_ace2005_trigger_detection_s2s
+from OpenEE.evaluation.dump_result import get_leven_submission_seq2seq, get_maven_submission_seq2seq
+
 from OpenEE.trainer_seq2seq import Seq2SeqTrainer
 from OpenEE.model.constraint_decoding import type_start, type_end
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-    # If we pass only one argument to the script and it's the path to a json file,
-    # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
 elif len(sys.argv) >= 2 and sys.argv[2].endswith(".yaml"):
     model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[2]))
@@ -46,7 +50,10 @@ logging.basicConfig(
 # markers
 data_args.markers = ["<event>", "</event>"] + [type_start, type_end]
 
-print(data_args, model_args, training_args)
+# logging
+logging.info(data_args)
+logging.info(model_args)
+logging.info(training_args)
 
 # set seed
 set_seed(training_args.seed)
@@ -86,15 +93,32 @@ if training_args.do_train:
 
 
 if training_args.do_predict:
-    test_dataset = data_class(data_args, tokenizer, data_args.test_file)
-    logits, labels, metrics = trainer.predict(
-        test_dataset=test_dataset,
-        ignore_keys=["loss"]
-    )
+    logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                                    data_args=data_args, data_file=data_args.test_file,
+                                                    training_args=training_args)
+
+    logging.info("\n")
+    logging.info("{}Predict{}".format("-"*25, "-"*25))
+
     if data_args.test_exists_labels:
-        print(metrics)
+        logging.info("{} test performance: {}".format(data_args.dataset_name, metrics))
+        preds = np.argmax(logits, axis=-1)
+        pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
     else:
-        pass 
+        # save name
+        aggregation = model_args.aggregation
+        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
+
+        if data_args.dataset_name == "MAVEN":
+            get_maven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
+                                         training_args, data_args)
+        elif data_args.dataset_name == "LEVEN":
+            get_leven_submission_seq2seq(logits, labels, save_path, json.load(open(type2id_path)), tokenizer,
+                                         training_args, data_args)
+        else:
+            raise NotImplementedError
+
+        logging.info("{} submission file generated at {}".format(data_args.dataset_name, save_path))
 
 if training_args.do_ED_infer:
     pass

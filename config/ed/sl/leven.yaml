@@ -8,10 +8,10 @@ paradigm: sequence_labeling
 task_name: ED
 dataset_name: LEVEN
 output_dir: output/LEVEN
-type2id_path: ../data/processed/LEVEN/label2id.json
-train_file: ../data/processed/LEVEN/train.unified.jsonl
-validation_file: ../data/processed/LEVEN/valid.unified.jsonl
-test_file: ../data/processed/LEVEN/test.unified.jsonl
+type2id_path: ../../data/processed/LEVEN/label2id.json
+train_file: ../../data/processed/LEVEN/train.unified.jsonl
+validation_file: ../../data/processed/LEVEN/valid.unified.jsonl
+test_file: ../../data/processed/LEVEN/test.unified.jsonl
 language: Chinese
 test_exists_labels: False
 

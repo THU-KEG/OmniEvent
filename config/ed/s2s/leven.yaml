@@ -15,7 +15,7 @@ output_dir: output/LEVEN
 type2id_path: ../../data/processed/LEVEN/label2id.json
 train_file: ../../data/processed/LEVEN/train.unified.jsonl
 validation_file: ../../data/processed/LEVEN/valid.unified.jsonl
-test_file: ../../data/processed/LEVEN/valid.unified.jsonl
+test_file: ../../data/processed/LEVEN/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 

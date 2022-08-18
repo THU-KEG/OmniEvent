@@ -1,8 +1,7 @@
-import os
-import pdb
-import json
-
 import collections
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def read_query_templates(prompt_file, translate=False):
@@ -126,17 +125,17 @@ def make_predictions(all_start_logits, all_end_logits, training_args):
                 prelim_predictions.append(
                     _PrelimPrediction(start_index=word_start_index, end_index=word_end_index,
                                       start_logit=start_logits[start_index], end_logit=end_logits[end_index]))
-        ## sort
+        # sort
         prelim_predictions = sorted(prelim_predictions, key=lambda x: (x.start_logit + x.end_logit), reverse=True)
-        ## get final pred in format: [event_type_offset_argument_type, [start_offset, end_offset]]
+        # get final pred in format: [event_type_offset_argument_type, [start_offset, end_offset]]
         max_num_pred_per_arg = 1
         predictions_per_query = []
         for _, pred in enumerate(prelim_predictions[:max_num_pred_per_arg]):
             na_prob = (start_logits[0] + end_logits[0]) - (pred.start_logit + pred.end_logit)
             predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob, data_for_evaluation["ids"][example_id]))
         final_all_predictions.extend(predictions_per_query)
-    # pdb.set_trace()
-    print("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
+
+    logger.info("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
     return final_all_predictions, final_all_labels
 
 
@@ -178,18 +177,17 @@ def find_best_thresh(new_preds, new_all_gold):
             best_score = f1_c
             best_na_thresh = argument[-2]
 
-    # import ipdb; ipdb.set_trace()
     return best_na_thresh + 1e-10
 
 
-def compute_mrc_F1_cls(all_predcitions, all_labels):
-    all_predcitions = sorted(all_predcitions, key=lambda x: x[-2])
+def compute_mrc_F1_cls(all_predictions, all_labels):
+    all_predictions = sorted(all_predictions, key=lambda x: x[-2])
     # best_na_thresh = 0
-    best_na_thresh = find_best_thresh(all_predcitions, all_labels)
+    best_na_thresh = find_best_thresh(all_predictions, all_labels)
     print("Best thresh founded. %.6f" % best_na_thresh)
 
     final_new_preds = []
-    for argument in all_predcitions:
+    for argument in all_predictions:
         if argument[-2] < best_na_thresh:
             final_new_preds.append(argument[:-2] + argument[-1:])  # no na_prob
 
@@ -225,5 +223,5 @@ def compute_mrc_F1_cls(all_predcitions, all_labels):
     else:
         f1_c = 0
 
-    print("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
+    logger.info("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
     return f1_c

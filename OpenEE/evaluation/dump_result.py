@@ -1,14 +1,8 @@
-import os
-import sys
-import pdb 
-import argparse
 import jsonlines
 import json
-import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 from .metric import select_start_position, compute_seq_F1
-from ..input_engineering.input_utils import get_start_poses, check_if_start, get_word_position
 
 
 def get_pred_per_mention(pos_start, pos_end, preds, id2label):
@@ -182,9 +176,6 @@ def get_duee_submission_sl(preds, labels, is_overflow, result_file, config):
                         if config.language == "English":
                             assert len(preds[example_idx]) == len(item["text"].split())
                         elif config.language == "Chinese":
-                            # print('len preds: {}'.format(len(preds[example_idx])))
-                            # print('len clean text: {}'.format(len("".join(item["text"].split()))))
-                            # print('text:{}'.format(item['text']))
                             assert len(preds[example_idx]) == len("".join(item["text"].split()))  # remove space token
                         else:
                             raise NotImplementedError
@@ -224,3 +215,12 @@ def get_duee_submission_sl(preds, labels, is_overflow, result_file, config):
 
     return all_results
 
+
+def get_duee_submission_s2s(preds, labels, is_overflow, result_file, config):
+    # TODO: Add seq2seq submission
+    pass
+
+
+def get_duee_submission_mrc(preds, labels, is_overflow, result_file, config):
+    # TODO: Add mrc submission
+    pass

@@ -1,4 +1,3 @@
-import pdb
 import json
 import logging
 
@@ -9,7 +8,7 @@ from .base_processor import (
     EAEInputFeatures
 )
 from .mrc_converter import read_query_templates
-from .input_utils import get_words, get_left_and_right_pos
+from .input_utils import get_words, get_left_and_right_pos, get_word_ids
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -33,8 +32,8 @@ class EAEMRCProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
+                words = get_words(text=item["text"], language=self.config.language)
                 if "events" in item:
-                    words = get_words(text=item["text"], language=self.config.language)
                     for event in item["events"]:
                         for trigger in event["triggers"]:
                             if self.is_training or self.config.golden_trigger or self.event_preds is None:
@@ -224,7 +223,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             max_length=self.config.max_seq_length,
                                             is_split_into_words=True)
 
-            input_context = self.remove_sub_word(input_context)
+            input_context = self.remove_sub_word(self.tokenizer, input_context, example.text)
             # concatenate
             input_ids = input_context["input_ids"] + input_template["input_ids"]
             attention_mask = input_context["attention_mask"] + input_template["attention_mask"]
@@ -254,10 +253,10 @@ class EAEMRCProcessor(EAEDataProcessor):
             self.input_features.append(features)
 
     @staticmethod
-    def remove_sub_word(inputs):
+    def remove_sub_word(tokenizer, inputs, word_list):
         outputs = defaultdict(list)
         pre_word_id = -1
-        for token_id, word_id in enumerate(inputs.word_ids()):
+        for token_id, word_id in enumerate(get_word_ids(tokenizer, inputs, word_list)):
             if token_id == 0 or (word_id != pre_word_id and word_id is not None):
                 for key in inputs:
                     outputs[key].append(inputs[key][token_id])

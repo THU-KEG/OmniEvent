@@ -2,6 +2,7 @@ import json
 import logging
 
 from tqdm import tqdm
+from .input_utils import get_words, get_left_and_right_pos, get_word_ids
 from .base_processor import (
     EDDataProcessor,
     EDInputExample,
@@ -25,39 +26,24 @@ class EDSLProcessor(EDDataProcessor):
 
     def read_examples(self, input_file):
         self.examples = []
+        language = self.config.language
+
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-
-                if self.config.language == "English":
-                    words = item["text"].split()
-                elif self.config.language == "Chinese":
-                    words = list(item["text"])
-                else:
-                    raise NotImplementedError
-
+                text = item["text"]
+                words = get_words(text=text, language=language)
                 labels = ["O"] * len(words)
 
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.config.language == "English":
-                                left_pos = len(item["text"][:trigger["position"][0]].split())
-                                right_pos = len(item["text"][:trigger["position"][1]].split())
-                            elif self.config.language == "Chinese":
-                                left_pos = trigger["position"][0]
-                                right_pos = trigger["position"][1]
-                            else:
-                                raise NotImplementedError
-
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=trigger, language=language)
                             labels[left_pos] = f"B-{event['type']}"
                             for i in range(left_pos + 1, right_pos):
                                 labels[i] = f"I-{event['type']}"
-                example = EDInputExample(
-                    example_id=item["id"],
-                    text=words,
-                    labels=labels
-                )
+
+                example = EDInputExample(example_id=item["id"], text=words, labels=labels)
                 self.examples.append(example)
 
     def get_final_labels(self, example, word_ids_of_each_token, label_all_tokens=False):
@@ -86,10 +72,11 @@ class EDSLProcessor(EDDataProcessor):
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
 
-            word_ids_of_each_token = outputs.word_ids()[: self.config.max_seq_length]
+            word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, example.text)[: self.config.max_seq_length]
             final_labels = self.get_final_labels(example, word_ids_of_each_token, label_all_tokens=False)
 
             features = EDInputFeatures(
@@ -115,17 +102,13 @@ class EAESLProcessor(EAEDataProcessor):
 
     def read_examples(self, input_file):
         self.examples = []
+        language = self.config.language
         trigger_idx = 0
         with open(input_file, "r", encoding="utf-8") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
                 item = json.loads(line.strip())
-
-                if self.config.language == "English":
-                    words = item["text"].split()
-                elif self.config.language == "Chinese":
-                    words = list(item["text"])
-                else:
-                    raise NotImplementedError
+                text = item["text"]
+                words = get_words(text=text, language=language)
 
                 if "events" in item:
                     for event in item["events"]:
@@ -135,30 +118,17 @@ class EAESLProcessor(EAEDataProcessor):
                             else:
                                 pred_type = self.event_preds[trigger_idx]
                             trigger_idx += 1
+
                             # Evaluation mode for EAE
                             # If the predicted event type is NA, We don't consider the trigger
                             if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
-                            if self.config.language == "English":
-                                trigger_left = len(item["text"][:trigger["position"][0]].split())
-                                trigger_right = len(item["text"][:trigger["position"][1]].split())
-                            elif self.config.language == "Chinese":
-                                trigger_left = trigger["position"][0]
-                                trigger_right = trigger["position"][1]
-                            else:
-                                raise NotImplementedError
+                            trigger_left, trigger_right = get_left_and_right_pos(text=text, trigger=trigger, language=language)
                             labels = ["O"] * len(words)
 
                             for argument in trigger["arguments"]:
                                 for mention in argument["mentions"]:
-                                    if self.config.language == "English":
-                                        left_pos = len(item["text"][:mention["position"][0]].split())
-                                        right_pos = len(item["text"][:mention["position"][1]].split())
-                                    elif self.config.language == "Chinese":
-                                        left_pos = mention["position"][0]
-                                        right_pos = mention["position"][1]
-                                    else:
-                                        raise NotImplementedError
+                                    left_pos, right_pos = get_left_and_right_pos(text=text, trigger=mention, language=language)
 
                                     labels[left_pos] = f"B-{argument['role']}"
                                     for i in range(left_pos + 1, right_pos):
@@ -176,7 +146,7 @@ class EAESLProcessor(EAEDataProcessor):
                             self.examples.append(example)
 
                     # negative triggers
-                    for neg_trigger in item["negative_triggers"]:
+                    for neg in item["negative_triggers"]:
                         if self.is_training or self.config.golden_trigger or self.event_preds is None:
                             pred_type = "NA"
                         else:
@@ -186,36 +156,22 @@ class EAESLProcessor(EAEDataProcessor):
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
                             if pred_type != "NA":
-                                if self.config.language == "English":
-                                    trigger_left = len(item["text"][:neg_trigger["position"][0]].split())
-                                    trigger_right = len(item["text"][:neg_trigger["position"][1]].split())
-                                elif self.config.language == "Chinese":
-                                    trigger_left = neg_trigger["position"][0]
-                                    trigger_right = neg_trigger["position"][1]
-                                else:
-                                    raise NotImplementedError
+                                neg_left, neg_right = get_left_and_right_pos(text=text, trigger=neg, language=language)
                                 example = EAEInputExample(
                                     example_id=item["id"],
                                     text=words,
                                     pred_type=pred_type,
                                     true_type="NA",
-                                    trigger_left=trigger_left,
-                                    trigger_right=trigger_right,
+                                    trigger_left=neg_left,
+                                    trigger_right=neg_right,
                                     labels=["O"] * len(words),
                                 )
                                 self.examples.append(example)
                         else:
                             raise ValueError("Invaild eac_eval_mode: %s" % self.config.eae_eval_mode)
                 else:
-                    for candi in item["candidates"]:
-                        if self.config.language == "English":
-                            trigger_left = len(item["text"][:candi["position"][0]].split())
-                            trigger_right = len(item["text"][:candi["position"][1]].split())
-                        elif self.config.language == "Chinese":
-                            trigger_left = candi["position"][0]
-                            trigger_right = candi["position"][1]
-                        else:
-                            raise NotImplementedError
+                    for can in item["candidates"]:
+                        can_left, can_right = get_left_and_right_pos(text=text, trigger=can, language=language)
                         labels = ["O"] * len(words)
                         pred_type = self.event_preds[trigger_idx]
                         trigger_idx += 1
@@ -225,8 +181,8 @@ class EAESLProcessor(EAEDataProcessor):
                                 text=words,
                                 pred_type=pred_type,
                                 true_type="NA",  # true type not given, set to NA.
-                                trigger_left=trigger_left,
-                                trigger_right=trigger_right,
+                                trigger_left=can_left,
+                                trigger_right=can_right,
                                 labels=labels,
                             )
                             self.examples.append(example)
@@ -252,8 +208,7 @@ class EAESLProcessor(EAEDataProcessor):
     def insert_marker(text, event_type, labels, trigger_pos, markers):
         left, right = trigger_pos
 
-        marked_text = text[:left] + [markers[event_type][0]] + text[left:right] + [markers[event_type][1]] + text[
-                                                                                                             right:]
+        marked_text = text[:left] + [markers[event_type][0]] + text[left:right] + [markers[event_type][1]] + text[right:]
         marked_labels = labels[:left] + ["X"] + labels[left:right] + ["X"] + labels[right:]
 
         assert len(marked_text) == len(marked_labels)
@@ -280,7 +235,7 @@ class EAESLProcessor(EAEDataProcessor):
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
 
-            word_ids_of_each_token = outputs.word_ids()[: self.config.max_seq_length]
+            word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, example.text)[: self.config.max_seq_length]
             final_labels = self.get_final_labels(labels, word_ids_of_each_token, label_all_tokens=False)
 
             features = EAEInputFeatures(

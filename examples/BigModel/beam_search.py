@@ -199,8 +199,6 @@ def _update_model_kwargs_for_generation(
 
         return model_kwargs
 
-
-
 def beam_search(
     args,
     config, 
