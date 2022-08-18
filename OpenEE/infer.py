@@ -16,7 +16,7 @@ from transformers import (
     MT5TokenizerFast,
     BartTokenizerFast
 )
-from .forinfer.seq2seq import (
+from .infer_module.seq2seq import (
     do_event_detection, 
     do_event_argument_extraction,
     get_ed_result,

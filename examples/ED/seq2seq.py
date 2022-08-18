@@ -48,7 +48,7 @@ logging.basicConfig(
 )
 
 # markers
-data_args.markers = ["<event>", "</event>"] + [type_start, type_end]
+data_args.markers = ["<event>", "</event>", "<ace>", "<duee>", "<fewfc>", "<kbp>", "<ere>", "<maven>", "<leven>"]
 
 # logging
 logging.info(data_args)

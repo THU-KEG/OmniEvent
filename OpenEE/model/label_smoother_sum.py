@@ -8,7 +8,6 @@ from dataclasses import dataclass
 class SumLabelSmoother:
     """
     Adds label-smoothing on a pre-computed output from a Transformers model.
-
     Args:
         epsilon (:obj:`float`, `optional`, defaults to 0.1):
             The label smoothing factor.

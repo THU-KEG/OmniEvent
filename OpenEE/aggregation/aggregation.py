@@ -123,8 +123,7 @@ class DynamicPooling(nn.Module):
 
 
 # To do 
-# - GCN 
-# - ... 
+# - Test MOGANED
 class MOGCN(nn.Module):
     def __init__(self, in_dim, hidden_dim, K, dropout, device, alpha=0.2):
         super(MOGCN, self).__init__()

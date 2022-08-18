@@ -27,29 +27,29 @@ class DataArguments:
         default=None, metadata={"help": "The name of the dataset to use (via the datasets library)."}
     )
     train_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the training data."}
+        default=None, metadata={"help": "A jsonl file containing the training data."}
     )
     validation_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the validation data."}
+        default=None, metadata={"help": "A jsonl file containing the validation data."}
     )
     test_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the test data."}
+        default=None, metadata={"help": "A jsonl file containing the test data."}
     )
     train_pred_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the training data."}
+        default=None, metadata={"help": "A jsonl file containing the predicted event triggers for training data. (Only meaningful for EAE)"}
     )
     validation_pred_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the validation data."}
+        default=None, metadata={"help": "A jsonl file containing the predicted event triggers for validation data. (Only meaningful for EAE)"}
     )
     test_pred_file: Optional[str] = field(
-        default=None, metadata={"help": "A csv or a json file containing the test data."}
+        default=None, metadata={"help": "A jsonl file containing the predicted event triggers test data. (Only meaningful for EAE)"}
     )
     template_file: Optional[str] = field(
-        default=None, metadata={"help": "Path to template file."}
+        default=None, metadata={"help": "Path to template file. (Only meaningful for mrc paradigm)"}
     )
     golden_trigger: bool = field(
         default=False,
-        metadata={"help":" Whether or not golden trigger"}
+        metadata={"help":" Whether or not to use golden trigger for EAE"}
     )
     test_exists_labels: bool = field(
         default=False,
@@ -76,14 +76,10 @@ class DataArguments:
         default=None,
         metadata={"help": "Path to role2id file."}
     )
-    role2norm_path: str = field(
-        default=None,
-        metadata={"help": "role2norm path."}
-    )
     prompt_file: str = field(
         default=None, 
         metadata={
-            "help": "path to prompt file."
+            "help": "Path to prompt file."
         }
     )
     return_token_type_ids: bool = field(
@@ -106,18 +102,18 @@ class DataArguments:
     )
     language: str = field(
         default="English",
-        metadata={"help": "data language."}
+        metadata={"help": "Data language."}
     )
     split_infer: bool = field(
         default=True,
         metadata={
-            "help": "whether split large dataset for inference. False only if truncate_in_batch"
+            "help": "Whether split large dataset for inference. False only if truncate_in_batch"
         }
     )
     split_infer_size: int = field(
         default=500,
         metadata={
-            "help": "sub-batch size for split inference"
+            "help": "Sub-batch size for split inference"
         }
     )
     eae_eval_mode: str = field(
@@ -129,7 +125,7 @@ class DataArguments:
     mrc_template_id: int = field(
         default=0,
         metadata={
-            "help": "mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
+            "help": "Mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
         }
     )
 
@@ -147,27 +143,29 @@ class ModelArguments:
     )
     checkpoint_path: str = field(
         default=None,
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={"help": "Path to pretrained model or model identifier"}
     )
     hidden_size: int = field(
         default=768,
-        metadata={"help": "hidden size"}
+        metadata={"help": "Hidden size"}
     )
     head_type: int = field(
         default="linear",
-        metadata={"help": "head type"}
+        metadata={"help": "Head type"}
     )
     head_scale: int = field(
         default=1,
-        metadata={"help": "Head scale"}
+        metadata={"help": "Head scale for classification head"}
     )
     aggregation: str = field(
         default="cls",
-        metadata={"help": "aggregation method"}
+        metadata={"help": "Aggregation method"}
     )
     paradigm: str = field(
         default="token_classification",
-        metadata={"help": "paradigm"}
+        metadata={
+            "help": "Paradigm of the method. Selected in ['token_classification', 'sequence_labeling', 'seq2seq', and 'mrc']."
+        }
     )
     config_name: Optional[str] = field(
         default=None, metadata={"help": "Pretrained config name or path if not the same as model_name"}
@@ -195,7 +193,7 @@ class ModelArguments:
         },
     )
     '''
-    For tranditional model.
+    For tranditional model (CNN, LSTM).
     '''
     word_embedding_dim: int = field(
         default=300,
@@ -218,7 +216,7 @@ class ModelArguments:
     hidden_dropout_prob: float = field(
         default=0.5,
         metadata={
-            "help": "dropout rate"
+            "help": "Dropout rate"
         }
     )
     vocab_file: float = field(
@@ -238,7 +236,9 @@ class TrainingArguments(TrainingArguments):
     )
     task_name: str = field(
         default="ED",
-        metadata={"help": "Task type."}
+        metadata={
+            "help": "Task type. Selected in ['ED', 'EAE']"
+        }
     )
     do_ED_infer: bool = field(
         default=False, 

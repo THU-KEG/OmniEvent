@@ -37,7 +37,6 @@ def get_label_name_tree(label_name_list, tokenizer, end_symbol='<end>'):
 
 def match_sublist(the_list, to_match):
     """
-
     :param the_list: [1, 2, 3, 4, 5, 6, 1, 2, 4, 5]
     :param to_match: [1, 2]
     :return:
@@ -201,7 +200,6 @@ class StruConstraintDecoder(ConstraintDecoder):
 
     def get_state_valid_tokens(self, src_sentence, tgt_generated):
         """
-
         :param src_sentence:
         :param tgt_generated:
         :return:
@@ -300,7 +298,6 @@ class SpanConstraintDecoder(ConstraintDecoder):
 
     def get_state_valid_tokens(self, src_sentence, tgt_generated):
         """
-
         :param src_sentence:
         :param tgt_generated:
         :return:
