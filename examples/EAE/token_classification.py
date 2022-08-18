@@ -102,7 +102,7 @@ trainer = Trainer(
     compute_metrics=metric_fn,
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
-    callbacks=[earlystoppingCallBack]
+    callbacks=[earlystoppingCallBack],
 )
 trainer.train()
 

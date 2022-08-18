@@ -8,7 +8,7 @@ from .base_processor import (
     EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
-    EAEInputFeatures
+    EAEInputFeatures,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class EDTCProcessor(EDDataProcessor):
                                 text=item["text"],
                                 trigger_left=trigger["position"][0],
                                 trigger_right=trigger["position"][1],
-                                labels=event["type"]
+                                labels=event["type"],
                             )
                             self.examples.append(example)
                 if "negative_triggers" in item:
@@ -46,7 +46,7 @@ class EDTCProcessor(EDDataProcessor):
                             text=item["text"],
                             trigger_left=neg["position"][0],
                             trigger_right=neg["position"][1],
-                            labels="NA"
+                            labels="NA",
                         )
                         self.examples.append(example)
                 # test set 
@@ -92,7 +92,7 @@ class EDTCProcessor(EDDataProcessor):
                 attention_mask=outputs["attention_mask"],
                 token_type_ids=outputs["token_type_ids"],
                 trigger_left=left,
-                trigger_right=right
+                trigger_right=right,
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
@@ -125,9 +125,8 @@ class EAETCProcessor(EAEDataProcessor):
 
                             trigger_idx += 1
 
-                            if self.config.eae_eval_mode in ['default', 'loose']:
-                                if pred_type == "NA":
-                                    continue
+                            if self.config.eae_eval_mode in ['default', 'loose'] and pred_type == "NA":
+                                continue
 
                             args_for_trigger = set()
                             positive_offsets = []
@@ -142,7 +141,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         trigger_right=trigger["position"][1],
                                         argument_left=mention["position"][0],
                                         argument_right=mention["position"][1],
-                                        labels=argument["role"]
+                                        labels=argument["role"],
                                     )
                                     args_for_trigger.add(mention['mention_id'])
                                     positive_offsets.append(mention["position"])
@@ -168,7 +167,7 @@ class EAETCProcessor(EAEDataProcessor):
                                             trigger_right=trigger["position"][1],
                                             argument_left=mention["position"][0],
                                             argument_right=mention["position"][1],
-                                            labels="NA"
+                                            labels="NA",
                                         )
                                         if "train" in input_file or self.config.golden_trigger:
                                             example.pred_type = event["type"]
@@ -193,7 +192,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         trigger_right=trigger["position"][1],
                                         argument_left=neg["position"][0],
                                         argument_right=neg["position"][1],
-                                        labels="NA"
+                                        labels="NA",
                                     )
                                     if "train" in input_file or self.config.golden_trigger:
                                         example.pred_type = event["type"]
@@ -220,7 +219,7 @@ class EAETCProcessor(EAEDataProcessor):
                                                 trigger_right=trigger["position"][1],
                                                 argument_left=mention["position"][0],
                                                 argument_right=mention["position"][1],
-                                                labels="NA"
+                                                labels="NA",
                                             )
                                             self.examples.append(example)
                                 else:
@@ -234,7 +233,7 @@ class EAETCProcessor(EAEDataProcessor):
                                             trigger_right=trigger["position"][1],
                                             argument_left=neg["position"][0],
                                             argument_right=neg["position"][1],
-                                            labels="NA"
+                                            labels="NA",
                                         )
                                         if "train" in input_file or self.config.golden_trigger:
                                             example.pred_type = event["type"]
@@ -256,7 +255,7 @@ class EAETCProcessor(EAEDataProcessor):
                                             trigger_right=candi["position"][1],
                                             argument_left=mention["position"][0],
                                             argument_right=mention["position"][1],
-                                            labels="NA"
+                                            labels="NA",
                                         )
                                         self.examples.append(example)
                             else:
@@ -270,7 +269,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         trigger_right=trigger["position"][1],
                                         argument_left=neg["position"][0],
                                         argument_right=neg["position"][1],
-                                        labels="NA"
+                                        labels="NA",
                                     )
                                     if "train" in input_file or self.config.golden_trigger:
                                         example.pred_type = event["type"]
@@ -345,7 +344,7 @@ class EAETCProcessor(EAEDataProcessor):
                 trigger_left=trigger_left,
                 trigger_right=trigger_right,
                 argument_left=argument_left,
-                argument_right=argument_right
+                argument_right=argument_right,
             )
             if example.labels is not None:
                 features.labels = self.config.role2id[example.labels]

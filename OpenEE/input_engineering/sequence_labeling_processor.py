@@ -9,7 +9,7 @@ from .base_processor import (
     EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
-    EAEInputFeatures
+    EAEInputFeatures,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class EDSLProcessor(EDDataProcessor):
                 input_ids=outputs["input_ids"],
                 attention_mask=outputs["attention_mask"],
                 token_type_ids=outputs["token_type_ids"],
-                labels=final_labels
+                labels=final_labels,
             )
             self.input_features.append(features)
 
@@ -123,12 +123,14 @@ class EAESLProcessor(EAEDataProcessor):
                             # If the predicted event type is NA, We don't consider the trigger
                             if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
-                            trigger_left, trigger_right = get_left_and_right_pos(text=text, trigger=trigger, language=language)
+                            trigger_left, trigger_right = get_left_and_right_pos(text=text, trigger=trigger,
+                                                                                 language=language)
                             labels = ["O"] * len(words)
 
                             for argument in trigger["arguments"]:
                                 for mention in argument["mentions"]:
-                                    left_pos, right_pos = get_left_and_right_pos(text=text, trigger=mention, language=language)
+                                    left_pos, right_pos = get_left_and_right_pos(text=text, trigger=mention,
+                                                                                 language=language)
 
                                     labels[left_pos] = f"B-{argument['role']}"
                                     for i in range(left_pos + 1, right_pos):
@@ -168,7 +170,7 @@ class EAESLProcessor(EAEDataProcessor):
                                 )
                                 self.examples.append(example)
                         else:
-                            raise ValueError("Invaild eac_eval_mode: %s" % self.config.eae_eval_mode)
+                            raise ValueError("Invalid eac_eval_mode: %s" % self.config.eae_eval_mode)
                 else:
                     for can in item["candidates"]:
                         can_left, can_right = get_left_and_right_pos(text=text, trigger=can, language=language)
@@ -243,6 +245,6 @@ class EAESLProcessor(EAEDataProcessor):
                 input_ids=outputs["input_ids"],
                 attention_mask=outputs["attention_mask"],
                 token_type_ids=outputs["token_type_ids"],
-                labels=final_labels
+                labels=final_labels,
             )
             self.input_features.append(features)

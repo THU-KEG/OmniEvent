@@ -11,7 +11,7 @@ from .base_processor import (
     EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
-    EAEInputFeatures
+    EAEInputFeatures,
 )
 
 type_start = "<"
@@ -76,7 +76,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                         example_id=idx,
                         text=words,
                         labels=labels,
-                        **kwargs
+                        **kwargs,
                     )
                     self.examples.append(example)
                 else:
@@ -106,7 +106,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                 example_id=example.example_id,
                 input_ids=input_context["input_ids"],
                 attention_mask=input_context["attention_mask"],
-                labels=label_outputs["input_ids"]
+                labels=label_outputs["input_ids"],
             )
             self.input_features.append(features)
 
@@ -176,7 +176,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 trigger_left=trigger["position"][0],
                                 trigger_right=trigger["position"][1],
                                 labels=labels,
-                                **kwargs
+                                **kwargs,
                             )
                             self.examples.append(example)
                     # negative triggers 
@@ -202,7 +202,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                     trigger_left=neg_trigger["position"][0],
                                     trigger_right=neg_trigger["position"][1],
                                     labels=labels,
-                                    **kwargs
+                                    **kwargs,
                                 )
                                 self.examples.append(example)
                         else:
@@ -224,7 +224,7 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 trigger_left=candi["position"][0],
                                 trigger_right=candi["position"][1],
                                 labels=labels,
-                                **kwargs
+                                **kwargs,
                             )
                             self.examples.append(example)
             if self.event_preds is not None:
@@ -271,6 +271,6 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                 example_id=example.example_id,
                 input_ids=input_context["input_ids"],
                 attention_mask=input_context["attention_mask"],
-                labels=label_outputs["input_ids"]
+                labels=label_outputs["input_ids"],
             )
             self.input_features.append(features)

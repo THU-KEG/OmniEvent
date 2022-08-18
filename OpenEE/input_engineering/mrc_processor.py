@@ -83,9 +83,6 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     no_answer = True
                                     for argument in trigger["arguments"]:
                                         if argument["role"] not in query_templates[pred_event_type]:
-                                            # raise ValueError(
-                                            #     "No template for %s in %s" % (argument["role"], pred_event_type)
-                                            # )
                                             logger.warning(
                                                 "No template for %s in %s" % (argument["role"], pred_event_type))
                                             pass
@@ -106,7 +103,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                 trigger_right=trigger_right,
                                                 argument_left=left_pos,
                                                 argument_right=right_pos - 1,
-                                                argument_role=role
+                                                argument_role=role,
                                             )
                                             self.examples.append(example)
                                     if no_answer:
@@ -120,7 +117,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             trigger_right=trigger_right,
                                             argument_left=-1,
                                             argument_right=-1,
-                                            argument_role=role
+                                            argument_role=role,
                                         )
                                         self.examples.append(example)
                                 else:
@@ -135,7 +132,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         trigger_right=trigger_right,
                                         argument_left=-1,
                                         argument_right=-1,
-                                        argument_role=role
+                                        argument_role=role,
                                     )
                                     self.examples.append(example)
                     # negative triggers
@@ -170,7 +167,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     trigger_right=trigger_right,
                                     argument_left=-1,
                                     argument_right=-1,
-                                    argument_role=role
+                                    argument_role=role,
                                 )
                                 self.examples.append(example)
 
@@ -199,7 +196,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     trigger_right=trigger_right,
                                     argument_left=-1,
                                     argument_right=-1,
-                                    argument_role=role
+                                    argument_role=role,
                                 )
                                 self.examples.append(example)
             if self.event_preds is not None:

@@ -10,9 +10,7 @@ from transformers import set_seed, EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.seq2seq_processor import (
-    EAESeq2SeqProcessor
-)
+from OpenEE.input_engineering.seq2seq_processor import EAESeq2SeqProcessor, type_start, type_end
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import compute_seq_F1
 from OpenEE.evaluation.dump_result import get_duee_submission_s2s
@@ -49,8 +47,8 @@ logging.basicConfig(
 )
 
 # markers 
-markers = ["<event>", "</event>", "<ace>", "<duee>", "<fewfc>", "<kbp>", "<ere>", "<maven>", "<leven>"]
-data_args.markers = markers
+dataset_markers = ["<ace>", "<duee>", "<fewfc>", "<kbp>", "<ere>", "<maven>", "<leven>"]
+data_args.markers = ["<event>", "</event>", type_start, type_end] + dataset_markers
 
 # logging
 logging.info(data_args)
@@ -61,12 +59,13 @@ logging.info(training_args)
 set_seed(training_args.seed)
 
 # writter 
-earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience, \
+earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience,
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path, \
-                                           model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path,
+                                           model_args.model_name_or_path, data_args.markers,
+                                           new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
 
