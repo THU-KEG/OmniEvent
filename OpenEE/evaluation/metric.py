@@ -34,9 +34,6 @@ def compute_seq_F1(logits, labels, **kwargs):
     training_args = kwargs["training_args"]
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
 
-    if kwargs.get("return_decoded_preds", False):
-        return decoded_preds
-
     # Replace -100 in the labels as we can't decode them.
     labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
     decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=False)
@@ -158,6 +155,3 @@ def compute_mrc_F1(logits, labels, **kwargs):
     all_predictions, all_labels = make_predictions(start_logits, end_logits, kwargs["training_args"])
     micro_f1 = compute_mrc_F1_cls(all_predictions, all_labels)
     return {"micro_f1": micro_f1}
-
-
-

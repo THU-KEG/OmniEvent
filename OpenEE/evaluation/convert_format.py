@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 from sklearn.metrics import f1_score
@@ -10,7 +9,8 @@ from ..input_engineering.input_utils import (
     check_pred_len,
     get_ed_candidates_per_item,
     get_eae_candidates,
-    get_event_preds
+    get_event_preds,
+    get_plain_label,
 )
 logger = logging.getLogger(__name__)
 
@@ -230,26 +230,21 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
         lines = f.readlines()
         for idx, line in enumerate(lines):
             item = json.loads(line.strip())
-            # preds per index 
-            preds_per_idx = []
-            for pred in preds:
-                if pred[0] == idx:
-                    preds_per_idx.append(pred)
+            preds_per_idx = preds[idx]
 
-            candidates, label_names_per_item = get_ed_candidates_per_item(item=item)
-            label_names.extend(label_names_per_item)
+            candidates, labels_per_item = get_ed_candidates_per_item(item=item)
+            for i, label in enumerate(labels_per_item):
+                labels_per_item[i] = get_plain_label(label)
+            label_names.extend(labels_per_item)
 
             # loop for converting 
             for candidate in candidates:
-                # get word positions
-                char_pos = candidate["position"]
-                # get predictions
-                candidate_mention = item["text"][char_pos[0]:char_pos[1]]
                 pred_type = "NA"
-                for pred in preds_per_idx:
-                    if pred[-1] == candidate_mention:
-                        pred_type = pred[-2]
-                # record results
+
+                word = candidate["trigger_word"]
+                if word in preds_per_idx and preds_per_idx[word] in data_args.type2id:
+                    pred_type = preds_per_idx[word]
+
                 results.append(pred_type)
 
     if "events" in item:

@@ -2,7 +2,8 @@ import jsonlines
 import json
 from tqdm import tqdm
 from collections import defaultdict
-from .metric import select_start_position, compute_seq_F1
+from .metric import select_start_position
+from ..input_engineering.input_utils import check_pred_len, get_left_and_right_pos
 
 
 def get_pred_per_mention(pos_start, pos_end, preds, id2label):
@@ -67,32 +68,21 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
     # get per-word predictions
     preds, _ = select_start_position(preds, labels, False)
     results = defaultdict(list)
+    language = config.language
+
     with open(config.test_file, "r") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             item = json.loads(line.strip())
+            text = item["text"]
+
             # check for alignment 
             if not is_overflow[i]:
-                if config.language == "English":
-                    assert len(preds[i]) == len(item["text"].split())
-                elif config.language == "Chinese":
-                    assert len(preds[i]) == len("".join(item["text"].split()))  # remove space/special token
-                else:
-                    raise NotImplementedError
+                check_pred_len(pred=preds[i], item=item, language=language)
 
             for candidate in item["candidates"]:
                 # get word positions
-                char_pos = candidate["position"]
-
-                if config.language == "English":
-                    word_pos_start = len(item["text"][:char_pos[0]].split())
-                    word_pos_end = word_pos_start + len(item["text"][char_pos[0]:char_pos[1]].split())
-                elif config.language == "Chinese":
-                    word_pos_start = len("".join(item["text"][:char_pos[0]].split()))
-                    word_pos_end = len("".join(item["text"][:char_pos[1]].split()))
-                else:
-                    raise NotImplementedError
-
+                word_pos_start, word_pos_end = get_left_and_right_pos(text=text, trigger=candidate, language=language)
                 # get predictions
                 pred = get_pred_per_mention(word_pos_start, word_pos_end, preds[i], config.id2type)
                 # record results
@@ -107,11 +97,8 @@ def get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
-    decoded_preds = compute_seq_F1(preds, labels, 
-                                    **{"tokenizer": tokenizer, 
-                                       "training_args": training_args, 
-                                       "return_decoded_preds": True})
+def get_maven_submission_seq2seq(preds, save_path, data_args):
+    type2id = data_args.type2id
     results = defaultdict(list)
     with open(data_args.test_file, "r") as f:
         lines = f.readlines()
@@ -119,15 +106,13 @@ def get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, t
             item = json.loads(line.strip())
             for candidate in item["candidates"]:
                 pred_type = "NA"
-                # pdb.set_trace()
-                if candidate["trigger_word"] in decoded_preds[i] and \
-                    decoded_preds[i][candidate["trigger_word"]] in type2id:
-                    pred_type = decoded_preds[i][candidate["trigger_word"]]
+
+                word = candidate["trigger_word"]
+                if word in preds[i] and preds[i][word] in type2id:
+                    pred_type = preds[i][word]
+
                 # record results
-                results[item["id"]].append({
-                    "id": candidate["id"].split("-")[-1],
-                    "type_id": int(type2id[pred_type]),
-                })
+                results[item["id"]].append({"id": candidate["id"].split("-")[-1], "type_id": int(type2id[pred_type])})
     # dump results 
     with open(save_path, "w") as f:
         for id, preds_per_doc in results.items():
@@ -143,8 +128,8 @@ def get_leven_submission_sl(preds, labels, is_overflow, result_file, type2id, co
     return get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config)
 
 
-def get_leven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args):
-    return get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args)
+def get_leven_submission_seq2seq(preds, save_path, data_args):
+    return get_maven_submission_seq2seq(preds, save_path, data_args)
 
 
 def get_duee_submission():

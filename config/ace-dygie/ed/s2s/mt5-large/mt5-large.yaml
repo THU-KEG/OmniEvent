@@ -1,7 +1,7 @@
 seed: 42
 do_train: True
 do_predict: True 
-do_ED_infer: False
+do_ED_infer: True 
 
 # top-level config #
 paradigm: seq2seq
@@ -24,8 +24,8 @@ truncate_seq2seq_output: True
 
 # model config #
 model_type: mt5
-model_name_or_path: google/mt5-base
-hidden_size: 768
+model_name_or_path: google/mt5-large
+hidden_size: 1024
 aggregation: none
 
 # training config #

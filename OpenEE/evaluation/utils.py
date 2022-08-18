@@ -1,11 +1,14 @@
 import os
 import json
 import logging
+import shutil
+
 import jsonlines
 import numpy as np
 
 from tqdm import tqdm
-from .convert_format import get_ace2005_trigger_detection_sl
+from .convert_format import get_ace2005_trigger_detection_sl, get_ace2005_trigger_detection_s2s
+from ..input_engineering.seq2seq_processor import extract_argument
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +30,14 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
     logger.info("{}-Dump Preds-{}{}".format("-"*25, mode, "-"*25))
     logger.info("Test file: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
 
-    preds = np.argmax(logits, axis=-1)
+    preds = get_pred_s2s(logits, tokenizer) if model_args.paradigm == "seq2seq" else np.argmax(logits, axis=-1)
+
     if model_args.paradigm == "token_classification":
         pred_labels = [data_args.id2type[pred] for pred in preds]
     elif model_args.paradigm == "sequence_labeling":
         pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+    elif model_args.paradigm == "seq2seq":
+        pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, None)
     else:
         raise NotImplementedError
 
@@ -39,6 +45,26 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
 
     json.dump(pred_labels, open(save_path, "w", encoding='utf-8'), ensure_ascii=False)
     logger.info("ED {} preds dumped to {}\n ED finished!".format(mode, save_path))
+
+
+def get_pred_s2s(logits, tokenizer):
+    decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
+
+    def clean_str(x_str):
+        for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
+            x_str = x_str.replace(to_remove_token, '')
+        return x_str.strip()
+
+    preds = list()
+    for i, pred in enumerate(decoded_preds):
+        pred = clean_str(pred)
+        arguments = extract_argument(pred, i, "NA")
+        tmp = dict()
+        for arg in arguments:
+            tmp[arg[-1]] = arg[-2]
+        preds.append(tmp)
+
+    return preds
 
 
 def predict(trainer, tokenizer, data_class, data_args, data_file, training_args):
@@ -57,8 +83,13 @@ def predict(trainer, tokenizer, data_class, data_args, data_file, training_args)
 def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
     test_data = list(jsonlines.open(input_test_file))
     sub_data_folder = '/'.join(input_test_file.split('/')[:-1]) + '/test_cache/'
-    # TODO: Clear the cache dir every time
-    os.makedirs(sub_data_folder, exist_ok=True)
+
+    # clear the cache dir before split evaluate
+    if os.path.isdir(sub_data_folder):
+        shutil.rmtree(sub_data_folder)
+        logger.info("Cleared Existing Cache Dir")
+
+    os.makedirs(sub_data_folder, exist_ok=False)
     output_test_files = []
 
     if input_test_pred_file:
@@ -112,6 +143,7 @@ def predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file):
 
     logits_list, labels_list = [], []
     for data_file in tqdm(data_file_list, desc='Split Evaluate'):
+        data_args.truncate_in_batch = False
         logits, labels, metrics, _ = predict_ed(trainer, tokenizer, data_class, data_args, data_file)
         logits_list.append(logits)
         labels_list.append(labels)

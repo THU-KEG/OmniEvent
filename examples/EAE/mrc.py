@@ -13,9 +13,8 @@ from transformers import EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.mrc_processor import (
-    EAEMRCProcessor
-)
+from OpenEE.input_engineering.mrc_processor import EAEMRCProcessor
+
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import compute_mrc_F1
 from OpenEE.evaluation.dump_result import get_duee_submission_mrc

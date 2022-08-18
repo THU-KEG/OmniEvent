@@ -4,7 +4,7 @@ import logging
 
 from tqdm import tqdm
 from collections import defaultdict
-from .input_utils import get_words
+from .input_utils import get_words, get_plain_label
 from .base_processor import (
     EDInputExample,
     EDDataProcessor,
@@ -21,7 +21,7 @@ split_word = ":"
 logger = logging.getLogger(__name__)
 
 
-def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"[{type_start}{type_end}]")):
+def extract_argument(raw_text, instance_id, event_type, template=re.compile(f"{type_start}|{type_end}")):
     arguments = []
     for span in template.split(raw_text):
         if span.strip() == "":
@@ -47,7 +47,6 @@ class EDSeq2SeqProcessor(EDDataProcessor):
 
     def read_examples(self, input_file):
         self.examples = []
-        language = self.config.language
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
@@ -59,17 +58,13 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                         self.config.language = "English"
                 else:
                     kwargs = {"source": []}
-                if self.config.language == "English":
-                    words = item["text"].split()
-                elif self.config.language == "Chinese":
-                    words = list(item["text"])
-                else:
-                    raise NotImplementedError
+
+                words = get_words(text=item["text"], language=self.config.language)
                 # training and valid set
                 if "events" in item:
                     labels = []
                     for event in item["events"]:
-                        type = "".join("".join(event["type"].split(".")[-1].split("-")).split("_")).lower()
+                        type = get_plain_label(event["type"])
                         for trigger in event["triggers"]:
                             labels.append(f"{type_start} {type}{split_word} {trigger['trigger_word']} {type_end}")
                     if len(labels) != 0:
@@ -90,7 +85,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
 
     def convert_examples_to_features(self):
         self.input_features = []
-        for example in tqdm(self.examples, desc="Processing features for SL"):
+        for example in tqdm(self.examples, desc="Processing features for Seq2Seq"):
             # context 
             input_context = self.tokenizer(example.kwargs["source"]+example.text,
                                            truncation=True,

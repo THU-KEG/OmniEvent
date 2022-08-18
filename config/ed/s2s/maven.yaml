@@ -1,7 +1,7 @@
 seed: 42
 do_train: True
 do_predict: True 
-do_ED_infer: True 
+do_ED_infer: True
 
 # top-level config #
 paradigm: seq2seq
@@ -23,14 +23,14 @@ return_token_type_ids: False
 truncate_seq2seq_output: True 
 
 # model config #
-model_type: t5
-model_name_or_path: t5-base
+model_type: mt5
+model_name_or_path: google/mt5-base
 
 hidden_size: 768
 aggregation: none
 
 # training config #
-num_train_epochs: 20
+num_train_epochs: 10
 max_seq_length: 120
 max_out_length: 128
 dataloader_num_workers: 2
@@ -62,5 +62,5 @@ save_strategy: epoch
 save_steps: 500
 
 # split inference #
-split_infer: False 
+split_infer: False
 split_infer_size: 500

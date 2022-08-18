@@ -46,6 +46,17 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
+# prepare labels
+data_args.type2id = json.load(open(data_args.type2id_path))
+data_args.type2id = get_bio_labels(data_args.type2id)
+model_args.num_labels = len(data_args.type2id)
+
+training_args.label_name = ["labels"]
+
+# used for evaluation
+training_args.type2id = data_args.type2id
+data_args.id2type = {id: type for type, id in data_args.type2id.items()}
+
 # markers
 data_args.markers = ["<event>", "</event>"]
 
@@ -108,10 +119,10 @@ if training_args.do_predict:
 
         if data_args.dataset_name == "MAVEN":
             get_maven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
-                                    json.load(open(type2id_path)), data_args)
+                                    json.load(open(data_args.type2id_path)), data_args)
         elif data_args.dataset_name == "LEVEN":
             get_leven_submission_sl(preds, labels, test_dataset.is_overflow, save_path,
-                                    json.load(open(type2id_path)), data_args)
+                                    json.load(open(data_args.type2id_path)), data_args)
         else:
             raise NotImplementedError
 

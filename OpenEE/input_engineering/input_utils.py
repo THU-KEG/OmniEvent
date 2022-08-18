@@ -1,4 +1,4 @@
-import os 
+import os
 import json
 import logging
 
@@ -31,7 +31,7 @@ def get_start_poses(sentence):
 def check_if_start(start_poses, char_pos):
     if char_pos[0] in start_poses:
         return True
-    return False 
+    return False
 
 
 def get_word_position(start_poses, char_pos):
@@ -64,6 +64,7 @@ def get_word_ids(tokenizer, outputs, word_list):
     word_list = [w.lower() for w in word_list]
     try:
         word_ids = outputs.word_ids()
+        return word_ids
     except:
         assert isinstance(tokenizer, WordLevelTokenizer)
         pass
@@ -159,3 +160,10 @@ def get_event_preds(pred_file):
         logger.info("Load {} failed, using golden triggers for EAE evaluation".format(pred_file))
 
     return event_preds
+
+
+def get_plain_label(input_label):
+    if input_label == "NA":
+        return input_label
+
+    return "".join("".join(input_label.split(".")[-1].split("-")).split("_")).lower()
