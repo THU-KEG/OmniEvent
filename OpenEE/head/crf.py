@@ -1,6 +1,8 @@
+# Copyright pytorch-crf from https://github.com/kmkurn/pytorch-crf. 
+# Licensed under the MIT License.
+
 from typing import List, Optional
 
-import pdb 
 import torch
 import torch.nn as nn
 

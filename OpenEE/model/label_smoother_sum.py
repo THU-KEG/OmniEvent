@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
+# Copyright Text2Event from https://github.com/luyaojie/Text2Event.
+# Licensed under the MIT License.
+
 import torch
 from dataclasses import dataclass
 
