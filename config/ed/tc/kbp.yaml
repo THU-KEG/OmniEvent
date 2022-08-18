@@ -4,7 +4,7 @@ do_predict: True
 do_ED_infer: True 
 
 # top-level config #
-paradigm: token_classification
+paradigm: sequence_labeling
 task_name: ED
 dataset_name: TAC-KBP
 language: English
@@ -12,10 +12,10 @@ test_exists_labels: True
 
 # file path #
 output_dir: output/TAC-KBP
-type2id_path: ../../data/processed/TAC-KBP/label2id.json
-train_file: ../../data/processed/TAC-KBP/train.unified.jsonl
-validation_file: ../../data/processed/TAC-KBP/valid.unified.jsonl
-test_file: ../../data/processed/TAC-KBP/test.unified.jsonl
+type2id_path: ../data/TAC-KBP/label2id.json
+train_file: ../data/TAC-KBP/train.unified.jsonl
+validation_file: ../data/TAC-KBP/valid.unified.jsonl
+test_file: ../data/TAC-KBP/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: False
@@ -26,11 +26,10 @@ truncate_seq2seq_output: False
 model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: marker
-head_scale: 2
+aggregation: none
 
 # training config #
-num_train_epochs: 5
+num_train_epochs: 10
 max_seq_length: 128
 max_out_length: 128
 dataloader_num_workers: 2
@@ -42,7 +41,7 @@ ignore_pad_token_for_loss: True
 
 per_device_train_batch_size: 32
 per_device_eval_batch_size: 64
-gradient_accumulation_steps: 1
+gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5
 weight_decay: 1.0e-5

@@ -17,7 +17,7 @@ train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
 # event detection predictions
-golden_trigger: True
+golden_trigger: False
 train_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/train_preds.json
 validation_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/valid_preds.json
 test_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/test_preds.json

@@ -15,6 +15,7 @@ from collections import defaultdict
 from transformers import set_seed
 from transformers.integrations import TensorBoardCallback
 from transformers import EarlyStoppingCallback
+from opendelta import LoraModel
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OpenEE.backbone.backbone import get_backbone
@@ -24,19 +25,6 @@ from OpenEE.input_engineering.seq2seq_processor import (
 from OpenEE.model.model import get_model
 from OpenEE.evaluation.metric import (
     compute_seq_F1,
-)
-from OpenEE.evaluation.dump_result import (
-    get_leven_submission,
-    get_leven_submission_sl,
-    get_leven_submission_seq2seq,
-    get_maven_submission,
-    get_maven_submission_sl,
-    get_maven_submission_seq2seq,
-    get_duee_submission,
-    get_duee_submission_sl,
-)
-from OpenEE.evaluation.convert_format import (
-    get_ace2005_argument_extraction_sl
 )
 
 from OpenEE.evaluation.utils import (
@@ -51,12 +39,12 @@ from OpenEE.trainer_seq2seq import Seq2SeqTrainer, ConstrainedSeq2SeqTrainer
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
-if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
+if len(sys.argv) >= 2 and sys.argv[1].endswith(".json"):
     # If we pass only one argument to the script and it's the path to a json file,
     # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) >= 2 and sys.argv[1].endswith(".yaml"):
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
+elif len(sys.argv) >= 2 and sys.argv[2].endswith(".yaml"):
+    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[2]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -79,7 +67,7 @@ logging.basicConfig(
 )
 
 # markers 
-markers = ["<event>", "</event>", "<ace>", "<duee>", "<fewfc>"]
+markers = ["<event>", "</event>"]
 data_args.markers = markers
 print(data_args, model_args, training_args)
 
@@ -91,8 +79,11 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path, \
+backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path, \
                                            model_args.model_name_or_path, data_args.markers, new_tokens=data_args.markers)
+delta_model = LoraModel(backbone_model=backbone)
+delta_model.freeze_module(set_state_dict=True)
+backbone.load_state_dict(torch.load(os.path.join(model_args.checkpoint_path, "pytorch_model.bin")), strict=False)
 model = get_model(model_args, backbone)
 model.cuda()
 
@@ -115,12 +106,12 @@ trainer = Seq2SeqTrainer(
     compute_metrics=metric_fn,
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
-    callbacks=[earlystoppingCallBack],
-    # decoding_type_schema={"role_list": all_roles_except_na}
+    callbacks=[earlystoppingCallBack]
 )
 
 if training_args.do_train:
     trainer.train()
+
 
 if training_args.do_predict:
     if not data_args.split_infer:
@@ -131,20 +122,6 @@ if training_args.do_predict:
     # pdb.set_trace()
     preds = np.argmax(logits, axis=-1)
     if data_args.test_exists_labels:
-        # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
         print(metrics)
-        if model_args.paradigm == "sequence_labeling":
-            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-        else:
-            pass
     else:
-        # save name
-        aggregation = model_args.aggregation
-        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
-        if model_args.paradigm == "token_classification":
-            pass
-
-        elif model_args.paradigm == "sequence_labeling":
-            if data_args.dataset_name == "DuEE1.0":
-                print("Start get duee submission++++++++++++++++++")
-                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+        pass 

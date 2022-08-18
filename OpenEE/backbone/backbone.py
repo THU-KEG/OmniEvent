@@ -9,9 +9,8 @@ import numpy as np
 
 from transformers import BertModel, BertTokenizerFast 
 from transformers import RobertaModel, RobertaTokenizerFast
-from transformers import T5ForConditionalGeneration, T5TokenizerFast
+from transformers import T5ForConditionalGeneration, T5TokenizerFast, T5Config
 from transformers import MT5ForConditionalGeneration
-from transformers import BartForConditionalGeneration, BartTokenizerFast
 from transformers.utils import ModelOutput 
 
 from ..input_engineering.tokenizer import WordLevelTokenizer, load_vocab, VOCAB_FILES_NAMES
@@ -26,10 +25,7 @@ def get_backbone(model_type, model_name_or_path, tokenizer_name, markers,
         tokenizer = BertTokenizerFast.from_pretrained(tokenizer_name, never_split=markers)
     elif model_type == "roberta":
         model = RobertaModel.from_pretrained(model_name_or_path)
-        tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer_name, never_split=markers, add_prefix_space=True)
-    elif model_type == "bart":
-        model = BartForConditionalGeneration.from_pretrained(model_name_or_path)
-        tokenizer = BartTokenizerFast.from_pretrained(tokenizer_name, never_split=markers, add_prefix_space=True)
+        tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer_name, never_split=markers)
     elif model_type == "t5":
         model = T5ForConditionalGeneration.from_pretrained(model_name_or_path)
         tokenizer = T5TokenizerFast.from_pretrained(tokenizer_name, never_split=markers)

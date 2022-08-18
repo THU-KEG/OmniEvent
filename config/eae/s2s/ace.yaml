@@ -13,7 +13,7 @@ test_exists_labels: True
 output_dir: output/ACE2005-EN
 type2id_path: ../../data/processed/ace2005-dygie/label2id.json
 role2id_path: ../../data/processed/ace2005-dygie/role2id.json
-train_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
+train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
 # event detection predictions
@@ -28,9 +28,9 @@ return_token_type_ids: False
 truncate_seq2seq_output: True
 
 # model config #
-model_type: mt5
-model_name_or_path: google/mt5-base
-checkpoint_path: google/mt5-base
+model_type: t5
+model_name_or_path: t5-base
+checkpoint_path: t5-base
 hidden_size: 768
 aggregation: none
 
