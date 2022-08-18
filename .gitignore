@@ -154,6 +154,10 @@ serialization_dir
 /scripts/data_processing/ace2005-dygie/raw_data 
 /scripts/data_processing/ace2005-dygie/default-settings
 
+# checkpoints 
+/examples/BigModel/configs 
+/examples/BigModel/results 
+
 # emacs
 *.*~
 debug.env

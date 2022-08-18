@@ -84,15 +84,15 @@ def char_pos_to_word_pos(text, position):
     return len(text[:position].split())
 
 
-def make_preditions(all_start_logits, all_end_logits, training_args):
+def make_predictions(all_start_logits, all_end_logits, training_args):
     data_for_evaluation = training_args.data_for_evaluation
     assert len(all_start_logits) == len(data_for_evaluation["ids"])
     # all golden labels
     final_all_labels = []
     for arguments in data_for_evaluation["golden_arguments"]:
-        event_argument_type =arguments["true_type"] + "_" + arguments["role"]
         arguments_per_trigger = []
         for argument in arguments["arguments"]:
+            event_argument_type = arguments["true_type"] + "_" + argument["role"]
             for mention in argument["mentions"]:
                 arguments_per_trigger.append(
                     (event_argument_type, (mention["position"][0], mention["position"][1]), arguments["id"]))
@@ -102,7 +102,7 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
                                                ["start_index", "end_index", "start_logit", "end_logit"])
     final_all_predictions = []
     for example_id, (start_logits, end_logits) in enumerate(zip(all_start_logits, all_end_logits)):
-        event_argument_type = data_for_evaluation["pred_trues"][example_id] + "_" + \
+        event_argument_type = data_for_evaluation["pred_types"][example_id] + "_" + \
                               data_for_evaluation["roles"][example_id]
         start_indexes = _get_best_indexes(start_logits, 20, True, start_logits[0])
         end_indexes = _get_best_indexes(end_logits, 20, True, end_logits[0])

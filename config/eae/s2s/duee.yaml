@@ -7,10 +7,10 @@ paradigm: seq2seq
 task_name: EAE
 dataset_name: DuEE1.0
 language: Chinese
-test_exists_labels: True
+test_exists_labels: False
 
 # file path #
-output_dir: output/DuEE1.0/
+output_dir: output/DuEE1.0
 type2id_path: ../../data/processed/DuEE1.0/label2id.json
 role2id_path: ../../data/processed/DuEE1.0/role2id.json
 train_file: ../../data/processed/DuEE1.0/duee_train.unified.json
@@ -19,9 +19,9 @@ test_file: ../../data/processed/DuEE1.0/duee_test2.unified.json
 
 # event detection predictions
 golden_trigger: True 
-# train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
-# validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
-# test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
+train_pred_file: output/DuEE1.0/ED/token_classification/bert-base-chinese-marker/train_preds.json
+validation_pred_file: output/DuEE1.0/ED/token_classification/bert-base-chinese-marker/valid_preds.json
+test_pred_file: output/DuEE1.0/ED/token_classification/bert-base-chinese-marker/test_preds.json
 
 # config for data processor # 
 truncate_in_batch: True 
@@ -37,7 +37,7 @@ aggregation: none
 
 # training config #
 num_train_epochs: 10
-max_seq_length: 160
+max_seq_length: 200
 max_out_length: 128
 dataloader_num_workers: 2
 # early_stopping_patience: 100
