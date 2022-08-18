@@ -4,16 +4,6 @@ import os
 import uuid
 import random
 from tqdm import tqdm
-from transformers import BertTokenizerFast
-
-
-def check_unk_in_text(input_text, input_tokenizer):
-    words = input_text.split()
-    inputs = input_tokenizer(words, is_split_into_words=True)
-    error_tokens = []
-    for idx in set(range(len(words))).difference(set(inputs.word_ids()[1:-1])):
-        error_tokens.append(words[idx])
-    return error_tokens
 
 
 def gen_label2id_and_role2id(input_data):
@@ -78,15 +68,10 @@ def remove_sub_word_annotations(input_data):
     """
     random.seed(42)
     del_sentence, del_trigger, del_argument, del_event = 0, 0, 0, 0
-    tokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased')
     output_data = []
-    all_unk = []
-    for i, sent in enumerate(tqdm(input_data, desc="Removing subword annotations")):
-        unk_words = check_unk_in_text(sent['text'], tokenizer)
-        all_unk.extend(unk_words)
-        for unk in unk_words:
-            sent['text'] = sent['text'].replace(unk, ' ')    # manually replace special tokens
-        assert len(check_unk_in_text(sent['text'], tokenizer)) == 0
+    for i, sent in enumerate(input_data):
+        for sp in ['\x96', '\x97']:
+            sent['text'] = sent['text'].replace(sp, ' ')    # manually replace special tokens
         clean_events = []
         for event in sent['events']:
             clean_triggers = []
@@ -122,7 +107,6 @@ def remove_sub_word_annotations(input_data):
         sent['events'] = clean_events
         output_data.append(sent)
 
-    print('detected {} unk words: [{}]'.format(len(set(all_unk)), set(all_unk)))
     print('deleted {} sentences, {} events, {} triggers, {} arguments'.format(del_sentence, del_event, del_trigger,
                                                                               del_argument))
 
@@ -158,7 +142,7 @@ if __name__ == "__main__":
     output_dir = "../../../data/processed/TAC-KBP/"
     os.makedirs(output_dir, exist_ok=True)
     is_eae_14_15 = False  # kbp2014 and kbp2015 do not have EAE data currently.
-    dump = False
+    dump = True
 
     kbp2014 = list(jsonlines.open(input_dir + 'TAC-KBP2014/train.unified.jsonl')) + list(
         jsonlines.open(input_dir + '/TAC-KBP2014/test.unified.jsonl'))

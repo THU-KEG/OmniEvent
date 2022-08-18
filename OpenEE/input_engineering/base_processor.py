@@ -16,8 +16,7 @@ class EDInputExample(object):
                  text,
                  trigger_left=None,
                  trigger_right=None,
-                 labels=None,
-                 **kwargs):
+                 labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -32,7 +31,6 @@ class EDInputExample(object):
         self.trigger_left = trigger_left
         self.trigger_right = trigger_right
         self.labels = labels
-        self.kwargs = kwargs
 
 
 class EDInputFeatures(object):
@@ -65,8 +63,7 @@ class EAEInputExample(object):
                  argument_left=None,
                  argument_right=None,
                  argument_role=None, 
-                 labels=None,
-                 **kwargs):
+                 labels=None):
         """Constructs a InputExample.
 
         Args:
@@ -87,7 +84,6 @@ class EAEInputExample(object):
         self.argument_right = argument_right
         self.argument_role = argument_role
         self.labels = labels
-        self.kwargs = kwargs
 
 
 class EAEInputFeatures(object):
@@ -100,19 +96,16 @@ class EAEInputFeatures(object):
                  token_type_ids=None,
                  trigger_left=None,
                  trigger_right=None,
-                 argument_left=None,
-                 argument_right=None,
-                 start_positions=None, # used for MRC
+                 start_positions=None,
                  end_positions=None,
-                 labels=None):
+                 labels=None,
+                 ):
         self.example_id = example_id
         self.input_ids = input_ids
         self.attention_mask = attention_mask
         self.token_type_ids = token_type_ids
         self.trigger_left = trigger_left
         self.trigger_right = trigger_right
-        self.argument_left = argument_left
-        self.argument_right = argument_right 
         self.start_positions = start_positions
         self.end_positions = end_positions
         self.labels = labels
@@ -276,10 +269,6 @@ class EAEDataProcessor(Dataset):
             data_dict["trigger_left"] = torch.tensor(features.trigger_left, dtype=torch.long)
         if features.trigger_right is not None:
             data_dict["trigger_right"] = torch.tensor(features.trigger_right, dtype=torch.long)
-        if features.argument_left is not None:
-            data_dict["argument_left"] = torch.tensor(features.argument_left, dtype=torch.long)
-        if features.argument_right is not None:
-            data_dict["argument_right"] = torch.tensor(features.argument_right, dtype=torch.long)
         if features.start_positions is not None:
             data_dict["start_positions"] = torch.tensor(features.start_positions, dtype=torch.long)
         if features.end_positions is not None:

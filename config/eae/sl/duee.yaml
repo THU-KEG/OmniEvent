@@ -19,9 +19,9 @@ test_file: ../../data/processed/DuEE1.0/duee_test2.unified.json
 
 # event detection predictions
 golden_trigger: False
-train_pred_file: output/DuEE1.0/ED/token_classification/bert-base-chinese-marker/train_preds.json
-validation_pred_file: output/DuEE1.0/ED/token_classification/bert-base-chinese-marker/valid_preds.json
-test_pred_file: output/DuEE1.0/ED/token_classification/bert-base-chinese-marker/test_preds.json
+train_pred_file: output/DuEE1.0/ED/sequence_labeling/bert-base-chinese-none/train_preds.json
+validation_pred_file: output/DuEE1.0/ED/sequence_labeling/bert-base-chinese-none/valid_preds.json
+test_pred_file: output/DuEE1.0/ED/sequence_labeling/bert-base-chinese-none/test_preds.json
 # config for some specific paradigms
 
 # config for data processor #

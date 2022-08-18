@@ -1,12 +1,12 @@
 seed: 42
-do_train: True
+do_train: False
 do_predict: True
 
 # top-level config #
 paradigm: seq2seq
 task_name: EAE
 dataset_name: ALL
-# language: English
+language: English
 test_exists_labels: True
 
 # file path #
@@ -14,8 +14,6 @@ output_dir: output/ALL-EAE
 train_file: ../../data/processed/all-eae/train.unified.jsonl
 validation_file: ../../data/processed/all-eae/dev.unified.jsonl
 test_file: ../../data/processed/all-eae/test.unified.jsonl
-# test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
-# test_file: ../../data/processed/FewFC/test_base.unified.json
 # event detection predictions
 golden_trigger: True 
 
@@ -26,11 +24,10 @@ truncate_seq2seq_output: True
 
 # model config #
 model_type: mt5
-model_name_or_path: google/mt5-large
-checkpoint_path: google/mt5-large
-# checkpoint_path: /ldata/ph/OpenEE/examples/BigModel/output/mt5-large
+model_name_or_path: google/mt5-xl
+checkpoint_path: output/ALL-EAE/EAE/seq2seq/mt5-xl/checkpoint-6010
 aggregation: none 
-early_stopping_patience: 100
+# early_stopping_patience: 10
 
 # training config #
 num_train_epochs: 10
@@ -43,22 +40,15 @@ generation_num_beams: 4
 predict_with_generate: True 
 ignore_pad_token_for_loss: True 
 
-per_device_train_batch_size: 8
-per_device_eval_batch_size: 16
-gradient_accumulation_steps: 2
+per_device_train_batch_size: 2
+per_device_eval_batch_size: 2
+gradient_accumulation_steps: 8
 # eval_accumulation_steps: 4
-learning_rate: 5.0e-5
+learning_rate: 1.0e-3
 weight_decay: 1.0e-5
 warmup_ratio: 0.1
 max_grad_norm: 1
 optim: adamw_torch
-deepspeed: ../../config/deepspeed_zero_2.json
-# pipeline: True 
-fp16: False
-# fp16_backend: apex
-fp16_opt_level: O1
-place_model_on_device: False 
-# lr_scheduler_type: constant 
 
 load_best_model_at_end: True
 metric_for_best_model: micro_f1 

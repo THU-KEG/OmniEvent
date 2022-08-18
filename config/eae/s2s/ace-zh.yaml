@@ -5,12 +5,12 @@ do_predict: True
 # top-level config #
 paradigm: seq2seq
 task_name: EAE
-dataset_name: ACE2005-ZH
+dataset_name: ACE2005
 language: Chinese
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-ZH
+output_dir: output/ace2005-zh
 type2id_path: ../../data/processed/ace2005-zh/label2id.json
 role2id_path: ../../data/processed/ace2005-zh/role2id.json
 train_file: ../../data/processed/ace2005-zh/train.unified.jsonl
@@ -18,9 +18,9 @@ validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
-train_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/train_preds.json
-validation_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/valid_preds.json
-test_pred_file: output/ACE2005-ZH/ED/token_classification/bert-base-chinese-marker/test_preds.json
+train_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/train_preds.json
+validation_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/valid_preds.json
+test_pred_file: output/ACE2005-EN/ED/sequence_labeling/bert-base-uncased/test_preds.json
 
 # config for data processor # 
 truncate_in_batch: True 
@@ -36,7 +36,7 @@ aggregation: none
 
 # training config #
 num_train_epochs: 10
-max_seq_length: 256
+max_seq_length: 160
 max_out_length: 128
 dataloader_num_workers: 2
 

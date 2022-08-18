@@ -128,8 +128,8 @@ class ModelForMRC(nn.Module):
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor, 
         token_type_ids: Optional[torch.Tensor] = None,
-        argument_left: Optional[torch.Tensor] = None,
-        argument_right: Optional[torch.Tensor] = None
+        start_positions: Optional[torch.Tensor] = None,
+        end_positions: Optional[torch.Tensor] = None
     ) -> Dict[str, torch.Tensor]:
         # backbone encode 
         outputs = self.backbone(input_ids=input_ids, \
@@ -140,20 +140,20 @@ class ModelForMRC(nn.Module):
         start_logits, end_logits = self.mrc_head(hidden_states)
         total_loss = None
         # pdb.set_trace()
-        if argument_left is not None and argument_right is not None:
+        if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, split add a dimension
-            if len(argument_left.size()) > 1:
-                argument_left = argument_left.squeeze(-1)
-            if len(argument_right.size()) > 1:
-                argument_right = argument_right.squeeze(-1)
+            if len(start_positions.size()) > 1:
+                start_positions = start_positions.squeeze(-1)
+            if len(end_positions.size()) > 1:
+                end_positions = end_positions.squeeze(-1)
             # sometimes the start/end positions are outside our model inputs, we ignore these terms
             ignored_index = start_logits.size(1)
-            argument_left = argument_left.clamp(0, ignored_index)
-            argument_right = argument_right.clamp(0, ignored_index)
+            start_positions = start_positions.clamp(0, ignored_index)
+            end_positions = end_positions.clamp(0, ignored_index)
 
             loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
-            start_loss = loss_fct(start_logits, argument_left)
-            end_loss = loss_fct(end_logits, argument_right)
+            start_loss = loss_fct(start_logits, start_positions)
+            end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
         logits = torch.cat((start_logits, end_logits), dim=-1) # [batch_size, seq_length*2]
         
