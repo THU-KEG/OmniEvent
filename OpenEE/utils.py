@@ -45,10 +45,10 @@ def download(path, base_path, url):
 
 def check_web_and_convert_path(path, load_type, base_path="OpenEE_Model"): # TODO add hash
     if os.path.isdir(path):
-        print(f"load from local file: {path}")
+        print(f"load from local file: {path} {load_type}")
         return path
     if os.path.isdir(os.path.join(base_path, path)):
-        print(f"load from local file: {os.path.join(base_path, path)}")
+        print(f"load from local file: {os.path.join(base_path, path)} {load_type}")
         return os.path.join(base_path, path)
     if not os.path.exists(base_path):
         os.mkdir(base_path)

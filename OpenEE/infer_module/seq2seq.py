@@ -5,27 +5,43 @@ from collections import defaultdict
 from .io_format import Result, Event
 
 
+split_word = ":"
+
+def get_words(text, language):
+    if language == "English":
+        words = text.split()
+    elif language == "Chinese":
+        words = list(text)
+    else:
+        raise NotImplementedError
+    return words
+
 
 class EDProcessor():
     def __init__(self, tokenizer, max_seq_length=160):
         self.tokenizer = tokenizer 
         self.max_seq_length = max_seq_length
 
-    def tokenize_per_instance(self, text):
-        input_context = self.tokenizer(text,
+    def tokenize_per_instance(self, text, schema):
+        if schema in ["<duee>", "<fewfc>", "<leven>"]:
+            words = get_words(schema+text, "Chinese")
+        else:
+            words = get_words(schema+text, "English")
+        input_context = self.tokenizer(words,
                                        truncation=True,
                                        padding="max_length",
-                                       max_length=self.max_seq_length)
+                                       max_length=self.max_seq_length,
+                                       is_split_into_words=True)
         return dict(
             input_ids=torch.tensor(input_context["input_ids"], dtype=torch.long),
             attention_mask=torch.tensor(input_context["attention_mask"], dtype=torch.float32)
         )
 
 
-    def tokenize(self, texts):
+    def tokenize(self, texts, schemas):
         batch = []
-        for text in texts:
-            batch.append(self.tokenize_per_instance(text))
+        for text, schema in zip(texts, schemas):
+            batch.append(self.tokenize_per_instance(text, schema))
         # output batch features 
         output_batch = defaultdict(list)
         for key in batch[0].keys():
@@ -59,12 +75,19 @@ class EAEProcessor():
         markered_text = markered_text.strip()
         return markered_text
 
-    def tokenize_per_instance(self, text, trigger):
-        text = self.insert_marker(text, trigger["offset"])
-        input_context = self.tokenizer(text,
+    def tokenize_per_instance(self, text, trigger, schema):
+        if schema in ["<duee>", "<fewfc>", "<leven>"]:
+            language = "Chinese"
+        else:
+            language = "English"
+        whitespace = True if language == "English" else False
+        text = self.insert_marker(text, trigger["offset"], whitespace)
+        words = get_words(text, language)
+        input_context = self.tokenizer(words,
                                        truncation=True,
                                        padding="max_length",
-                                       max_length=self.max_seq_length)
+                                       max_length=self.max_seq_length,
+                                       is_split_into_words=True)
         return dict(
             input_ids=torch.tensor(input_context["input_ids"], dtype=torch.long),
             attention_mask=torch.tensor(input_context["attention_mask"], dtype=torch.float32)
@@ -74,7 +97,7 @@ class EAEProcessor():
         batch = []
         for i, instance in enumerate(instances):
             for trigger in instance["triggers"]:
-                batch.append(self.tokenize_per_instance(instance["text"], trigger))
+                batch.append(self.tokenize_per_instance(instance["text"], trigger, instance["schema"]))
         # output batch features 
         output_batch = defaultdict(list)
         for key in batch[0].keys():
@@ -152,11 +175,12 @@ def get_eae_result(instances, arguments):
     return results
         
 
-def prepare_for_eae_from_input(texts, all_triggers):
+def prepare_for_eae_from_input(texts, all_triggers, schemas):
     instances = []
-    for text, triggers in zip(texts, all_triggers):
+    for text, triggers, schema in zip(texts, all_triggers, schemas):
         instance = {
             "text": text,
+            "schema": schema,
             "triggers": []
         }
         for trigger in triggers:
@@ -168,12 +192,13 @@ def prepare_for_eae_from_input(texts, all_triggers):
     return instances
 
 
-def prepare_for_eae_from_pred(texts, triggers):
+def prepare_for_eae_from_pred(texts, triggers, schemas):
     instances = []
     for i, text in enumerate(texts):
         triggers_in_text = [trigger for trigger in triggers if trigger[0]==i]
         instance = {
             "text": text,
+            "schema": schemas[i],
             "triggers": []
         }
         for trigger in triggers_in_text:
@@ -191,15 +216,17 @@ def prepare_for_eae_from_pred(texts, triggers):
     return instances 
 
 
-def extract_argument(raw_text, instance_id, template=re.compile(r"[<>]")):
+def extract_argument(raw_text, instance_id, template=re.compile(r"<|>")):
     arguments = []
     for span in template.split(raw_text):
         if span.strip() == "":
             continue
-        words = span.strip().split()
-        role = words[0]
-        value = " ".join(words[1:])
-        if value.strip() != "":
+        words = span.strip().split(split_word)
+        if len(words) != 2:
+            continue
+        role = words[0].strip().replace(" ", "")
+        value = words[1].strip().replace(" ", "")
+        if role != "" and value != "":
             arguments.append((instance_id, role, value))
     arguments = list(set(arguments))
     return arguments
@@ -225,9 +252,9 @@ def generate(model, tokenizer, inputs):
     return tokenizer.batch_decode(generated_tokens, skip_special_tokens=False)
 
 
-def do_event_detection(model, tokenizer, texts):
+def do_event_detection(model, tokenizer, texts, schemas):
     data_processor = EDProcessor(tokenizer)
-    inputs = data_processor.tokenize(texts)
+    inputs = data_processor.tokenize(texts, schemas)
     decoded_preds = generate(model, tokenizer, inputs)
     def clean_str(x_str):
         for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:

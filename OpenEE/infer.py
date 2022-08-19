@@ -25,6 +25,11 @@ from .infer_module.seq2seq import (
     prepare_for_eae_from_pred
 )
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
 
 TOKENIZER_NAME_TO_CLS = {
     "BertTokenizer": BertTokenizerFast,
@@ -51,32 +56,79 @@ def get_model(model_args, model_name_or_path):
 
 def get_pretrained(model_name_or_path):
     # config 
-    parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
-    model_args, data_args, training_args = parser.from_pretrained(model_name_or_path)
+    # parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
+    # model_args, data_args, training_args = parser.from_pretrained(model_name_or_path)
     # model
+    model_args = AttrDict({
+        "paradigm": "seq2seq",
+        "model_type": "mt5"
+    })
     model = get_model(model_args, model_name_or_path)
+    model.cuda()
     # tokenizer 
     tokenizer = get_tokenizer(model_name_or_path)
 
-    return model, tokenizer, (model_args, data_args, training_args)
+    return model, tokenizer
 
 
-def infer(text, triggers=None, task="ED"):
+def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="ED"):
+    """Infer method.
+
+    Args:
+        text (`str`): Input plain text.
+        triggers (`List[List]`, *optional*): List of triggers in the text. Only useful for EAE. Examples: [(moving, 2, 8), ...]
+        schema (`str`): Schema used for ED and EAE. Selected in ['ace', 'kbp', 'ere', 'maven', 'leven', 'duee', 'fewfc']
+        task (`str`): Task type. Selected in ['ED', 'EAE', 'EE']
+    
+    Returns:
+        results (`List`): Predicted results. The format is 
+        [
+            {
+                'text': `text`, 
+                'events': [
+                    {
+                        'type': `type`,
+                        'trigger': `trigger word`,
+                        'offset': [`char start`, `char end`],
+                        'arguments': [ // for EAE and EE
+                            {
+                                'mention': `argument mention`,
+                                'offset': [`char start`, `char end`],
+                                'role': `argument role`
+                            }
+                        ]
+                    }
+                ]
+            } 
+        ]
+    """
+    assert schema in ['ace', 'kbp', 'ere', 'maven', 'leven', 'duee', 'fewfc']
+    assert task in ['ED', 'EAE', 'EE']
+    schema = f"<{schema}>"
     if task == "ED":
-        ed_model, ed_tokenizer, _ = get_pretrained("s2s-mt5-ed")
-        ed_model.cuda()
-        events = do_event_detection(ed_model, ed_tokenizer, [text])
+        if model is None or tokenizer is None:
+            ed_model, ed_tokenizer = get_pretrained("s2s-mt5-ed")
+        else:
+            ed_model, ed_tokenizer = model, tokenizer
+        events = do_event_detection(ed_model, ed_tokenizer, [text], [schema])
         results = get_ed_result([text], events)
     elif task == "EAE":
-        eae_model, eae_tokenizer, _ = get_pretrained("s2s-mt5-eae")
-        instances = prepare_for_eae_from_input([text], triggers)
+        if model is None or tokenizer is None:
+            eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae")
+        else:
+            eae_model, eae_tokenizer = model, tokenizer
+        instances = prepare_for_eae_from_input([text], triggers, [schema])
         arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances)
         results = get_eae_result(instances, arguments)
     elif task == "EE":
-        ed_model, ed_tokenizer, _ = get_pretrained("s2s-mt5-ed")
-        eae_model, eae_tokenizer, _ = get_pretrained("s2s-mt5-eae")
-        events = do_event_detection(ed_model, ed_tokenizer, [text])
-        instances = prepare_for_eae_from_pred([text], events)
+        if model is None or tokenizer is None:
+            ed_model, ed_tokenizer = get_pretrained("s2s-mt5-ed")
+            eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae")
+        else:
+            ed_model, ed_tokenizer = model[0], tokenizer[0]
+            eae_model, eae_tokenizer = model[1], tokenizer[1]
+        events = do_event_detection(ed_model, ed_tokenizer, [text], [schema])
+        instances = prepare_for_eae_from_pred([text], events, [schema])
         if len(instances[0]["triggers"]) == 0:
             results = [{
                 "text": instances[0]["text"],
