@@ -80,7 +80,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                     )
                     self.examples.append(example)
                 else:
-                    example = EDInputExample(example_id=idx, text=words, labels="")
+                    example = EDInputExample(example_id=idx, text=words, labels="", **kwargs)
                     self.examples.append(example)
 
     def convert_examples_to_features(self):
