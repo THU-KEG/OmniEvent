@@ -141,7 +141,7 @@ class LSTM(nn.Module):
         self.embedding.resize_token_embeddings(vocab_size)
 
     @staticmethod
-    def prepare_pack_padded_sequence(self, input_ids, input_lengths, descending=True):
+    def prepare_pack_padded_sequence(input_ids, input_lengths, descending=True):
         sorted_input_lengths, indices = torch.sort(input_lengths, descending=descending)
         _, desorted_indices = torch.sort(indices, descending=False)
         sorted_input_ids = input_ids[indices]

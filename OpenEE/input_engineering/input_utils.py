@@ -85,9 +85,12 @@ def get_word_ids(tokenizer, outputs, word_list):
 
 def check_pred_len(pred, item, language):
     if language == "English":
-        assert len(pred) == len(item["text"].split())
+        if len(pred) != len(item["text"].split()):
+            logger.warning("There might be special tokens in the input text: {}".format(item["text"]))
+
     elif language == "Chinese":
-        assert len(pred) == len("".join(item["text"].split()))  # remove space token
+        if len(pred) != len("".join(item["text"].split())): # remove space token
+            logger.warning("There might be special tokens in the input text: {}".format(item["text"]))
     else:
         raise NotImplementedError
 

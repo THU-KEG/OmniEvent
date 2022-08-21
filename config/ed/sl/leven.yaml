@@ -53,3 +53,7 @@ evaluation_strategy: epoch
 eval_steps: 500
 save_strategy: epoch
 save_steps: 500
+
+# split inference #
+split_infer: True
+split_infer_size: 2000
