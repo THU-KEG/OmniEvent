@@ -205,7 +205,7 @@ class EDDataProcessor(Dataset):
         config:
             The pre-defined configurations of the execution.
         tokenizer (`str`):
-            A string representing the tokenizer proposed for the tokenization process.
+            The tokenizer method proposed for the tokenization process.
         examples (`List[EDInputExample]`):
             A list of `EDInputExample`s constructed based on the input dataset.
         input_features (`List[EDInputFeatures]`):
@@ -214,7 +214,7 @@ class EDDataProcessor(Dataset):
 
     def __init__(self,
                  config,
-                 tokenizer: str) -> None:
+                 tokenizer) -> None:
         """Constructs an `EDDataProcessor`."""
         self.config = config
         self.tokenizer = tokenizer
@@ -302,14 +302,14 @@ class EAEDataProcessor(Dataset):
     Attributes:
         config:
             The pre-defined configurations of the execution.
-        tokenizer (`str`):
-            A string representing the tokenizer proposed for the tokenization process.
+        tokenizer:
+            The tokenizer method proposed for the tokenization process.
         is_training (`bool`):
             A boolean variable indicating the state is training or not.
         examples (`List[EDInputExample]`):
             A list of `EDInputExample`s constructed based on the input dataset.
-        input_features (`List[EDInputFeatures]`):
-            A list of `EDInputFeatures`s corresponding to the `EDInputExample`s.
+        input_features (`List[EAEInputFeatures]`):
+            A list of `EAEInputFeatures`s corresponding to the `EAEInputExample`s.
         data_for_evaluation (`dict`):
             A dictionary representing the evaluation data.
         event_preds (`list`):
@@ -318,7 +318,7 @@ class EAEDataProcessor(Dataset):
 
     def __init__(self,
                  config,
-                 tokenizer: str,
+                 tokenizer,
                  pred_file: str,
                  is_training: bool) -> None:
         """Constructs a EAEDataProcessor."""

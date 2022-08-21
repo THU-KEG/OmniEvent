@@ -27,7 +27,7 @@ class EAEMRCProcessor(EAEDataProcessor):
 
     def __init__(self,
                  config,
-                 tokenizer: str,
+                 tokenizer,
                  input_file: str,
                  pred_file: str,
                  is_training: bool = False) -> None:

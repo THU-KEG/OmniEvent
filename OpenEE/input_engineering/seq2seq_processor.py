@@ -63,7 +63,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
 
     def __init__(self,
                  config,
-                 tokenizer: str,
+                 tokenizer,
                  input_file: str) -> None:
         """Constructs a `EDSeq2SeqProcessor`."""
         super().__init__(config, tokenizer)
