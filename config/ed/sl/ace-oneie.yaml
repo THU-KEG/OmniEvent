@@ -1,0 +1,59 @@
+seed: 42
+do_train: True
+do_predict: True 
+do_ED_infer: True 
+
+# top-level config #
+paradigm: sequence_labeling
+task_name: ED
+dataset_name: ACE2005-oneie
+language: English
+test_exists_labels: True
+
+# file path # 
+output_dir: output/ACE2005-oneie
+type2id_path: ../../data/processed/ace2005-oneie/label2id.json
+train_file: ../../data/processed/ace2005-oneie/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-oneie/dev.unified.jsonl
+test_file: ../../data/processed/ace2005-oneie/test.unified.jsonl
+
+# config for data processor #
+return_token_type_ids: True 
+truncate_seq2seq_output: False
+
+# model config #
+model_type: bert
+model_name_or_path: bert-base-uncased
+hidden_size: 768
+aggregation: none
+
+# training config #
+num_train_epochs: 35
+max_seq_length: 160
+max_out_length: 160
+dataloader_num_workers: 2
+
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 64
+gradient_accumulation_steps: 1
+# eval_accumulation_steps: 4
+learning_rate: 12.0e-5
+weight_decay: 1.0e-5
+warmup_ratio: 0.1 
+max_grad_norm: 1
+optim: adamw_torch
+
+load_best_model_at_end: True
+metric_for_best_model: micro_f1 
+greater_is_better: True 
+
+logging_strategy: steps
+logging_steps: 100
+evaluation_strategy: epoch
+eval_steps: 500
+save_strategy: epoch
+save_steps: 500
+
+# split inference #
+split_infer: False 
+split_infer_size: 500

@@ -1,0 +1,70 @@
+seed: 42
+do_train: True 
+do_predict: True
+
+# top-level config #
+paradigm: seq2seq
+task_name: ED
+dataset_name: ALL
+# language: English
+test_exists_labels: True
+
+# file path #
+output_dir: output/ALL-ED
+train_file: ../../data/processed/all-ed/train.unified.jsonl
+validation_file: ../../data/processed/all-ed/dev.unified.jsonl
+test_file: ../../data/processed/all-ed/test.unified.jsonl
+
+# config for data processor # 
+truncate_in_batch: True 
+return_token_type_ids: False 
+truncate_seq2seq_output: True
+
+# model config #
+model_type: mt5
+model_name_or_path: google/mt5-base
+aggregation: none 
+# early_stopping_patience: 100
+
+# training config #
+num_train_epochs: 10
+max_seq_length: 160
+max_out_length: 128
+dataloader_num_workers: 2
+
+generation_max_length: 128
+generation_num_beams: 4
+predict_with_generate: True 
+ignore_pad_token_for_loss: True 
+
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 32
+gradient_accumulation_steps: 2
+# eval_accumulation_steps: 4
+learning_rate: 5.0e-5
+weight_decay: 1.0e-5
+warmup_ratio: 0.1 
+max_grad_norm: 1
+optim: adamw_torch
+deepspeed: ../../config/deepspeed_zero_2.json
+# pipeline: True 
+fp16: False
+# fp16_backend: apex
+fp16_opt_level: O1
+place_model_on_device: False 
+
+load_best_model_at_end: True
+metric_for_best_model: micro_f1 
+greater_is_better: True 
+
+logging_strategy: steps
+logging_steps: 50
+evaluation_strategy: epoch
+eval_steps: 1000
+save_strategy: epoch
+save_steps: 1000
+
+# split inference #
+split_infer: False
+split_infer_size: 5000
+
