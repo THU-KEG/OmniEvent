@@ -13,11 +13,11 @@ from .utils import check_web_and_convert_path
 
 @dataclass
 class DataArguments:
-    """
-    Arguments pertaining to what data we are going to input our model for training and eval.
-    Using `HfArgumentParser` we can turn this class
-    into argparse arguments to be able to specify them on
-    the command line.
+    """Arguments pertaining to what data we are going to input our model for training and eval.
+
+    Arguments pertaining to what data we are going to input our model for training and eval, such as the config file
+    path, dataset name, and the path of the training, validation, and testing file. By using `HfArgumentParser`, we can
+    turn this class into argparse arguments to be able to specify them on the command line.
     """
     config_file: str = field(
         default=None, 
@@ -132,8 +132,10 @@ class DataArguments:
 
 @dataclass
 class ModelArguments:
-    """
-    Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
+    """Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
+
+    Arguments pertaining to which model/config/tokenizer we are going to fine-tune from, such as the model type, model
+    path, checkpoint path, hidden size, and aggregation method.
     """
     model_type: str = field(
         metadata={"help": "Model type."}
@@ -230,6 +232,11 @@ class ModelArguments:
 
 @dataclass 
 class TrainingArguments(TrainingArguments):
+    """Arguments pertaining to the configurations in the training process.
+
+    Arguments pertaining to the configurations in the training process, such as the random seed, task name,
+    early stopping patience and threshold, and max length.
+    """
     seed: int = field(
         default=42,
         metadata={"help": "seed"}
@@ -285,11 +292,13 @@ class TrainingArguments(TrainingArguments):
 
 
 class ArgumentParser(HfArgumentParser):
+    """Alternative helper method that does not use `argparse` at all.
+
+    Alternative helper method that does not use `argparse` at all, parsing the pre-defined yaml file with arguments
+    instead loading a json file and populating the dataclass types.
+    """
     def parse_yaml_file(self, yaml_file: str):
-        """
-        Alternative helper method that does not use `argparse` at all, instead loading a json file and populating the
-        dataclass types.
-        """
+        """Parses the pre-defined yaml file with arguments."""
         data = yaml.safe_load(Path(yaml_file).read_text())
         outputs = []
         for dtype in self.dataclass_types:

@@ -2,12 +2,26 @@ import os
 import json
 import jsonlines
 from tqdm import tqdm
+from typing import Dict, List
 
 
-def convert_leven_to_unified(data_path: str, dump=True) -> list:
-    """
-    Convert LEVEN dataset to the unified format.
-    Dataset link: https://github.com/thunlp/LEVEN
+def convert_leven_to_unified(data_path: str,
+                             dump=True) -> List[Dict]:
+    """Convert LEVEN dataset to the unified format.
+
+    Extract the information from the original LEVEN dataset and convert the format to a unified OpenEE dataset. The
+    converted dataset is written to a json file.
+
+    Args:
+        data_path (`str`):
+            A string indicating the path of the original LEVEN dataset.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether or not writing the manipulated dataset to a json file.
+
+    Returns:
+        formatted_data (`List[Dict]`):
+            A list of dictionaries representing the manipulated dataset of LEVEN after converting its format into a
+            unified OpenEE dataset.
     """
     leven_data = list(jsonlines.open(data_path))
 

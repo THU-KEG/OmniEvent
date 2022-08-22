@@ -127,7 +127,38 @@ def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
     return output_test_files
 
 
-def predict_ed(trainer, tokenizer, data_class, data_args, data_file):
+def predict_ed(trainer,
+               tokenizer: str,
+               data_class,
+               data_args,
+               data_file: str):
+    """Predicts the test set of the event detection task.
+
+    Predicts the test set of the event detection task. The prediction of logits and labels, evaluation metrics' results,
+    and the dataset would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The pre-defined arguments for data processing.
+        data_file (`str`):
+            A string representing the file path of the dataset.
+
+    Returns:
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
+        metrics:
+            The evaluation metrics result based on the predictions and annotations.
+        dataset:
+            An instance of the testing dataset.
+    """
     dataset = data_class(data_args, tokenizer, data_file)
     logits, labels, metrics = trainer.predict(
         test_dataset=dataset,
@@ -136,7 +167,40 @@ def predict_ed(trainer, tokenizer, data_class, data_args, data_file):
     return logits, labels, metrics, dataset
 
 
-def predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file):
+def predict_sub_ed(trainer,
+                   tokenizer: str,
+                   data_class,
+                   data_args,
+                   data_file: str):
+    """Predicts the test set of the event detection task of subfile datasets.
+
+    Predicts the test set of the event detection task of a list of datasets. The prediction of logits and labels are
+    conducted separately on each file, and the evaluation metrics' results are calculated after concatenating the
+    predictions together. Finally, the prediction of logits and labels, evaluation metrics' results, and the dataset
+    would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The pre-defined arguments for data processing.
+        data_file (`str`):
+            A string representing the file path of the dataset.
+
+    Returns:
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
+        metrics:
+            The evaluation metrics result based on the predictions and annotations.
+        dataset:
+            An instance of the testing dataset.
+    """
     data_file_full = data_file
     data_file_list = get_sub_files(input_test_file=data_file_full,
                                    sub_size=data_args.split_infer_size)
@@ -158,7 +222,38 @@ def predict_sub_ed(trainer, tokenizer, data_class, data_args, data_file):
     return logits, labels, metrics, dataset
 
 
-def predict_eae(trainer, tokenizer, data_class, data_args, training_args):
+def predict_eae(trainer,
+                tokenizer: str,
+                data_class,
+                data_args,
+                training_args):
+    """Predicts the test set of the event argument extraction task.
+
+    Predicts the test set of the event argument extraction task. The prediction of logits and labels, evaluation
+    metrics' results, and the dataset would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The pre-defined arguments for data processing.
+        training_args:
+            The pre-defined arguments for the training process.
+
+    Returns:
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
+        metrics:
+            The evaluation metrics result based on the predictions and annotations.
+        test_dataset:
+            An instance of the testing dataset.
+    """
     test_dataset = data_class(data_args, tokenizer, data_args.test_file, data_args.test_pred_file)
     training_args.data_for_evaluation = test_dataset.get_data_for_evaluation()
     logits, labels, metrics = trainer.predict(test_dataset=test_dataset, ignore_keys=["loss"])
@@ -166,7 +261,40 @@ def predict_eae(trainer, tokenizer, data_class, data_args, training_args):
     return logits, labels, metrics, test_dataset
 
 
-def predict_sub_eae(trainer, tokenizer, data_class, data_args, training_args):
+def predict_sub_eae(trainer,
+                    tokenizer: str,
+                    data_class,
+                    data_args,
+                    training_args):
+    """Predicts the test set of the event detection task of subfile datasets.
+
+    Predicts the test set of the event detection task of a list of datasets. The prediction of logits and labels are
+    conducted separately on each file, and the evaluation metrics' results are calculated after concatenating the
+    predictions together. Finally, the prediction of logits and labels, evaluation metrics' results, and the dataset
+    would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`str`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The pre-defined arguments for data processing.
+        training_args:
+            The pre-defined arguments for the training process.
+
+    Returns:
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
+        metrics:
+            The evaluation metrics result based on the predictions and annotations.
+        test_dataset:
+            An instance of the testing dataset.
+    """
     test_file_full, test_pred_file_full = data_args.test_file, data_args.test_pred_file
     test_file_list, test_pred_file_list = get_sub_files(input_test_file=test_file_full,
                                                         input_test_pred_file=test_pred_file_full,

@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import List, Union, Any, Optional
 
 from tqdm import tqdm
 from .input_utils import get_words, get_left_and_right_pos, get_word_ids
@@ -16,15 +17,30 @@ logger = logging.getLogger(__name__)
 
 
 class EDSLProcessor(EDDataProcessor):
-    """Data processor for sequence labeling."""
+    """Data processor for sequence labeling for event detection.
 
-    def __init__(self, config, tokenizer, input_file):
+    Data processor for sequence labeling for event detection. The class is inherited from the `EDDataProcessor` class,
+    in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
+    a new function entitled `get_final_labels()` is defined to obtain final results, and the rest of the attributes and
+    functions are multiplexed from the `EDDataProcessor` class.
+
+    Attributes:
+        is_overflow:
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str) -> None:
+        """Constructs a EDSLProcessor."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.is_overflow = []
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         language = self.config.language
 
@@ -46,7 +62,11 @@ class EDSLProcessor(EDDataProcessor):
                 example = EDInputExample(example_id=item["id"], text=words, labels=labels)
                 self.examples.append(example)
 
-    def get_final_labels(self, example, word_ids_of_each_token, label_all_tokens=False):
+    def get_final_labels(self,
+                         example: EDInputExample,
+                         word_ids_of_each_token: List[int],
+                         label_all_tokens: Optional[bool] = False) -> List[Union[str, int]]:
+        """Obtains the final label of each token."""
         final_labels = []
         pre_word_id = None
         for word_id in word_ids_of_each_token:
@@ -60,7 +80,8 @@ class EDSLProcessor(EDDataProcessor):
 
         return final_labels
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         self.input_features = []
 
         for example in tqdm(self.examples, desc="Processing features for SL"):
@@ -90,9 +111,28 @@ class EDSLProcessor(EDDataProcessor):
 
 
 class EAESLProcessor(EAEDataProcessor):
-    """Data processor for sequence labeling."""
+    """Data processor for sequence labeling for event argument extraction.
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
+    Data processor for sequence labeling for event argument extraction. The class is inherited from the
+    `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are  implemented; twp new functions, entitled `get_final_labels()` and
+    `insert_markers()` are defined, and the rest of the attributes and functions are multiplexed from the
+    `EAEDataProcessor` class.
+
+    Attributes:
+        positive_candidate_indices (`List[int]`):
+            A list of integers indicating the indices of positive trigger candidates.
+        is_overflow:
+
+    """
+
+    def __init__(self,
+                 config: str,
+                 tokenizer: str,
+                 input_file: str,
+                 pred_file: str,
+                 is_training: Optional[bool] = False) -> None:
+        """Constructs an EAESLProcessor/"""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.positive_candidate_indices = []
         self.is_overflow = []
@@ -100,7 +140,9 @@ class EAESLProcessor(EAEDataProcessor):
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         language = self.config.language
         trigger_idx = 0
@@ -192,7 +234,11 @@ class EAESLProcessor(EAEDataProcessor):
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-    def get_final_labels(self, labels, word_ids_of_each_token, label_all_tokens=False):
+    def get_final_labels(self,
+                         labels: dict,
+                         word_ids_of_each_token: List[Any],
+                         label_all_tokens: bool = False) -> List[Union[str, int]]:
+        """Obtains the final label of each token."""
         final_labels = []
         pre_word_id = None
         for word_id in word_ids_of_each_token:
@@ -207,7 +253,12 @@ class EAESLProcessor(EAEDataProcessor):
         return final_labels
 
     @staticmethod
-    def insert_marker(text, event_type, labels, trigger_pos, markers):
+    def insert_marker(text: str,
+                      event_type: str,
+                      labels,
+                      trigger_pos: List[int],
+                      markers):
+        """Adds a marker at the start and end position of event triggers and argument mentions."""
         left, right = trigger_pos
 
         marked_text = text[:left] + [markers[event_type][0]] + text[left:right] + [markers[event_type][1]] + text[right:]
@@ -216,7 +267,8 @@ class EAESLProcessor(EAEDataProcessor):
         assert len(marked_text) == len(marked_labels)
         return marked_text, marked_labels
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         self.input_features = []
         self.is_overflow = []
 

@@ -7,13 +7,23 @@ import random
 import jsonlines
 
 from tqdm import tqdm
-from typing import List
+from typing import List, Optional, Dict, Union
 from collections import defaultdict
 
 random.seed(42)
 
 
 def generate_label2id_role2id(data_path: str):
+    """Allocates an id for event types and roles within the event schema.
+
+    Allocates an id for event types and roles within the event schema. The id of event types and roles start from 0.
+    Finally, the correspondence of each event type/role and their id are stored in a dictionary and dumped into json
+    files, in which the key of each element is the event type/role, and the value is their corresponding id.
+
+    Args:
+        data_path (`str`):
+            A string indicating the path of the `duee_event_schema.json` schema file.
+    """
     label2id, role2id = dict(NA=0), dict(NA=0)
 
     schema = list(jsonlines.open(data_path))
@@ -32,6 +42,23 @@ def generate_label2id_role2id(data_path: str):
 
 
 def chinese_tokenizer(input_text: str, tokenizer="jieba") -> List[str]:
+    """Tokenizes the Chinese input sequence into tokens.
+
+    Tokenizes the Chinese input sequence into tokens by calling the relevant packages. The function integrates four
+    commonly-used tokenizers, including Jieba, LTP, THULAC, and HanLP. The tokenized tokens are stored as a list for
+    return.
+
+    Args:
+        input_text (`str`):
+            A string indicating the input text for tokenization.
+        tokenizer (`str`, `optional`, defaults to "jieba"):
+            A string indicating the tokenizer proposed to be utilized for the tokenization process, selected from
+            "jieba", "ltp", "thulac", and "hanlp".
+
+    Returns:
+        token_list (`List[str]`):
+            A list of strings representing the tokens within the given Chinese input sequence.
+    """
     token_list = []
     if tokenizer == "jieba":
         token_list = jieba.lcut(input_text)
@@ -47,7 +74,8 @@ def chinese_tokenizer(input_text: str, tokenizer="jieba") -> List[str]:
     return token_list
 
 
-def re_tokenize(token_list: List[str], mention: dict) -> List[str]:
+def re_tokenize(token_list: List[str],
+                mention: dict) -> List[str]:
     trigger = mention["trigger"]
     offset = [mention["trigger_start_index"], mention["trigger_start_index"]+len(trigger)]
 
@@ -75,9 +103,25 @@ def re_tokenize(token_list: List[str], mention: dict) -> List[str]:
 
 
 def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> list:
-    """
-    Convert DuEE-fin dataset to unified format.
-    Dataset link: https://www.luge.ai/#/luge/dataDetail?id=7
+    """Convert DuEE-fin dataset to the unified format.
+
+    Extract the information from the original DuEE-fin dataset and convert the format to a unified OpenEE dataset. The
+    tokens not annotated as triggers are also regarded as negative triggers. The converted dataset is written to a json
+    file.
+
+    Args:
+        data_path (`str`):
+            A string representing the path of the original DuEE 1.0 dataset.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether or not to write the manipulated dataset into a json file.
+        tokenizer (`str`, `optional`, defaults to `jieba`):
+            A string indicating the tokenizer proposed to be utilized for the tokenization process, selected from
+            "jieba", "ltp", "thulac", and "hanlp".
+
+    Returns:
+        formatted_data (`List[Dict[str, Union[str, List[Dict]]]]`):
+            A list of dictionary indicating the manipulated dataset of DuEE 1.0-fin after converting its format into a
+            unified OpenEE dataset.
     """
     dueefin_data = list(jsonlines.open(data_path))
 

@@ -3,9 +3,26 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from typing import Dict, List, Optional
 
-def read_query_templates(prompt_file, translate=False):
-    """Load query templates"""
+
+def read_query_templates(prompt_file: str,
+                         translate: Optional[bool] = False) -> Dict[str, Dict[str, List[str]]]:
+    """Loads query templates from a prompt file.
+
+    Loads query templates from a prompt file. If a translation is required, the query templates would be translated from
+    English to Chinese based on four types of regulations.
+
+    Args:
+        prompt_file (`str`):
+            A string indicating the path of the prompt file.
+        translate (`bool`, `optional`, defaults to `False`):
+            A boolean variable indicating whether or not to translate the query templates into Chinese.
+
+    Returns:
+        query_templates (`Dict[str, Dict[str, List[str]]]`)
+            A dictionary containing the query templates applicable for every event type and argument role.
+    """
     et_translation = dict()
     ar_translation = dict()
     if translate:
@@ -64,8 +81,15 @@ def read_query_templates(prompt_file, translate=False):
     return query_templates
 
 
-def _get_best_indexes(logits, n_best_size=1, larger_than_cls=False, cls_logit=None):
-    """Get the n-best logits from a list."""
+def _get_best_indexes(logits: List[int],
+                      n_best_size: Optional[int] = 1,
+                      larger_than_cls: Optional[bool] = False,
+                      cls_logit: Optional[int] = None) -> List[int]:
+    """Gets the n-best logits from a list.
+
+    Gets the n-best logits from a list. The methods returns a list containing the indexes of the n-best logits that
+    satisfies both the logits are n-best and greater than the logit of the "cls" token.
+    """
     index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
 
     best_indexes = []
@@ -79,11 +103,27 @@ def _get_best_indexes(logits, n_best_size=1, larger_than_cls=False, cls_logit=No
     return best_indexes
 
 
-def char_pos_to_word_pos(text, position):
+def char_pos_to_word_pos(text: str,
+                         position: int) -> int:
+    """Returns the word-level position of a mention.
+
+    Returns the word-level position of a mention by counting the number of words before the start position of the
+    mention.
+
+    Args:
+        text (`str`):
+            A string representing the source text that the mention is within.
+        position (`int`)
+            An integer indicating the character-level position of the mention.
+
+    Returns:
+        An integer indicating the word-level position of the mention.
+    """
     return len(text[:position].split())
 
 
 def make_predictions(all_start_logits, all_end_logits, training_args):
+    """Obtains the prediction from the Machine Reading Comprehension (MRC) model."""
     data_for_evaluation = training_args.data_for_evaluation
     assert len(all_start_logits) == len(data_for_evaluation["ids"])
     # all golden labels

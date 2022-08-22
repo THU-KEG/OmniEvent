@@ -2,8 +2,28 @@ import json
 import jsonlines
 import os
 
+from typing import Dict, List, Optional
 
-def gen_prompts(input_folder="../../data/processed/ace2005-zh/", dump=False):
+
+def gen_prompts(input_folder: Optional[str] = "../../data/processed/ace2005-zh/",
+                dump: Optional[bool] = False) -> Dict[str: List[str]]:
+    """Generates prompts for the Machine Reading Comprehension (MRC) model.
+
+    Generates prompts for the Machine Reading Comprehension (MRC) model. An event schema containing the argument roles
+    of each event type is firstly constructed, and then the prompts for the MRC model are generated, following the
+    following template:
+
+        "{event type}_{argument_role}_not_implemented_yet}"
+
+    Args:
+        input_folder (`str`, `optional`, defaults to "../../data/processed/ace2005-zh/"):
+            A string indicating the folder of the processed dataset.
+        dump (`bool`, `optional`, defaults to `False`):
+            A boolean variable indicating whether or not to dump the prompts into a csv file.
+
+    Returns:
+        A dictionary containing the argument roles existed in each event type.
+    """
     event_schema = dict()
     for file in os.listdir(input_folder):
         if "unified" in file:

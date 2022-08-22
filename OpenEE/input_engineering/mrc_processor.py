@@ -15,14 +15,29 @@ logger = logging.getLogger(__name__)
 
 
 class EAEMRCProcessor(EAEDataProcessor):
-    "Data processor for machine reading comprehension."
+    """Data processor for Machine Reading Comprehension (MRC) for event argument extraction.
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
+    Data processor for Machine Reading Comprehension (MRC) for event argument extraction. The class is inherited from
+    the `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are implemented; a new function entitled `remove_sub_word()` is defined to remove
+    the annotations whose word is a sub-word, the rest of the attributes and functions are multiplexed from the
+    `EAEDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer,
+                 input_file: str,
+                 pred_file: str,
+                 is_training: bool = False) -> None:
+        """Constructs a `EAEMRCProcessor`."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
         trigger_idx = 0
@@ -202,7 +217,8 @@ class EAEMRCProcessor(EAEDataProcessor):
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         self.input_features = []
         self.data_for_evaluation["text_range"] = []
         self.data_for_evaluation["text"] = []
@@ -250,7 +266,8 @@ class EAEMRCProcessor(EAEDataProcessor):
             self.input_features.append(features)
 
     @staticmethod
-    def remove_sub_word(tokenizer, inputs, word_list):
+    def remove_sub_word(inputs):
+        """Removes the annotations whose word is a sub-word."""
         outputs = defaultdict(list)
         pre_word_id = -1
         for token_id, word_id in enumerate(get_word_ids(tokenizer, inputs, word_list)):

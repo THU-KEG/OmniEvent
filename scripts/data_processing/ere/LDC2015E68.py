@@ -10,14 +10,31 @@ sys.path.append("../")
 
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 from tqdm import tqdm
+from typing import Dict, List, Union
 from xml.dom.minidom import parse
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
 
 
 class Config(object):
-    """
-    The configurations of this project.
+    """The configurations of this project.
+
+    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
+    path of the dataset.
+
+    Attributes:
+        ALL_DATA_FOLDER (`str`):
+            A string indicating the folder containing all the datasets.
+        DATA_FOLDER (`str`):
+            A string indicating the folder containing the annotation folder and source text folder.
+        GOLD_FOLDER (`str`):
+            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
+            documents.
+        SOURCE_FOLDER (`str`):
+            A string indicating the folder containing the source texts of the documents, corresponding to the documents
+            under the `GOLD_FOLDER` folder.
+        SAVE_DATA_FOLDER (`str`):
+            A string indicating the folder of saving the manipulated dataset.
     """
     def __init__(self):
         # The configuration for the project (current) folder.
@@ -34,12 +51,25 @@ class Config(object):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
 
-def read_xml(gold_folder, source_folder):
-    """
-    Read the annotated files and construct the hoppers.
-    :param gold_folder:   The path for the gold_standard folder.
-    :param source_folder: The path for the source folder.
-    :return: documents:   The set of the constructed documents.
+def read_xml(gold_folder: str,
+             source_folder: str):
+    """Reads the annotation files and saves the annotation of event triggers, arguments, and entities.
+
+    Reads the annotation files and extracts the event trigger, argument, and entity annotations and saves them to a
+    dictionary. Finally, the annotations of each document are stored in a list.
+
+    Args:
+        gold_folder (`str`):
+            A string representing the path of the folder containing the annotations of the documents.
+        source_folder (`str`):
+            A string representing the path of the folder containing the source text of the documents.
+
+    Returns:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing each document's document id and the trigger, argument, and entity
+            annotations. The source text of each document is temporarily left blank, which will be extracted in the
+            `read_source()` method. The processed `documents` is then sent to the `read_source()` function for source
+            text extraction.
     """
     # Initialise the document list.
     documents = list()
@@ -207,12 +237,26 @@ def read_xml(gold_folder, source_folder):
     return read_source(documents, source_folder)
 
 
-def read_source(documents, source_folder):
-    """
-    Extract the source texts from the corresponding file.
-    :param documents:     The structured documents list.
-    :param source_folder: Path of the source folder.
-    :return documents:    The list of the constructed documents.
+def read_source(documents: List[Dict[str, Union[str, List]]],
+                source_folder: str):
+    """Extracts the source text of each document and removes the xml elements.
+
+    Extracts the source text of each document and removes the xml elements (covered by "<>"), url elements (start with
+    "http"), and linebreaks within the source text. The position of trigger words, arguments, and entities are also
+    amended after removing the xml elements.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each document.
+        source_folder (`str`):
+            A string representing the path of the folder containing the source text of the documents.
+
+    Returns:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document. The processed `documents` is then sent to the `clean_documents()` to remove
+            the arguments and entities that within the xml elements of the original source text.
     """
     for document in tqdm(documents, desc="Reading source..."):
         # Extract the sentence of each document.
@@ -282,11 +326,24 @@ def read_source(documents, source_folder):
     return clean_documents(documents)
 
 
-def clean_documents(documents):
-    """
-    Delete the entities and arguments in the xml elements.
-    :param documents:         The structured documents list.
-    :return: documents_clean: The cleaned documents list.
+def clean_documents(documents: List[Dict[str, Union[str, List]]]):
+    """Removes the entities and arguments within the xml elements of the original source text.
+
+    Removes the entities and arguments within the xml elements of the original source text, Considering the xml elements
+    have been removed from the source text in the `read_source()` function by constructing a new dataset, in which the
+    event trigger, argument, and entity annotations are not within the xml elements.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document.
+
+    Returns:
+        documents_clean (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document, without the arguments and entities within the xml elements of the original
+            source text. The processed `documents_clean` is then sent to the `sentence_tokenize()` function for sentence
+            tokenization.
     """
     # Initialise the structure for the cleaned documents.
     documents_clean = list()
@@ -348,11 +405,26 @@ def clean_documents(documents):
     return sentence_tokenize(documents_clean)
 
 
-def sentence_tokenize(documents):
-    """
-    Tokenize the document into multiple sentences.
-    :param documents:         The structured documents list.
-    :return: documents_split: The split sentences" document.
+def sentence_tokenize(documents: List[Dict[str, Union[str, List]]]):
+    """Tokenizes the source text into sentences and matches the corresponding event triggers, arguments, and entities.
+
+    Tokenizes the source text into sentences, and matches the event triggers, arguments, and entities that belong to
+    each sentence. The sentences do not contain any triggers and entities are stored separately.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each document.
+
+    Returns:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers and entities within.
+
+        The processed `documents_split` and `documents_without_event` is then sent to the `add_spaces()` function
+        for adding spaces beside punctuations.
     """
     # Initialise a list of the splitted documents.
     documents_split, documents_without_event = list(), list()
@@ -450,7 +522,28 @@ def sentence_tokenize(documents):
     return add_spaces(documents_split, documents_without_event)
 
 
-def add_spaces(documents_split, documents_without_event):
+def add_spaces(documents_split: List[Dict[str, Union[str, List]]],
+               documents_without_event: List[Dict[str, Union[str, List[str]]]]):
+    """Adds a space before and after the punctuations.
+
+    Adds a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
+    source texts. The mention and position of the event trigger, argument, and entity annotations are also amended.
+
+    Args:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger, argument, and entity
+            annotations of each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers and entities within.
+
+    Returns:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers and entities within. The processed
+            `documents_split` and `documents_without_event` are returned as final results.
+    """
     for document in tqdm(documents_split, desc="Adding spaces..."):
         punc_char = list()
         for i in range(len(document["text"])):
@@ -580,12 +673,28 @@ def add_spaces(documents_split, documents_without_event):
     return documents_split, documents_without_event
 
 
-def fix_tokenize(sentence_tokenize, sentence_pos):
-    """
-    Fix the wrong tokenization within a sentence.
-    :param sentence_pos:      List of starting and ending position of each sentence.
-    :param sentence_tokenize: The tokenized sentences list.
-    :return: The fixed sentence position and tokenization lists.
+def fix_tokenize(sentence_tokenize: List[str],
+                 sentence_pos: List[List[str]]):
+    """Fixes the wrong sentence tokenizations that affect the mention extraction.
+
+    Fixes the wrong sentence tokenizations caused by `nltk.tokenize.punkt.PunktSentenceTokenizer` due to points (".")
+    existing at the end of abbreviations, which are regarded as the end of a sentence from the sentence tokenization
+    algorithm. Fix some wrong tokenizations that split a trigger word, an argument mention, or an entity mention into
+    two sentences.
+
+    Args:
+        sentence_tokenize (`List[str]`):
+            A list of strings indicating the sentences tokenized by `nltk.tokenize.punkt.PunktSentenceTokenizer`.
+        sentence_pos (`List[List[int]]`):
+            A list of lists containing each sentence's start and end character positions, corresponding to the sentences
+            in `sentence_tokenize`.
+
+    Returns:
+        sentence_tokenize (`List[str]`):
+            A list of strings indicating the sentences after fixing the wrong tokenizations.
+        sentence_pos (`List[List[int]]`):
+            A list of lists containing each sentence's start and end character positions, corresponding to the sentences
+            in `sentence_tokenize`.
     """
     # Set a list for the deleted indexes.
     del_index = list()
@@ -621,7 +730,21 @@ def fix_tokenize(sentence_tokenize, sentence_pos):
     return new_sentence_tokenize, new_sentence_pos
 
 
-def check_argument(documents):
+def check_argument(documents: List[Dict[str, Union[str, List]]]) -> bool:
+    """Checks whether the argument and entity mentions with the same id are consistent.
+
+    Checks whether the argument and entity mentions with the same id are consistent, considering various operations are
+    conducted in each function.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each document/sentence.
+
+    Returns:
+        Returns `False` if an inconsistency is found between the argument and entity mentions with the same id;
+        otherwise returns `True`.
+    """
     for document in documents:
         for event in document["events"]:
             for trigger in event["triggers"]:
@@ -635,11 +758,19 @@ def check_argument(documents):
     return True
 
 
-def check_position(documents):
-    """
-    Check whether the position of each trigger is correct.
-    :param documents: The set of the constructed documents.
-    :return: True/False
+def check_position(documents: List[Dict[str, Union[str, List]]]) -> bool:
+    """Checks whether the start and end positions correspond to the mention.
+
+    Checks whether the string sliced from the source text based on the start and end positions corresponds to the
+    mention.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each document/sentence.
+
+    Returns:
+        Returns `False` if an inconsistency is found between the positions and the mention; otherwise, returns `True`.
     """
     for document in documents:
         # Check the positions of the events.
@@ -662,12 +793,20 @@ def check_position(documents):
     return True
 
 
-def to_jsonl(filename, save_dir, documents):
-    """
-    Write the manipulated dataset into jsonl file.
-    :param filename:  Name of the saved file.
-    :param documents: The manipulated dataset.
-    :return:
+def to_jsonl(filename: str,
+             save_dir: str,
+             documents: List[Dict[str, Union[str, List]]]):
+    """Writes the manipulated dataset into a jsonl file.
+
+    Writes the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
+
+    Args:
+        filename (`str`):
+            A string indicating the filename of the saved jsonl file.
+        save_dir (`str`):
+            A string indicating the directory to place the jsonl file.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries indicating the `document_split` or the `document_without_event` dataset.
     """
     label2id = dict(NA=0)
     role2id = dict(NA=0)

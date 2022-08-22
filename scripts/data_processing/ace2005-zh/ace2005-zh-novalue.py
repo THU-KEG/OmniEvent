@@ -1,4 +1,5 @@
 import os
+from typing import List, Dict, Union, Optional
 from xml.dom.minidom import parse
 from tqdm import tqdm
 # from stanfordcorenlp import StanfordCoreNLP
@@ -14,10 +15,19 @@ from pathlib import Path
 from collections import defaultdict
 
 class Tokenizer():
+    """Tokenizer for word and sentence tokenization.
+
+    Tokenizer for word and sentence tokenization, tokenizing the given sentence into tokens and sentences accompanied
+    with the offsets of each token and sentence.
+    """
+
     def __init__(self) -> None:
+        """Constructs a `Tokenizer`."""
         pass
-    
-    def word_tokenize(self, sentence):
+
+    def word_tokenize(self,
+                      sentence: str):
+        """Tokenizes the input sentence into tokens."""
         # sentence = sentence.replace(" ", "").replace("\n", "")
         seg_list = jieba.cut(sentence)
         tokens = []
@@ -31,8 +41,10 @@ class Tokenizer():
             result += seg 
         assert len(result) == len(sentence)
         return tokens, offsets
-    
-    def sentence_tokenize(self, sentence):
+
+    def sentence_tokenize(self,
+                          sentence: str):
+        """Tokenizes the input sentence into sub-sentences."""
         resentencesp = re.compile('([﹒﹔﹖﹗．；。！？]["’”」』]{0,2}|：(?=["‘“「『]{1,2}|$))')
         s = sentence
         slist = []
@@ -59,7 +71,31 @@ class Tokenizer():
 
 
 class Extractor():
-    def __init__(self, args):
+    """An extractor that extracts events triggers, entities, and negative triggers from the dataset.
+
+    An extractor that extracts event triggers, entities, and negative triggers from the dataset, returning the
+    annotations in lists of dictionaries, respectively.
+
+    Attributes:
+        dirs (`List[str]`):
+            A list of strings indicating the subdirectories of the ACE2005 dataset.
+        split_tags (`Dict[str, List[str]]`):
+            A dictionary indicating the special tokens within each subdirectory, which are regarded as split tags.
+        Events (`List[Dict]`):
+            A list of dictionaries representing the event trigger annotations within the dataset.
+        None_events (`List[Dict]`):
+            A list of dictionaries representing the negative event mention annotations within the dataset.
+        Entities (`List[Dict]`):
+            A list of dictionaries representing the entity annotations within the dataset.
+        args:
+            The pre-defined arguments for data extraction.
+        tokenizer (`Tokenizer`):
+            A `Tokenizer` instance for word and sentence tokenization.
+    """
+
+    def __init__(self,
+                 args):
+        """Constructs an `Extractor`."""
         self.dirs = ['bn','nw','wl']
         self.split_tags ={'bn':["<TURN>","</TURN>"],
                           'nw':['<TEXT>','</TEXT>','<HEADLINE>','</HEADLINE>'],
@@ -70,7 +106,10 @@ class Extractor():
         self.args = args 
         self.tokenizer = Tokenizer()
 
-    def find_index(self,offsets,offset): #offsets [) offset []
+    def find_index(self,
+                   offsets: List[List[int]],
+                   offset: List[int]):  # offsets [) offset []
+        """Finds the actual word-level offset of the mention."""
         idx_start = -1
         idx_end = -1
         for j, _offset in enumerate(offsets):
@@ -82,7 +121,10 @@ class Extractor():
         assert idx_start!=-1 and idx_end!=-1
         return idx_start,idx_end
 
-    def sentence_distillation(self,sents,offsets,dir):
+    def sentence_distillation(self,
+                              sents: List[str],
+                              offsets,
+                              dir: str):
         mark_split_tag = self.split_tags[dir]
 
         new_sents = []
@@ -119,7 +161,10 @@ class Extractor():
         return new_sents,new_offsets
 
 
-    def correct_offsets(self,sents,offsets):
+    def correct_offsets(self,
+                        sents: List[str],
+                        offsets):
+        """Corrects the offsets of sentences after removing xml elements."""
         new_offsets = []
         minus = 0
         for i,offsets_per_sentence in enumerate(offsets):
@@ -136,7 +181,8 @@ class Extractor():
         return sents,new_offsets
 
 
-    def Files_Extract(self):
+    def Files_Extract(self) -> None:
+        """Extracts the filenames containing events, source texts, and amps."""
         self.event_files = {}
         self.source_files = {}
         self.amp_files = []
@@ -160,7 +206,8 @@ class Extractor():
         # assert evtlen==599
 
 
-    def Entity_Extract(self):
+    def Entity_Extract(self) -> None:
+        """Extracts the entity annotations from the dataset."""
         all_ents = 0
         for dir in self.dirs:
             path = self.args.ACE_FILES+'/'+dir+'/adj'
@@ -190,7 +237,8 @@ class Extractor():
         self.Entities = [{'entity_id':e[5], "mention_id":e[6], "type":e[7], 'name':e[0],'start':e[1],'end':e[2],'file':e[3],'dir':e[4],'role':'None'} for e in self.Entities]
         print("Total %d mentions, %d entities." % (len(self.Entities), all_ents))
 
-    def Event_Extract(self):
+    def Event_Extract(self) -> None:
+        """Extracts the event annotations from the dataset."""
         # nlp = StanfordCoreNLPv2(self.args.corenlp_path)
         offsets2idx = {}
         for dir in self.dirs:
@@ -297,6 +345,7 @@ class Extractor():
         # nlp.close()
 
     def None_event_Extract(self):
+        """Extract negative event mentions from the dataset."""
         for dir in self.dirs:
             path = self.args.ACE_FILES+'/'+dir+'/adj'
             files =self.source_files[dir]
@@ -371,7 +420,9 @@ class Extractor():
                     }
                     self.None_events.append(none_event_summary)
 
-    def process(self):
+    def process(self) -> None:
+        """Converts the word-level position annotations of event triggers, entities, and none trigger mentions into
+           character-level position annotations."""
         Events = []
         # convert to sentence level
         events_in_sens = defaultdict(list)
@@ -473,7 +524,9 @@ class Extractor():
 
 
 
-    def Extract(self):
+    def Extract(self) -> None:
+        """Extracts the entities, events and negative mentions, splits the training, validation, and testing set,
+           and writes the datasets into json files."""
         if os.path.exists(os.path.join(self.args.ACE_DUMP, 'train.json')):
             print('--Already Exists Files--')
             return
@@ -539,7 +592,24 @@ class Extractor():
             json.dump(test_set, f, indent=4, ensure_ascii=False)
         
 
-def token_pos_to_char_pos(tokens, token_pos):
+def token_pos_to_char_pos(tokens: List[str],
+                          token_pos: List[int]) -> List[int]:
+    """Converts the token-level position of a mention into character-level.
+
+    Converts the token-level position of a mention into character-level by counting the number of characters before the
+    start position of the mention. The end position could then be derived by adding the character-level start position
+    and the length of the mention's span.
+
+    Args:
+        tokens (`List[str]`):
+            A list of strings representing the tokens within the source text.
+        token_pos (`List[int]`):
+            A list of integers indicating the word-level start and end position of the mention.
+
+    Returns:
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
+    """
     word_span = "".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
     curr_pos = 0
@@ -555,8 +625,25 @@ def token_pos_to_char_pos(tokens, token_pos):
     return [char_start, char_end]
 
 
+def filter_special_token(item: Dict[str, Union[str, List]],
+                         special_token: Optional[str] = "\n"):
+    """Filters the special token from the source text and annotations.
 
-def filter_special_token(item, special_token="\n"):
+    Filters the special token from the source text and annotations of the given document dictionary. The special token
+    is removed from the source text and annotations and the positions of event triggers and arguments are also amended.
+
+    Args:
+        item (`Dict[str, Union[str, List]]`):
+            A dictionary representing the document id, source text, and event trigger and argument annotations of a
+            document.
+        special_token (`str`, `optional`, defaults to "\n"):
+            A string indicating the special token to be removed.
+
+    Returns:
+        item (`Dict[str, Union[str, List]]`):
+            A dictionary representing the document id, source text, and event trigger and argument annotations of a
+            document; however, the special tokens within the source text and annotations have been removed.
+    """
     flag = [0] * len(item["text"])
     num_special = 0
     for i, token in enumerate(item["text"]):
@@ -619,7 +706,22 @@ def filter_special_token(item, special_token="\n"):
     return item 
 
 
-def convert_ace2005_to_unified(output_dir: str, file_name: str, dump=True) -> dict:
+def convert_ace2005_to_unified(output_dir: str,
+                               file_name: str,
+                               dump: Optional[bool] = True) -> None:
+    """Convert ACE2005 dataset to the unified format.
+
+    Extract the information from the original ACE2005 dataset and convert the format to a unified OpenEE dataset. The
+    converted dataset is written to a json file.
+
+    Args:
+        output_dir (`str`):
+            A string indicating the output directory of the output file.
+        file_name (`str`):
+            A string indicating the filename of the output file.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether or not to write the manipulated dataset into a json file.
+    """
     data = json.load(open(os.path.join(output_dir, file_name)))
     label2id = dict(NA=0)    
     role2id = dict(NA=0)
