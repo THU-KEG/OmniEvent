@@ -11,17 +11,17 @@ from collections import defaultdict
 from transformers import set_seed
 from transformers import EarlyStoppingCallback
 
-from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.mrc_processor import EAEMRCProcessor
+from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
+from OmniEvent.backbone.backbone import get_backbone
+from OmniEvent.input_engineering.mrc_processor import EAEMRCProcessor
 
-from OpenEE.model.model import get_model
-from OpenEE.evaluation.metric import compute_mrc_F1
-from OpenEE.evaluation.dump_result import get_duee_submission_mrc
-from OpenEE.evaluation.convert_format import get_ace2005_argument_extraction_mrc
-from OpenEE.evaluation.utils import predict
+from OmniEvent.model.model import get_model
+from OmniEvent.evaluation.metric import compute_mrc_F1
+from OmniEvent.evaluation.dump_result import get_duee_submission_mrc
+from OmniEvent.evaluation.convert_format import get_ace2005_argument_extraction_mrc
+from OmniEvent.evaluation.utils import predict
 
-from OpenEE.trainer import Trainer
+from OmniEvent.trainer import Trainer
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))

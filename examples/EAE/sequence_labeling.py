@@ -10,19 +10,19 @@ from collections import defaultdict
 
 from transformers import set_seed, EarlyStoppingCallback
 
-from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.input_engineering.sequence_labeling_processor import EAESLProcessor
+from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
+from OmniEvent.input_engineering.sequence_labeling_processor import EAESLProcessor
 
-from OpenEE.model.model import get_model
-from OpenEE.backbone.backbone import get_backbone
+from OmniEvent.model.model import get_model
+from OmniEvent.backbone.backbone import get_backbone
 
-from OpenEE.evaluation.metric import compute_span_F1
-from OpenEE.evaluation.dump_result import get_duee_submission_sl
-from OpenEE.evaluation.convert_format import get_ace2005_argument_extraction_sl
-from OpenEE.evaluation.utils import predict
+from OmniEvent.evaluation.metric import compute_span_F1
+from OmniEvent.evaluation.dump_result import get_duee_submission_sl
+from OmniEvent.evaluation.convert_format import get_ace2005_argument_extraction_sl
+from OmniEvent.evaluation.utils import predict
 
-from OpenEE.input_engineering.input_utils import get_bio_labels
-from OpenEE.trainer import Trainer
+from OmniEvent.input_engineering.input_utils import get_bio_labels
+from OmniEvent.trainer import Trainer
 
 
 # argument parser

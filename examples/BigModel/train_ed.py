@@ -19,8 +19,8 @@ from model_center.dataset.t5dataset import DATASET
 from model_center.utils import print_inspect
 from model_center.dataset import DistributedDataLoader
 
-from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor, extract_argument
-from OpenEE.evaluation.metric import f1_score_overall
+from OmniEvent.input_engineering.seq2seq_processor import EDSeq2SeqProcessor, extract_argument
+from OmniEvent.evaluation.metric import f1_score_overall
 
 from transformers import (
     LogitsProcessorList, 

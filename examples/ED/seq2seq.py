@@ -8,19 +8,19 @@ import logging
 from transformers import set_seed
 from transformers import EarlyStoppingCallback
 
-from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.input_engineering.input_utils import get_plain_label
-from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor, type_start, type_end
+from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
+from OmniEvent.input_engineering.input_utils import get_plain_label
+from OmniEvent.input_engineering.seq2seq_processor import EDSeq2SeqProcessor, type_start, type_end
 
-from OpenEE.model.model import get_model
-from OpenEE.backbone.backbone import get_backbone
+from OmniEvent.model.model import get_model
+from OmniEvent.backbone.backbone import get_backbone
 
-from OpenEE.evaluation.metric import compute_seq_F1
-from OpenEE.evaluation.utils import predict, dump_preds, get_pred_s2s
-from OpenEE.evaluation.convert_format import get_ace2005_trigger_detection_s2s
-from OpenEE.evaluation.dump_result import get_leven_submission_seq2seq, get_maven_submission_seq2seq
+from OmniEvent.evaluation.metric import compute_seq_F1
+from OmniEvent.evaluation.utils import predict, dump_preds, get_pred_s2s
+from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
+from OmniEvent.evaluation.dump_result import get_leven_submission_seq2seq, get_maven_submission_seq2seq
 
-from OpenEE.trainer_seq2seq import Seq2SeqTrainer
+from OmniEvent.trainer_seq2seq import Seq2SeqTrainer
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))

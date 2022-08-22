@@ -8,19 +8,19 @@ import numpy as np
 
 from transformers import set_seed, EarlyStoppingCallback
 
-from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.input_engineering.sequence_labeling_processor import EDSLProcessor
+from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
+from OmniEvent.input_engineering.sequence_labeling_processor import EDSLProcessor
 
-from OpenEE.model.model import get_model
-from OpenEE.backbone.backbone import get_backbone
+from OmniEvent.model.model import get_model
+from OmniEvent.backbone.backbone import get_backbone
 
-from OpenEE.evaluation.metric import compute_span_F1
-from OpenEE.evaluation.utils import predict, dump_preds
-from OpenEE.evaluation.convert_format import get_ace2005_trigger_detection_sl
-from OpenEE.evaluation.dump_result import get_leven_submission_sl, get_maven_submission_sl
+from OmniEvent.evaluation.metric import compute_span_F1
+from OmniEvent.evaluation.utils import predict, dump_preds
+from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_sl
+from OmniEvent.evaluation.dump_result import get_leven_submission_sl, get_maven_submission_sl
 
-from OpenEE.input_engineering.input_utils import get_bio_labels
-from OpenEE.trainer import Trainer
+from OmniEvent.input_engineering.input_utils import get_bio_labels
+from OmniEvent.trainer import Trainer
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))

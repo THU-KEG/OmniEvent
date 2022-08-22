@@ -8,17 +8,17 @@ import numpy as np
 
 from transformers import set_seed, EarlyStoppingCallback
 
-from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.input_engineering.token_classification_processor import EDTCProcessor
+from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
+from OmniEvent.input_engineering.token_classification_processor import EDTCProcessor
 
-from OpenEE.model.model import get_model
-from OpenEE.backbone.backbone import get_backbone
+from OmniEvent.model.model import get_model
+from OmniEvent.backbone.backbone import get_backbone
 
-from OpenEE.evaluation.metric import compute_F1
-from OpenEE.evaluation.utils import predict, dump_preds
-from OpenEE.evaluation.dump_result import get_leven_submission, get_maven_submission
+from OmniEvent.evaluation.metric import compute_F1
+from OmniEvent.evaluation.utils import predict, dump_preds
+from OmniEvent.evaluation.dump_result import get_leven_submission, get_maven_submission
 
-from OpenEE.trainer import Trainer
+from OmniEvent.trainer import Trainer
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))

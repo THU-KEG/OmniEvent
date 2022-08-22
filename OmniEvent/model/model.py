@@ -8,16 +8,16 @@ from typing import Tuple, Dict, Optional, Union
 from transformers import BartForConditionalGeneration, MT5ForConditionalGeneration, T5ForConditionalGeneration
 
 
-from OpenEE.aggregation.aggregation import get_aggregation, aggregate
-from OpenEE.head.head import get_head
-from OpenEE.head.classification import LinearHead
-from OpenEE.arguments import (
+from OmniEvent.aggregation.aggregation import get_aggregation, aggregate
+from OmniEvent.head.head import get_head
+from OmniEvent.head.classification import LinearHead
+from OmniEvent.arguments import (
     ModelArguments,
     DataArguments,
     TrainingArguments,
     ArgumentParser
 )
-from OpenEE.utils import check_web_and_convert_path
+from OmniEvent.utils import check_web_and_convert_path
 
 
 def get_model(model_args,
