@@ -1,6 +1,8 @@
 import os
 import pdb 
-import sys 
+import sys
+from typing import List
+
 sys.path.append("..")
 import json
 import collections
@@ -45,7 +47,27 @@ def convert_to_sentence():
                     f_convert.write(json.dumps(sentence_annotated, default=int) + "\n")
 
 
-def token_pos_to_char_pos(token_list, start, mention):
+def token_pos_to_char_pos(token_list: List[str],
+                          start: int,
+                          mention: str) -> List[int]:
+    """Converts the token-level position of a mention into character-level.
+
+    Converts the token-level position of a mention into character-level by counting the number of characters before the
+    start position of the mention. The end position could then be derived by adding the character-level start position
+    and the length of the mention's span.
+
+    Args:
+        token_list (`List[str]`):
+            A list of strings representing the tokens within the source text.
+        start (`int`):
+            An integer indicating the word-level position of the mention.
+        mention (`str`):
+            A string representing the mention.
+
+    Returns:
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
+    """
     char_start = 0
     for i, token in enumerate(token_list):
         if i == start:
@@ -56,7 +78,19 @@ def token_pos_to_char_pos(token_list, start, mention):
     return [char_start, char_end]
 
 
-def convert_to_openee(input_path, save_path):
+def convert_to_openee(input_path: str,
+                      save_path: str) -> None:
+    """Convert ACE2005 DyGIE dataset to the unified format.
+
+    Extract the information from the original ACE2005 DyGIE dataset and convert the format to a unified OpenEE dataset.
+    The converted dataset is written to a json file.
+
+    Args:
+        input_path (`str`):
+            A string indicating the path of the original ACE2005 DyGIE dataset.
+        save_path (`str`):
+            A string indicating the saving path of the processed ACE2005 DyGIE dataset.
+    """
     data = []
     with open(input_path) as f:
         for line in f.readlines():
@@ -105,7 +139,17 @@ def convert_to_openee(input_path, save_path):
             f.write(json.dumps(item)+"\n")
 
 
-def generate_negative_trigger(io_path):
+def generate_negative_trigger(io_path: str) -> None:
+    """Generates negative triggers based on the triggers and source text.
+
+    Generates negative triggers based on the triggers and source text. The tokens not within any trigger are regarded
+    as negative triggers. The id, trigger word, and word-level position of each negative trigger are stored in a
+    dictionary. The dictionaries are finally saved into a json file.
+
+    Args:
+        io_path (`str`):
+            A string indicating the path to store the negative triggers file.
+    """
     data = []
     with open(io_path) as f:
         for line in f.readlines():
@@ -116,7 +160,17 @@ def generate_negative_trigger(io_path):
             f.write(json.dumps(item)+"\n")
 
 
-def get_ids(data_path):
+def get_ids(data_path: Path) -> None:
+    """Generates the correspondence between labels and ids, and roles and ids.
+
+    Generates the correspondence between labels and ids, and roles and ids, and save the correspondences into json
+    files. Each label/role corresponds to a unique id.
+
+    Args:
+        data_path (`Dict`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+    """
     data = []
     with open(os.path.join(data_path, "train.unified.jsonl")) as f:
         for line in f.readlines():

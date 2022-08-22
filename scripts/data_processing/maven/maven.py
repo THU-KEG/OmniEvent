@@ -4,11 +4,26 @@ import json
 
 from tqdm import tqdm 
 from collections import defaultdict
+from typing import Dict, List, Optional
 
 
-def convert_maven_to_unified(data_path: str, dump=True) -> dict:
-    """
-    Convert the maven dataset to unified format.
+def convert_maven_to_unified(data_path: str,
+                             dump: Optional[bool] = True) -> List[Dict]:
+    """Converts MAVEN dataset to the unified format.
+
+    Extracts the information from the original MAVEN dataset and convert its format to a unified OpenEE dataset. The
+    converted dataset is finally written to a json file.
+
+    Args:
+        data_path (`str`):
+            A string indicating the path of the original MAVEN dataset.
+        dump (`bool`, `optional`, defaults to `True`):
+            A boolean variable indicating whether or not writing the manipulated dataset to a json file.
+
+    Returns:
+        formatted_data (`List[Dict]`):
+            A list of dictionaries representing the manipulated dataset of MAVEN after converting its format into a
+            unified OpenEE dataset.
     """
     # Load the maven dataset.
     maven_data = []

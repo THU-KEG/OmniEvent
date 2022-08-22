@@ -1,12 +1,55 @@
 import jsonlines
 import json
 import os
-import uuid
 import random
+import uuid
+
 from tqdm import tqdm
+from transformers import BertTokenizerFast
+from typing import Dict, List, Union
 
 
-def gen_label2id_and_role2id(input_data):
+def check_unk_in_text(input_text: str,
+                      input_tokenizer) -> List[str]:
+    """Checks the "UNK" tokens after tokenization.
+
+    Checks the "UNK" tokens after tokenization, indicating the original token is out-of-vocabulary. The error tokens
+    are stored in a list and returned.
+
+    Args:
+        input_text (`str`):
+            A string representing the source text that to be tokenized.
+        input_tokenizer:
+            The tokenizer proposed for the tokenization process.
+
+    Returns:
+        error_tokens (`List[str]`):
+            A list of strings indicating the out-of-vocabulary tokens in the original source text.
+    """
+    words = input_text.split()
+    inputs = input_tokenizer(words, is_split_into_words=True)
+    error_tokens = []
+    for idx in set(range(len(words))).difference(set(inputs.word_ids()[1:-1])):
+        error_tokens.append(words[idx])
+    return error_tokens
+
+
+def gen_label2id_and_role2id(input_data: List[Dict]):
+    """Generates the correspondence between labels and ids, and roles and ids.
+
+    Generates the correspondence between labels and ids, and roles and ids. Each label/role corresponds to a unique id.
+
+    Args:
+        input_data (`Dict`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+
+    Returns:
+        label_dict (`Dict[str, int]`):
+            A dictionary containing the correspondence between the labels and their unique ids.
+        role_dict (`Dict[str, int]`):
+            A dictionary containing the correspondence between the roles and their unique ids.
+    """
     label_dict = dict(NA=0)
     role_dict = dict(NA=0)
     for d in tqdm(input_data, desc='Generating Label2ID and Role2ID'):
@@ -24,7 +67,21 @@ def gen_label2id_and_role2id(input_data):
     return label_dict, role_dict
 
 
-def gen_train_valid_set(input_data):
+def gen_train_valid_set(input_data: List[Dict]):
+    """Splits the training and validation set.
+
+    Splits the training and validation set with a ratio of 0.8 and 0.2 randomly. 80% of the original dataset is regarded
+    as the training set, while the rest of the 20% are regarded as the validation set.
+
+    Args:
+        input_data (`List[Dict]`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+
+    Returns:
+        train_set (`List[Dict]`), valid_set (`List[Dict]`):
+            Two lists of dictionaries containing the training and validation datasets.
+    """
     random.seed(42)
     random.shuffle(input_data)
 
@@ -34,7 +91,21 @@ def gen_train_valid_set(input_data):
     return train_set, valid_set
 
 
-def detect_sub_word_annotations(input_data):
+def detect_sub_word_annotations(input_data: List[Dict]) -> List[Dict[str, Union[int, str]]]:
+    """Detects the sub-word annotations in the dataset.
+
+    Some KBP trigger and entity annotations are not a complete word, but a sub-word. The method detects and returns the
+    sub-word annotations for further check and fix.
+
+    Args:
+        input_data (`List[Dict]`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+
+    Returns:
+        error (`List[Dict[str, Union[int, str]]]`)
+            A list of dictionaries containing the sub-word triggers, arguments, and source texts.
+    """
     error = []
     for i, d in enumerate(input_data):
         tmp = dict(idx=i, trigger=[], argument=[], text=d['text'])
@@ -54,17 +125,27 @@ def detect_sub_word_annotations(input_data):
     return error
 
 
-def remove_sub_word_annotations(input_data):
-    """
-        Some of KBP trigger and entity annotations are not a complete word, but a sub-word.
-        We remove these annotations in order to simplify the training and evaluation process.
+def remove_sub_word_annotations(input_data: List[Dict]) -> List[Dict]:
+    """Remove the sub-word annotations within the dataset.
 
-        Examples:
-            Text: 'No trinket-gathering.'
-            Trigger: 'gathering'
+    Some KBP trigger and entity annotations are not a complete word, but a sub-word. The method removes these
+    annotations in order to simplify the training and evaluation process.
 
-            Text: 'Joe Zollars After you finish it, I suggest you get "Angels and Demons" next.'
-            Argument: 'Angels and Demons'
+    Examples:
+        Text: "No trinket-gathering."
+        Trigger: "gathering"
+
+        Text: "Joe Zollars After you finish it, I suggest you get "Angels and Demons" next."
+        Argument: "Angels and Demons"
+
+    Args:
+        input_data (`List[Dict]`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+
+    Returns:
+        output_data (`List[Dict]`):
+            A list of dictionaries similar to the input dictionary but removed the sub-word annotations.
     """
     random.seed(42)
     del_sentence, del_trigger, del_argument, del_event = 0, 0, 0, 0
@@ -113,7 +194,21 @@ def remove_sub_word_annotations(input_data):
     return output_data
 
 
-def remove_duplicate_event(input_data):
+def remove_duplicate_event(input_data: List[Dict]):
+    """Removes the duplicate event triggers and entities from the dataset.
+
+    Removes the duplicate event mentions and entities from the dataset. The unique event triggers and arguments are
+    stored in new lists, and then the original list is then replaced.
+
+    Args:
+        input_data (`List[Dict]`):
+            A list of dictionaries containing the annotations of every sentence, including its id, source text, and the
+            event trigger, argument, and entity annotations of the sentences.
+
+    Returns:
+        input_data (`List[Dict]`):
+            A list of dictionaries similar to the input dictionary but without duplicate event triggers and mentions.
+    """
     for d in input_data:
         clean_events = []
         for event in d['events']:

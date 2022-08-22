@@ -1,3 +1,17 @@
+# Copyright 2020 The HuggingFace Team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch 
 import logging
 from torch.utils.data import DataLoader
@@ -29,19 +43,22 @@ logger = logging.getLogger(__name__)
 
 
 class Trainer(Trainer):
-    """Trainer for event extraction."""
+    """Trainer for event extraction.
+
+    Trainer for event extraction, training the model based on the given dataset. The trainer predicts the labels,
+    calculates the loss and metrics, and update the parameters in each iteration.
+    """
 
     def __init__(self, *args, **kwargs):
+        """Constructs a `Trainer`."""
         super().__init__(*args, **kwargs)
 
-    def evaluation_loop(
-        self,
-        dataloader: DataLoader,
-        description: str,
-        prediction_loss_only: Optional[bool] = None,
-        ignore_keys: Optional[List[str]] = None,
-        metric_key_prefix: str = "eval",
-    ) -> EvalLoopOutput:
+    def evaluation_loop(self,
+                        dataloader: DataLoader,
+                        description: str,
+                        prediction_loss_only: Optional[bool] = None,
+                        ignore_keys: Optional[List[str]] = None,
+                        metric_key_prefix: str = "eval") -> EvalLoopOutput:
         """
         Prediction/evaluation loop, shared by `Trainer.evaluate()` and `Trainer.predict()`.
         Works both with or without labels.

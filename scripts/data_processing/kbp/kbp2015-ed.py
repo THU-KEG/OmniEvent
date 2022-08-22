@@ -1,6 +1,8 @@
 import copy
 import re
 import json
+from typing import List, Dict, Union
+
 import jsonlines
 import os
 
@@ -12,9 +14,37 @@ from utils import token_pos_to_char_pos, generate_negative_trigger
 
 
 class Config(object):
+    """The configurations of this project.
+
+    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
+    path of the pilot and evaluation dataset.
+
+    Attributes:
+        DATA_FOLDER (`str`):
+            A string indicating the folder containing all the datasets.
+        TRAIN_DATA_FOLDER (`str`):
+            A string indicating the folder containing the annotation folder and source text folder of the training data.
+        TRAIN_SOURCE_FOLDER (`str`):
+            A string indicating the folder containing the source texts of the documents, corresponding to the documents
+            under the `TRAIN_HOPPER_FOLDER` folder of the training data.
+        TRAIN_HOPPER_FOLDER (`str`):
+            A string indicating the folder containing the hopper annotations of the training data.
+        TRAIN_NUGGET_FOLDER (`str`):
+            A string indicating the folder containing the nugget annotations of the training data.
+        EVAL_DATA_FOLDER (`str`):
+            A string indicating the folder containing the annotation folder and source text folder of the evaluation
+            data.
+        EVAL_SOURCE_FOLDER (`str`):
+            A string indicating the folder containing the source texts of the documents, corresponding to the documents
+            under the `TRAIN_HOPPER_FOLDER` folder of the evaluation data.
+        EVAL_HOPPER_FOLDER (`str`):
+            A string indicating the folder containing the hopper annotations of the evaluation data.
+        EVAL_NUGGET_FOLDER (`str`):
+            A string indicating the folder containing the nugget annotations of the evaluation data.
+        SAVE_DATA_FOLDER (`str`):
+            A string indicating the folder of saving the manipulated dataset.
     """
-    The configurations of this project.
-    """
+
     def __init__(self):
         # The configuration of the current folder.
         self.DATA_FOLDER = "../../../data"
@@ -39,12 +69,24 @@ class Config(object):
             os.mkdir(self.SAVE_DATA_FOLDER)
 
 
-def read_xml(hopper_folder, source_folder):
-    """
-    Read the annotated files and construct the data.
-    :param hopper_folder: The path for the event_hopper folder.
-    :param source_folder: The path for the source folder.
-    :return: documents:   The set of the constructed documents.
+def read_xml(hopper_folder: str,
+             source_folder: str):
+    """Reads the annotation files and saves the annotation of event triggers.
+
+    Reads the annotation files, extract the event trigger annotations, and saves them to a dictionary. Finally, the
+    annotations of each document are stored in a list.
+
+    Args:
+        hopper_folder (`str`):
+            A string representing the path of the folder containing the annotations of the documents.
+        source_folder (`str`):
+            A string indicating the path of the folder containing the source text of the documents.
+
+    Returns:
+        documents:
+            A list of dictionaries containing each document's document id and the trigger annotations. The source text
+            of each document is temporarily left blank, which will be extracted in the `read_source()` function. The
+            processed `documents` is then sent to the `read_source()` function for source text extraction.
     """
     # Initialise the document list.
     documents = list()
@@ -99,12 +141,25 @@ def read_xml(hopper_folder, source_folder):
     return read_source(documents, source_folder)
 
 
-def read_source(documents, source_folder):
-    """
-    Extract the source texts from the corresponding file.
-    :param documents:     The documents lists with triggers.
-    :param source_folder: Path of the source folder.
-    :return: documents:   The set of the constructed documents.
+def read_source(documents: List[Dict[str, Union[str, List]]],
+                source_folder: str):
+    """Extracts the source text of each document, deletes the xml elements, and replaces the position annotations.
+
+    Extracts the source text of each document replaces the position annotation of each trigger word to character-level
+    annotation. The xml annotations (covered by "<>") and the urls (starting with "http") are then deleted from the
+    source text, and then the position of each trigger is amended.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and event trigger annotations.
+        source_folder (`str`):
+            A string representing the path of the folder containing the source text of the documents.
+
+    Returns:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and event trigger annotations of each
+            document. The processed documents` is then sent to the `sentence_tokenize()` function for sentence
+            tokenization.
     """
     for document in tqdm(documents, desc="Reading source..."):
         # Extract the sentence of each document.
@@ -175,11 +230,26 @@ def read_source(documents, source_folder):
     return sentence_tokenize(documents)
 
 
-def sentence_tokenize(documents):
-    """
-    Tokenize the document into multiple sentences.
-    :param documents:         The structured documents list.
-    :return: documents_split: The split sentences' document.
+def sentence_tokenize(documents: List[Dict[str, Union[str, List]]]):
+    """Tokenizes the source text into sentences and matches the corresponding event triggers, arguments, and entities.
+
+    Tokenizes the source text into sentences, and matches the event triggers, arguments, and entities that belong to
+    each sentence. The sentences do not contain any triggers and entities are stored separately.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger annotations of each
+            document.
+
+    Returns:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger, argument, and entity annotations of
+            each sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers within.
+
+        The processed `documents_split` and `documents_without_event` is then sent to the `add_spaces()` function
+        for adding spaces beside punctuations.
     """
     # Initialise a list of the splitted documents.
     documents_split = list()
@@ -239,7 +309,28 @@ def sentence_tokenize(documents):
     return add_spaces(documents_split, documents_without_event)
 
 
-def add_spaces(documents_split, documents_without_event):
+def add_spaces(documents_split: List[Dict[str, Union[str, List]]],
+               documents_without_event: List[Dict[str, Union[str, List[str]]]]):
+    """Adds a space before and after the punctuations.
+
+    Adds a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
+    source texts. The mention and position of the event trigger annotations are also amended.
+
+    Args:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger annotations of each
+            sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers within.
+
+    Returns:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger annotations of each
+            sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers within. The processed
+            `documents_split` and `documents_without_event` are returned as final results.
+    """
     for document in tqdm(documents_split, desc="Adding spaces..."):
         punc_char = list()
         for i in range(len(document["text"])):
@@ -343,11 +434,19 @@ def add_spaces(documents_split, documents_without_event):
     return documents_split, documents_without_event
 
 
-def check_position(documents):
-    """
-    Check whether the position of each trigger is correct.
-    :param documents: The set of the constructed documents.
-    :return: True/False
+def check_position(documents: List[Dict[str, Union[str, List]]]) -> bool:
+    """Checks whether the start and end positions correspond to the mention.
+
+    Checks whether the string sliced from the source text based on the start and end positions corresponds to the
+    mention.
+
+    Args:
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger annotations of each document/
+            sentence.
+
+    Returns:
+        Returns `False` if an inconsistency is found between the positions and the mention; otherwise, returns `True`.
     """
     for document in documents:
         for event in document["events"]:
@@ -359,12 +458,20 @@ def check_position(documents):
     return True
 
 
-def to_jsonl(filename, save_dir, documents):
-    """
-    Write the manipulated dataset into jsonl file.
-    :param filename:  Name of the saved file.
-    :param documents: The manipulated dataset.
-    :return:
+def to_jsonl(filename: str,
+             save_dir: str,
+             documents: List[Dict[str, Union[str, List]]]) -> None:
+    """Writes the manipulated dataset into a jsonl file.
+
+    Writes the manipulated dataset into a jsonl file; each line of the jsonl file corresponds to a piece of data.
+
+    Args:
+        filename (`str`):
+            A string indicating the filename of the saved jsonl file.
+        save_dir (`str`):
+            A string indicating the directory to place the jsonl file.
+        documents (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries indicating the `document_split` or the `document_without_event` dataset.
     """
     label2id = dict(NA=0)
     role2id = dict(NA=0)
@@ -385,7 +492,24 @@ def to_jsonl(filename, save_dir, documents):
         w.write_all(documents)
 
 
-def token_pos_to_char_pos(tokens, token_pos):
+def token_pos_to_char_pos(tokens: List[str],
+                          token_pos: List[int]) -> List[int]:
+    """Converts the token-level position of a mention into character-level.
+
+    Converts the token-level position of a mention into character-level by counting the number of characters before the
+    start position of the mention. The end position could then be derived by adding the character-level start position
+    and the length of the mention's span.
+
+    Args:
+        tokens (`List[str]`):
+            A list of strings representing the tokens within the source text.
+        token_pos (`List[int]`):
+            A list of integers indicating the word-level start and end position of the mention.
+
+    Returns:
+        `List[int]`:
+            A list of integers representing the character-level start and end position of the mention.
+    """
     word_span = " ".join(tokens[token_pos[0]:token_pos[1]])
     char_start, char_end = -1, -1
     curr_pos = 0
@@ -401,7 +525,23 @@ def token_pos_to_char_pos(tokens, token_pos):
     return [char_start, char_end]
 
 
-def generate_negative_trigger(data, none_event_instances):
+def generate_negative_trigger(data: Dict[str, Union[str, List]],
+                              none_event_instances: List[Dict[str, Union[str, List[str]]]]):
+    """Generates negative triggers from the none-event instances.
+
+    Generates negative triggers from the none-event instances, in which the tokens of the none-event sentences are
+    regarded as negative triggers.
+
+    Args:
+        data (`Dict`):
+            A dictionary containing the annotations of a sentence, including its id, source text, and the event trigger,
+            argument, and entity annotations of the sentence.
+        none_event_instances (`Dict`):
+            A list of dictionaries containing the sentences that do not contain any event triggers and entities.
+
+    Returns:
+        A dictionary similar to the input dictionary but added the negative triggers annotations.
+    """
     for item in data:
         tokens = item["text"].split()
         trigger_position = {i: False for i in range(len(tokens))}

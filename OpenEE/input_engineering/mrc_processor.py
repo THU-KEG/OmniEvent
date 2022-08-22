@@ -1,4 +1,3 @@
-import pdb
 import json
 import logging
 
@@ -9,21 +8,36 @@ from .base_processor import (
     EAEInputFeatures
 )
 from .mrc_converter import read_query_templates
-from .input_utils import get_words, get_left_and_right_pos
+from .input_utils import get_words, get_left_and_right_pos, get_word_ids
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
 
 class EAEMRCProcessor(EAEDataProcessor):
-    "Data processor for machine reading comprehension."
+    """Data processor for Machine Reading Comprehension (MRC) for event argument extraction.
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
+    Data processor for Machine Reading Comprehension (MRC) for event argument extraction. The class is inherited from
+    the `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are implemented; a new function entitled `remove_sub_word()` is defined to remove
+    the annotations whose word is a sub-word, the rest of the attributes and functions are multiplexed from the
+    `EAEDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer,
+                 input_file: str,
+                 pred_file: str,
+                 is_training: bool = False) -> None:
+        """Constructs a `EAEMRCProcessor`."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         self.data_for_evaluation["golden_arguments"] = []
         trigger_idx = 0
@@ -33,8 +47,8 @@ class EAEMRCProcessor(EAEDataProcessor):
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
+                words = get_words(text=item["text"], language=self.config.language)
                 if "events" in item:
-                    words = get_words(text=item["text"], language=self.config.language)
                     for event in item["events"]:
                         for trigger in event["triggers"]:
                             if self.is_training or self.config.golden_trigger or self.event_preds is None:
@@ -77,9 +91,14 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     no_answer = True
                                     for argument in trigger["arguments"]:
                                         if argument["role"] not in query_templates[pred_event_type]:
+<<<<<<< HEAD
                                             # raise ValueError(
                                             #     "No template for %s in %s" % (argument["role"], pred_event_type)
                                             # )
+=======
+                                            logger.warning(
+                                                "No template for %s in %s" % (argument["role"], pred_event_type))
+>>>>>>> dev
                                             pass
                                         if argument["role"] != role:
                                             continue
@@ -98,7 +117,11 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                 trigger_right=trigger_right,
                                                 argument_left=left_pos,
                                                 argument_right=right_pos - 1,
+<<<<<<< HEAD
                                                 argument_role=role 
+=======
+                                                argument_role=role,
+>>>>>>> dev
                                             )
                                             self.examples.append(example)
                                     if no_answer:
@@ -112,7 +135,11 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             trigger_right=trigger_right,
                                             argument_left=-1,
                                             argument_right=-1,
+<<<<<<< HEAD
                                             argument_role=role 
+=======
+                                            argument_role=role,
+>>>>>>> dev
                                         )
                                         self.examples.append(example)
                                 else:
@@ -127,7 +154,11 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         trigger_right=trigger_right,
                                         argument_left=-1,
                                         argument_right=-1,
+<<<<<<< HEAD
                                         argument_role=role 
+=======
+                                        argument_role=role,
+>>>>>>> dev
                                     )
                                     self.examples.append(example)
                     # negative triggers
@@ -162,7 +193,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     trigger_right=trigger_right,
                                     argument_left=-1,
                                     argument_right=-1,
-                                    argument_role=role
+                                    argument_role=role,
                                 )
                                 self.examples.append(example)
                         else:
@@ -190,13 +221,18 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     trigger_right=trigger_right,
                                     argument_left=-1,
                                     argument_right=-1,
+<<<<<<< HEAD
                                     argument_role=role 
+=======
+                                    argument_role=role,
+>>>>>>> dev
                                 )
                                 self.examples.append(example)
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         self.input_features = []
         self.data_for_evaluation["text_range"] = []
         self.data_for_evaluation["text"] = []
@@ -214,7 +250,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             max_length=self.config.max_seq_length,
                                             is_split_into_words=True)
 
-            input_context = self.remove_sub_word(input_context)
+            input_context = self.remove_sub_word(self.tokenizer, input_context, example.text)
             # concatenate
             input_ids = input_context["input_ids"] + input_template["input_ids"]
             attention_mask = input_context["attention_mask"] + input_template["attention_mask"]
@@ -245,9 +281,10 @@ class EAEMRCProcessor(EAEDataProcessor):
 
     @staticmethod
     def remove_sub_word(inputs):
+        """Removes the annotations whose word is a sub-word."""
         outputs = defaultdict(list)
         pre_word_id = -1
-        for token_id, word_id in enumerate(inputs.word_ids()):
+        for token_id, word_id in enumerate(get_word_ids(tokenizer, inputs, word_list)):
             if token_id == 0 or (word_id != pre_word_id and word_id is not None):
                 for key in inputs:
                     outputs[key].append(inputs[key][token_id])

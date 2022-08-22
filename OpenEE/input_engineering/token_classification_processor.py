@@ -2,27 +2,40 @@ import json
 import logging
 
 from tqdm import tqdm
+from typing import List, Optional, Dict
+
 from .base_processor import (
     EDDataProcessor,
     EDInputExample,
     EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
-    EAEInputFeatures
+    EAEInputFeatures,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class EDTCProcessor(EDDataProcessor):
-    """Data processor for token classification."""
+    """Data processor for token classification for event detection.
 
-    def __init__(self, config, tokenizer, input_file):
+    Data processor for token classification for event detection. The class is inherited from the`EDDataProcessor` class,
+    in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
+    the rest of the attributes and functions are multiplexed from the `EDDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str) -> None:
+        """Constructs an EDTCProcessor."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EDInputExample`s for the dataset."""
         self.examples = []
         with open(input_file, "r") as f:
             for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
@@ -36,7 +49,7 @@ class EDTCProcessor(EDDataProcessor):
                                 text=item["text"],
                                 trigger_left=trigger["position"][0],
                                 trigger_right=trigger["position"][1],
-                                labels=event["type"]
+                                labels=event["type"],
                             )
                             self.examples.append(example)
                 if "negative_triggers" in item:
@@ -46,7 +59,7 @@ class EDTCProcessor(EDDataProcessor):
                             text=item["text"],
                             trigger_left=neg["position"][0],
                             trigger_right=neg["position"][1],
-                            labels="NA"
+                            labels="NA",
                         )
                         self.examples.append(example)
                 # test set 
@@ -59,13 +72,10 @@ class EDTCProcessor(EDDataProcessor):
                             trigger_right=candidate["position"][1],
                             labels="NA",
                         )
-                        # # if test set has labels
-                        # assert not (self.config.test_exists_labels ^ ("type" in candidate))
-                        # if "type" in candidate:
-                        #     example.labels = candidate["type"]
                         self.examples.append(example)
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EDInputExample`s into `EDInputFeatures`s."""
         # merge and then tokenize
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for TC"):
@@ -79,14 +89,12 @@ class EDTCProcessor(EDDataProcessor):
                 text = text_left + self.config.markers[0] + " " + text_mid + " " + self.config.markers[1] + text_right
 
             outputs = self.tokenizer(text, padding="max_length", truncation=True, max_length=self.config.max_seq_length)
-            is_overflow = False
             try:
                 left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
                 right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
             except:
                 logger.warning("Markers are not in the input tokens.")
                 left, right = 0, 0
-                is_overflow = True
 
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
@@ -98,7 +106,7 @@ class EDTCProcessor(EDDataProcessor):
                 attention_mask=outputs["attention_mask"],
                 token_type_ids=outputs["token_type_ids"],
                 trigger_left=left,
-                trigger_right=right
+                trigger_right=right,
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
@@ -106,14 +114,28 @@ class EDTCProcessor(EDDataProcessor):
 
 
 class EAETCProcessor(EAEDataProcessor):
-    """Data processor for token classification."""
+    """Data processor for token classification for event argument extraction.
 
-    def __init__(self, config, tokenizer, input_file, pred_file, is_training=False):
+    Data processor for token classification for event argument extraction. The class is inherited from the
+    `EAEDataProcessor` class, in which the undefined functions, including `read_examples()` and
+    `convert_examples_to_features()` are  implemented; a new function entitled `insert_marker()` is defined, and
+    the rest of the attributes and functions are multiplexed from the `EAEDataProcessor` class.
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str,
+                 pred_file: str,
+                 is_training: Optional[bool] = False):
+        """Constructs a `EAETCProcessor`."""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.read_examples(input_file)
         self.convert_examples_to_features()
 
-    def read_examples(self, input_file):
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EAEInputExample`s for the dataset."""
         self.examples = []
         trigger_idx = 0
         with open(input_file, "r") as f:
@@ -131,9 +153,8 @@ class EAETCProcessor(EAEDataProcessor):
 
                             trigger_idx += 1
 
-                            if self.config.eae_eval_mode in ['default', 'loose']:
-                                if pred_type == "NA":
-                                    continue
+                            if self.config.eae_eval_mode in ['default', 'loose'] and pred_type == "NA":
+                                continue
 
                             args_for_trigger = set()
                             positive_offsets = []
@@ -148,7 +169,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         trigger_right=trigger["position"][1],
                                         argument_left=mention["position"][0],
                                         argument_right=mention["position"][1],
-                                        labels=argument["role"]
+                                        labels=argument["role"],
                                     )
                                     args_for_trigger.add(mention['mention_id'])
                                     positive_offsets.append(mention["position"])
@@ -174,7 +195,7 @@ class EAETCProcessor(EAEDataProcessor):
                                             trigger_right=trigger["position"][1],
                                             argument_left=mention["position"][0],
                                             argument_right=mention["position"][1],
-                                            labels="NA"
+                                            labels="NA",
                                         )
                                         if "train" in input_file or self.config.golden_trigger:
                                             example.pred_type = event["type"]
@@ -199,7 +220,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         trigger_right=trigger["position"][1],
                                         argument_left=neg["position"][0],
                                         argument_right=neg["position"][1],
-                                        labels="NA"
+                                        labels="NA",
                                     )
                                     if "train" in input_file or self.config.golden_trigger:
                                         example.pred_type = event["type"]
@@ -226,7 +247,7 @@ class EAETCProcessor(EAEDataProcessor):
                                                 trigger_right=trigger["position"][1],
                                                 argument_left=mention["position"][0],
                                                 argument_right=mention["position"][1],
-                                                labels="NA"
+                                                labels="NA",
                                             )
                                             self.examples.append(example)
                                 else:
@@ -240,7 +261,7 @@ class EAETCProcessor(EAEDataProcessor):
                                             trigger_right=trigger["position"][1],
                                             argument_left=neg["position"][0],
                                             argument_right=neg["position"][1],
-                                            labels="NA"
+                                            labels="NA",
                                         )
                                         if "train" in input_file or self.config.golden_trigger:
                                             example.pred_type = event["type"]
@@ -262,7 +283,7 @@ class EAETCProcessor(EAEDataProcessor):
                                             trigger_right=candi["position"][1],
                                             argument_left=mention["position"][0],
                                             argument_right=mention["position"][1],
-                                            labels="NA"
+                                            labels="NA",
                                         )
                                         self.examples.append(example)
                             else:
@@ -276,7 +297,7 @@ class EAETCProcessor(EAEDataProcessor):
                                         trigger_right=trigger["position"][1],
                                         argument_left=neg["position"][0],
                                         argument_right=neg["position"][1],
-                                        labels="NA"
+                                        labels="NA",
                                     )
                                     if "train" in input_file or self.config.golden_trigger:
                                         example.pred_type = event["type"]
@@ -286,7 +307,14 @@ class EAETCProcessor(EAEDataProcessor):
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-    def insert_marker(self, text, type, trigger_position, argument_position, markers, whitespace=True):
+    def insert_marker(self,
+                      text: str,
+                      type: str,
+                      trigger_position: List[int],
+                      argument_position: List[int],
+                      markers: Dict[str, str],
+                      whitespace: Optional[bool] = True) -> str:
+        """Adds a marker at the start and end position of event triggers and argument mentions."""
         markered_text = ""
         for i, char in enumerate(text):
             if i == trigger_position[0]:
@@ -304,7 +332,8 @@ class EAETCProcessor(EAEDataProcessor):
                 markered_text += markers["argument"][1]
         return markered_text
 
-    def convert_examples_to_features(self):
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         # merge and then tokenize
         self.input_features = []
         whitespace = True if self.config.language == "English" else False
@@ -351,7 +380,7 @@ class EAETCProcessor(EAEDataProcessor):
                 trigger_left=trigger_left,
                 trigger_right=trigger_right,
                 argument_left=argument_left,
-                argument_right=argument_right
+                argument_right=argument_right,
             )
             if example.labels is not None:
                 features.labels = self.config.role2id[example.labels]

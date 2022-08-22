@@ -1,12 +1,28 @@
-import os
-import pdb
-import json
-
 import collections
+import logging
+
+logger = logging.getLogger(__name__)
+
+from typing import Dict, List, Optional
 
 
-def read_query_templates(prompt_file, translate=False):
-    """Load query templates"""
+def read_query_templates(prompt_file: str,
+                         translate: Optional[bool] = False) -> Dict[str, Dict[str, List[str]]]:
+    """Loads query templates from a prompt file.
+
+    Loads query templates from a prompt file. If a translation is required, the query templates would be translated from
+    English to Chinese based on four types of regulations.
+
+    Args:
+        prompt_file (`str`):
+            A string indicating the path of the prompt file.
+        translate (`bool`, `optional`, defaults to `False`):
+            A boolean variable indicating whether or not to translate the query templates into Chinese.
+
+    Returns:
+        query_templates (`Dict[str, Dict[str, List[str]]]`)
+            A dictionary containing the query templates applicable for every event type and argument role.
+    """
     et_translation = dict()
     ar_translation = dict()
     if translate:
@@ -65,8 +81,15 @@ def read_query_templates(prompt_file, translate=False):
     return query_templates
 
 
-def _get_best_indexes(logits, n_best_size=1, larger_than_cls=False, cls_logit=None):
-    """Get the n-best logits from a list."""
+def _get_best_indexes(logits: List[int],
+                      n_best_size: Optional[int] = 1,
+                      larger_than_cls: Optional[bool] = False,
+                      cls_logit: Optional[int] = None) -> List[int]:
+    """Gets the n-best logits from a list.
+
+    Gets the n-best logits from a list. The methods returns a list containing the indexes of the n-best logits that
+    satisfies both the logits are n-best and greater than the logit of the "cls" token.
+    """
     index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
 
     best_indexes = []
@@ -80,11 +103,31 @@ def _get_best_indexes(logits, n_best_size=1, larger_than_cls=False, cls_logit=No
     return best_indexes
 
 
-def char_pos_to_word_pos(text, position):
+def char_pos_to_word_pos(text: str,
+                         position: int) -> int:
+    """Returns the word-level position of a mention.
+
+    Returns the word-level position of a mention by counting the number of words before the start position of the
+    mention.
+
+    Args:
+        text (`str`):
+            A string representing the source text that the mention is within.
+        position (`int`)
+            An integer indicating the character-level position of the mention.
+
+    Returns:
+        An integer indicating the word-level position of the mention.
+    """
     return len(text[:position].split())
 
 
+<<<<<<< HEAD
 def make_preditions(all_start_logits, all_end_logits, training_args):
+=======
+def make_predictions(all_start_logits, all_end_logits, training_args):
+    """Obtains the prediction from the Machine Reading Comprehension (MRC) model."""
+>>>>>>> dev
     data_for_evaluation = training_args.data_for_evaluation
     assert len(all_start_logits) == len(data_for_evaluation["ids"])
     # all golden labels
@@ -126,17 +169,17 @@ def make_preditions(all_start_logits, all_end_logits, training_args):
                 prelim_predictions.append(
                     _PrelimPrediction(start_index=word_start_index, end_index=word_end_index,
                                       start_logit=start_logits[start_index], end_logit=end_logits[end_index]))
-        ## sort
+        # sort
         prelim_predictions = sorted(prelim_predictions, key=lambda x: (x.start_logit + x.end_logit), reverse=True)
-        ## get final pred in format: [event_type_offset_argument_type, [start_offset, end_offset]]
+        # get final pred in format: [event_type_offset_argument_type, [start_offset, end_offset]]
         max_num_pred_per_arg = 1
         predictions_per_query = []
         for _, pred in enumerate(prelim_predictions[:max_num_pred_per_arg]):
             na_prob = (start_logits[0] + end_logits[0]) - (pred.start_logit + pred.end_logit)
             predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob, data_for_evaluation["ids"][example_id]))
         final_all_predictions.extend(predictions_per_query)
-    # pdb.set_trace()
-    print("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
+
+    logger.info("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
     return final_all_predictions, final_all_labels
 
 
@@ -178,18 +221,17 @@ def find_best_thresh(new_preds, new_all_gold):
             best_score = f1_c
             best_na_thresh = argument[-2]
 
-    # import ipdb; ipdb.set_trace()
     return best_na_thresh + 1e-10
 
 
-def compute_mrc_F1_cls(all_predcitions, all_labels):
-    all_predcitions = sorted(all_predcitions, key=lambda x: x[-2])
+def compute_mrc_F1_cls(all_predictions, all_labels):
+    all_predictions = sorted(all_predictions, key=lambda x: x[-2])
     # best_na_thresh = 0
-    best_na_thresh = find_best_thresh(all_predcitions, all_labels)
+    best_na_thresh = find_best_thresh(all_predictions, all_labels)
     print("Best thresh founded. %.6f" % best_na_thresh)
 
     final_new_preds = []
-    for argument in all_predcitions:
+    for argument in all_predictions:
         if argument[-2] < best_na_thresh:
             final_new_preds.append(argument[:-2] + argument[-1:])  # no na_prob
 
@@ -225,5 +267,5 @@ def compute_mrc_F1_cls(all_predcitions, all_labels):
     else:
         f1_c = 0
 
-    print("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
+    logger.info("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
     return f1_c

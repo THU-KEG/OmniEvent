@@ -1,3 +1,6 @@
+# Copyright DYGIE from https://github.com/dwadden/dygiepp.
+# Licensed under the MIT License. 
+
 """
 Convert ACE data to our json format.
 """

@@ -1,51 +1,33 @@
 import os
 from pathlib import Path
-import pdb
 import sys
 sys.path.append("../../")
 import json
-import torch
 import logging
 
 import numpy as np
-from tqdm import tqdm
 from collections import defaultdict
 
-from transformers import set_seed
-from transformers.integrations import TensorBoardCallback
-from transformers import EarlyStoppingCallback
+from transformers import set_seed, EarlyStoppingCallback
 
 from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
-from OpenEE.backbone.backbone import get_backbone
-from OpenEE.input_engineering.sequence_labeling_processor import (
-    EAESLProcessor
-)
-from OpenEE.model.model import get_model
-from OpenEE.evaluation.metric import (
-    compute_span_F1,
-)
-from OpenEE.evaluation.dump_result import (
-    get_duee_submission_sl,
-)
-from OpenEE.evaluation.convert_format import (
-    get_ace2005_argument_extraction_sl
-)
+from OpenEE.input_engineering.sequence_labeling_processor import EAESLProcessor
 
-from OpenEE.evaluation.utils import (
-    predict_eae,
-    predict_sub_eae,
-)
+from OpenEE.model.model import get_model
+from OpenEE.backbone.backbone import get_backbone
+
+from OpenEE.evaluation.metric import compute_span_F1
+from OpenEE.evaluation.dump_result import get_duee_submission_sl
+from OpenEE.evaluation.convert_format import get_ace2005_argument_extraction_sl
+from OpenEE.evaluation.utils import predict
 
 from OpenEE.input_engineering.input_utils import get_bio_labels
 from OpenEE.trainer import Trainer
 
-# from torch.utils.tensorboard import SummaryWriter
 
 # argument parser
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
-    # If we pass only one argument to the script and it's the path to a json file,
-    # let's parse it to get our arguments.
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
 elif len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
     model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
@@ -59,9 +41,6 @@ output_dir = Path(
                  model_name_or_path))
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
-
-# local rank
-# training_args.local_rank = int(os.environ["LOCAL_RANK"])
 
 # logging config 
 logging.basicConfig(
@@ -94,7 +73,10 @@ markers["argument"] = ["<argument>", "</argument>"]
 data_args.markers = markers
 insert_markers = [m for ms in data_args.markers.values() for m in ms]
 
-print(data_args, model_args, training_args)
+# logging
+logging.info(data_args)
+logging.info(model_args)
+logging.info(training_args)
 
 # set seed
 set_seed(training_args.seed)
@@ -108,8 +90,6 @@ backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.mod
                                            model_args.model_name_or_path, insert_markers, new_tokens=insert_markers)
 model = get_model(model_args, backbone)
 model.cuda()
-data_class = None
-metric_fn = None
 
 data_class = EAESLProcessor
 metric_fn = compute_span_F1
@@ -130,35 +110,31 @@ trainer = Trainer(
     compute_metrics=metric_fn,
     data_collator=train_dataset.collate_fn,
     tokenizer=tokenizer,
-    callbacks=[earlystoppingCallBack]
+    callbacks=[earlystoppingCallBack],
 )
 trainer.train()
 
 
 if training_args.do_predict:
-    pred_func = predict_sub_eae if data_args.split_infer else predict_eae
+    eval_mode = data_args.eae_eval_mode
+    use_gold = data_args.golden_trigger
+    logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                                    data_args=data_args, data_file=data_args.test_file,
+                                                    training_args=training_args)
+    preds = np.argmax(logits, axis=-1)
 
-    for eval_mode in ['default', 'loose', 'strict']:
-        print("\n+++++++++++++++++++ Evaluate in [{}] Mode ++++++++++++++++++\n".format(eval_mode))
-        data_args.eae_eval_mode = eval_mode
-        logits, labels, metrics, test_dataset = pred_func(trainer, tokenizer, data_class, data_args, training_args)
-        print("\n"+"-"*50+"\n")
-        print("Test File: {}, \nMetrics: {}, \nSplit_Infer: {}".format(data_args.test_file, metrics, data_args.split_infer))
+    logging.info("\n")
+    logging.info("{}-Evaluate Mode: {}, Golden Trigger: {}-{}".format("-" * 25, eval_mode, use_gold, "-" * 25))
 
-        # pdb.set_trace()
-        preds = np.argmax(logits, axis=-1)
-        assert model_args.paradigm == "sequence_labeling"
-        if data_args.test_exists_labels:
-            # writer.add_scalar(tag="test_accuracy", scalar_value=metrics["test_accuracy"])
-            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-            print("Above is the [{}]test performance for Sequence-Labeling Paradigm.".format(eval_mode))
 
-        else:
-            # save name
-            aggregation = model_args.aggregation
-            save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
+    if data_args.test_exists_labels:
+        logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
+        get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+    else:
+        # save name
+        aggregation = model_args.aggregation
+        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
 
-            if data_args.dataset_name == "DuEE1.0":
-                print("Start get duee submission++++++++++++++++++")
-                get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
-            break
+        if data_args.dataset_name == "DuEE1.0":
+            logging.info("Start to get DuEE Submission"+"-"*25)
+            get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)

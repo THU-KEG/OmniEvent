@@ -1,16 +1,35 @@
 import collections
+import logging
+import numpy as np
 import os
 import pdb 
-import logging
-import numpy as np 
-from typing import List, Optional, Tuple
+
 from transformers import PreTrainedTokenizer
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
 
-def load_vocab(vocab_file, return_embeddings=False):
-    """Loads a vocabulary file into a dictionary."""
+def load_vocab(vocab_file: str,
+               return_embeddings: bool = False) -> Union[Dict[str, int], np.ndarray]:
+    """Loads a vocabulary file into a dictionary.
+
+    Loads a vocabulary file, allocates a unique id for each word within the vocabulary and saves the correspondence
+    between words and ids into a dictionary. Generates and returns word embeddings if it is required.
+
+    Args:
+        vocab_file (`str`):
+            The path of the vocabulary file.
+        return_embeddings (`bool`, `optional`, defaults to `False`):
+            Whether or not to return the word embeddings.
+
+    Returns:
+        word_embeddings (`np.ndarray`):
+            An numpy array represents each word's embedding within the vocabulary, with the size of (number of words) *
+            (embedding dimension). Returns word embeddings if `return_embeddings` is set as True.
+        vocab (`Dict[str, int]`):
+            A dictionary indicates the unique id of each word within the vocabulary.
+    """
     vocab = collections.OrderedDict()
     vocab["[PAD]"] = 0
     with open(vocab_file, "r", encoding="utf-8") as reader:
@@ -30,8 +49,19 @@ def load_vocab(vocab_file, return_embeddings=False):
         return word_embeddings
     return vocab
 
-def whitespace_tokenize(text):
-    """Runs basic whitespace cleaning and splitting on a piece of text."""
+def whitespace_tokenize(text: str) -> List[str]:
+    """Runs basic whitespace cleaning and splitting on a piece of text.
+
+    Cleans the whitespace at the beginning and end of the text and splits the text into a list based on whitespaces.
+
+    Args:
+        text (`str`):
+            A string representing the input text to be processed.
+
+    Returns:
+        tokens (`List[str]`):
+            A list of strings in which each element represents a word within the input text.
+    """
     text = text.strip()
     if not text:
         return []
@@ -49,45 +79,18 @@ PRETRAINED_INIT_CONFIGURATION = {}
 
 
 class WordLevelTokenizer(PreTrainedTokenizer):
-    r"""
-    Construct a BERT tokenizer. Based on WordPiece.
+    """Construct a BERT tokenizer. Based on WordPiece.
 
-    This tokenizer inherits from [`PreTrainedTokenizer`] which contains most of the main methods. Users should refer to
+    This tokenizer inherits from `PreTrainedTokenizer` which contains most of the main methods. Users should refer to
     this superclass for more information regarding those methods.
 
-    Args:
-        vocab_file (`str`):
-            File containing the vocabulary.
-        do_lower_case (`bool`, *optional*, defaults to `True`):
-            Whether or not to lowercase the input when tokenizing.
-        do_basic_tokenize (`bool`, *optional*, defaults to `True`):
-            Whether or not to do basic tokenization before WordPiece.
-        never_split (`Iterable`, *optional*):
-            Collection of tokens which will never be split during tokenization. Only has an effect when
-            `do_basic_tokenize=True`
-        unk_token (`str`, *optional*, defaults to `"[UNK]"`):
-            The unknown token. A token that is not in the vocabulary cannot be converted to an ID and is set to be this
-            token instead.
-        sep_token (`str`, *optional*, defaults to `"[SEP]"`):
-            The separator token, which is used when building a sequence from multiple sequences, e.g. two sequences for
-            sequence classification or for a text and a question for question answering. It is also used as the last
-            token of a sequence built with special tokens.
-        pad_token (`str`, *optional*, defaults to `"[PAD]"`):
-            The token used for padding, for example when batching sequences of different lengths.
-        cls_token (`str`, *optional*, defaults to `"[CLS]"`):
-            The classifier token which is used when doing sequence classification (classification of the whole sequence
-            instead of per-token classification). It is the first token of the sequence when built with special tokens.
-        mask_token (`str`, *optional*, defaults to `"[MASK]"`):
-            The token used for masking values. This is the token used when training this model with masked language
-            modeling. This is the token which the model will try to predict.
-        tokenize_chinese_chars (`bool`, *optional*, defaults to `True`):
-            Whether or not to tokenize Chinese characters.
-
-            This should likely be deactivated for Japanese (see this
-            [issue](https://github.com/huggingface/transformers/issues/328)).
-        strip_accents (`bool`, *optional*):
-            Whether or not to strip all accents. If this option is not specified, then it will be determined by the
-            value for `lowercase` (as in the original BERT).
+    Attributes:
+        vocab (`Dict[str, int]`):
+            A dictionary indicating the correspondence between words and ids within the vocabulary.
+        ids_to_tokens (`Dict[int, str]`):
+            A dictionary indicating the correspondence between ids and words within the vocabulary.
+        whitespace_tokenizer (`WhitespaceTokenizer`):
+            A `WhitespaceTokenizer` instance for word piece tokenization.
     """
 
     vocab_files_names = VOCAB_FILES_NAMES
@@ -95,19 +98,18 @@ class WordLevelTokenizer(PreTrainedTokenizer):
     pretrained_init_configuration = PRETRAINED_INIT_CONFIGURATION
     max_model_input_sizes = PRETRAINED_POSITIONAL_EMBEDDINGS_SIZES
 
-    def __init__(
-        self,
-        vocab_file,
-        do_lower_case=True,
-        never_split=None,
-        unk_token="[UNK]",
-        sep_token="[SEP]",
-        pad_token="[PAD]",
-        cls_token="[CLS]",
-        strip_accents=None,
-        model_max_length=512,
-        **kwargs
-    ):
+    def __init__(self,
+                 vocab_file: str,
+                 do_lower_case: bool = True,
+                 never_split: Iterable = None,
+                 unk_token: str = "[UNK]",
+                 sep_token: str = "[SEP]",
+                 pad_token: str = "[PAD]",
+                 cls_token: str = "[CLS]",
+                 strip_accents: bool = None,
+                 model_max_length: int = 512,
+                 **kwargs):
+        """Construct a WordLevelTokenizer."""
         kwargs["model_max_length"] = model_max_length
         super().__init__(
             do_lower_case=do_lower_case,
@@ -131,43 +133,52 @@ class WordLevelTokenizer(PreTrainedTokenizer):
             if token not in self.vocab:
                 self.vocab[token] = len(self.vocab)
         self.ids_to_tokens = collections.OrderedDict([(ids, tok) for tok, ids in self.vocab.items()])
-        self.whitespace_tokenizer = WhitespaceTokenizer(vocab=self.vocab, do_lower_case=do_lower_case, unk_token=self.unk_token)
+        self.whitespace_tokenizer = WhitespaceTokenizer(vocab=self.vocab, do_lower_case=do_lower_case,
+                                                        unk_token=self.unk_token)
 
     @property
     def do_lower_case(self):
+        """Returns whether or not to lowercase the input when tokenizing."""
         return self.whitespace_tokenizer.do_lower_case
 
     @property
     def vocab_size(self):
+        """Returns the length of the vocabulary"""
         return len(self.vocab)
 
     def get_vocab(self):
+        """Returns the vocabulary in a dictionary."""
         return dict(self.vocab, **self.added_tokens_encoder)
 
-    def _tokenize(self, text):
+    def _tokenize(self,
+                  text: str):
+        """Tokenizes the input text into tokens."""
         if self.do_lower_case:
             text = text.lower()
         split_tokens = self.whitespace_tokenizer.tokenize(text)
         return split_tokens
 
-    def _convert_token_to_id(self, token):
-        """Converts a token (str) in an id using the vocab."""
+    def _convert_token_to_id(self,
+                             token: str):
+        """Converts a token (`str`) in an id using the vocab."""
         return self.vocab.get(token, self.vocab.get(self.unk_token))
 
-    def _convert_id_to_token(self, index):
-        """Converts an index (integer) in a token (str) using the vocab."""
+    def _convert_id_to_token(self,
+                             index: int):
+        """Converts an index (`int`) in a token (`str`) using the vocab."""
         return self.ids_to_tokens.get(index, self.unk_token)
 
-    def convert_tokens_to_string(self, tokens):
-        """Converts a sequence of tokens (string) in a single string."""
+    def convert_tokens_to_string(self,
+                                 tokens: str):
+        """Converts a sequence of tokens (`str`) in a single string."""
         out_string = " ".join(tokens).replace(" ##", "").strip()
         return out_string
 
-    def build_inputs_with_special_tokens(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
-    ) -> List[int]:
-        """
-        Build model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
+    def build_inputs_with_special_tokens(self,
+                                         token_ids_0: List[int],
+                                         token_ids_1: Optional[List[int]] = None) -> List[int]:
+        """Builds model inputs from a sequence or a pair of sequence.
+        Builds model inputs from a sequence or a pair of sequence for sequence classification tasks by concatenating and
         adding special tokens. A BERT sequence has the following format:
 
         - single sequence: `[CLS] X [SEP]`
@@ -175,12 +186,12 @@ class WordLevelTokenizer(PreTrainedTokenizer):
 
         Args:
             token_ids_0 (`List[int]`):
-                List of IDs to which the special tokens will be added.
-            token_ids_1 (`List[int]`, *optional*):
-                Optional second list of IDs for sequence pairs.
+                List of ids to which the special tokens will be added.
+            token_ids_1 (`List[int]`, `optional`):
+                Optional second list of ids for sequence pairs.
 
         Returns:
-            `List[int]`: List of [input IDs](../glossary#input-ids) with the appropriate special tokens.
+            `List[int]`: List of [input ids](../glossary#input-ids) with the appropriate special tokens.
         """
         if token_ids_1 is None:
             return [self.cls_token_id] + token_ids_0 + [self.sep_token_id]
@@ -188,24 +199,11 @@ class WordLevelTokenizer(PreTrainedTokenizer):
         sep = [self.sep_token_id]
         return cls + token_ids_0 + sep + token_ids_1 + sep
 
-    def get_special_tokens_mask(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None, already_has_special_tokens: bool = False
-    ) -> List[int]:
-        """
-        Retrieve sequence ids from a token list that has no special tokens added. This method is called when adding
-        special tokens using the tokenizer `prepare_for_model` method.
-
-        Args:
-            token_ids_0 (`List[int]`):
-                List of IDs.
-            token_ids_1 (`List[int]`, *optional*):
-                Optional second list of IDs for sequence pairs.
-            already_has_special_tokens (`bool`, *optional*, defaults to `False`):
-                Whether or not the token list is already formatted with special tokens for the model.
-
-        Returns:
-            `List[int]`: A list of integers in the range [0, 1]: 1 for a special token, 0 for a sequence token.
-        """
+    def get_special_tokens_mask(self,
+                                token_ids_0: List[int],
+                                token_ids_1: Optional[List[int]] = None,
+                                already_has_special_tokens: bool = False) -> List[int]:
+        """Retrieve sequence ids from a token list that has no special tokens added."""
 
         if already_has_special_tokens:
             return super().get_special_tokens_mask(
@@ -216,36 +214,20 @@ class WordLevelTokenizer(PreTrainedTokenizer):
             return [1] + ([0] * len(token_ids_0)) + [1] + ([0] * len(token_ids_1)) + [1]
         return [1] + ([0] * len(token_ids_0)) + [1]
 
-    def create_token_type_ids_from_sequences(
-        self, token_ids_0: List[int], token_ids_1: Optional[List[int]] = None
-    ) -> List[int]:
-        """
-        Create a mask from the two sequences passed to be used in a sequence-pair classification task. A BERT sequence
-        pair mask has the following format:
-
-        ```
-        0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1
-        | first sequence    | second sequence |
-        ```
-
-        If `token_ids_1` is `None`, this method only returns the first portion of the mask (0s).
-
-        Args:
-            token_ids_0 (`List[int]`):
-                List of IDs.
-            token_ids_1 (`List[int]`, *optional*):
-                Optional second list of IDs for sequence pairs.
-
-        Returns:
-            `List[int]`: List of [token type IDs](../glossary#token-type-ids) according to the given sequence(s).
-        """
+    def create_token_type_ids_from_sequences(self,
+                                             token_ids_0: List[int],
+                                             token_ids_1: Optional[List[int]] = None) -> List[int]:
+        """Create a mask from the two sequences passed to be used in a sequence-pair classification task."""
         sep = [self.sep_token_id]
         cls = [self.cls_token_id]
         if token_ids_1 is None:
             return len(cls + token_ids_0 + sep) * [0]
         return len(cls + token_ids_0 + sep) * [0] + len(token_ids_1 + sep) * [1]
 
-    def save_vocabulary(self, save_directory: str, filename_prefix: Optional[str] = None) -> Tuple[str]:
+    def save_vocabulary(self,
+                        save_directory: str,
+                        filename_prefix: Optional[str] = None) -> Tuple[str]:
+        """Saves the vocabulary (copy original file) and special tokens file to a directory."""
         index = 0
         if os.path.isdir(save_directory):
             vocab_file = os.path.join(
@@ -267,27 +249,31 @@ class WordLevelTokenizer(PreTrainedTokenizer):
 
 
 class WhitespaceTokenizer(object):
-    """Runs WordPiece tokenization."""
+    """A tokenizer to conduct word piece tokenization.
 
-    def __init__(self, vocab, do_lower_case, unk_token):
+    Tokenizes a piece of text into its word pieces by matching whether the token is in the vocabulary.
+
+    Attributes:
+        vocab (`Dict[str, int]`):
+            A dictionary indicates the correspondence between words and ids within the vocabulary.
+        do_lower_case (`bool`):
+            A boolean variable indicating Whether or not to lowercase the input when tokenizing.
+        unk_token (`str`):
+            A string representing the unknown token.
+    """
+
+    def __init__(self,
+                 vocab: Dict[str, int],
+                 do_lower_case: bool,
+                 unk_token: str):
+        """Constructs a `WhitespaceTokenizer`."""
         self.vocab = vocab
         self.do_lower_case = do_lower_case
         self.unk_token = unk_token
 
-    def tokenize(self, text):
-        """
-        Tokenizes a piece of text into its word pieces. This uses a greedy longest-match-first algorithm to perform
-        tokenization using the given vocabulary.
-
-        For example, `input = "unaffable"` wil return as output `["un", "##aff", "##able"]`.
-
-        Args:
-            text: A single token or whitespace separated tokens. This should have
-                already been passed through *BasicTokenizer*.
-
-        Returns:
-            A list of wordpiece tokens.
-        """
+    def tokenize(self,
+                 text: str) -> List[str]:
+        """Tokenizes a piece of text into its word pieces."""
 
         output_tokens = []
         for token in whitespace_tokenize(text):

@@ -32,14 +32,20 @@ logger = logging.getLogger(__name__)
 
 
 class Seq2SeqTrainer(Trainer):
-    def evaluate(
-        self,
-        eval_dataset: Optional[Dataset] = None,
-        ignore_keys: Optional[List[str]] = None,
-        metric_key_prefix: str = "eval",
-        max_length: Optional[int] = None,
-        num_beams: Optional[int] = None,
-    ) -> Dict[str, float]:
+    """
+    Trainer for event extraction based on the Sequence-to-Sequence (Seq2Seq) paradigm.
+
+    Trainer for event extraction based on the Sequence-to-Sequence (Seq2Seq) paradigm, training the model based on the
+    given dataset. The trainer predicts the labels, calculates the loss and metrics, and update the parameters in each
+    iteration.
+    """
+
+    def evaluate(self,
+                 eval_dataset: Optional[Dataset] = None,
+                 ignore_keys: Optional[List[str]] = None,
+                 metric_key_prefix: str = "eval",
+                 max_length: Optional[int] = None,
+                 num_beams: Optional[int] = None) -> Dict[str, float]:
         """
         Run evaluation and returns metrics.
 
@@ -73,14 +79,12 @@ class Seq2SeqTrainer(Trainer):
         self._num_beams = num_beams if num_beams is not None else self.args.generation_num_beams
         return super().evaluate(eval_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
-    def predict(
-        self,
-        test_dataset: Dataset,
-        ignore_keys: Optional[List[str]] = None,
-        metric_key_prefix: str = "test",
-        max_length: Optional[int] = None,
-        num_beams: Optional[int] = None,
-    ) -> PredictionOutput:
+    def predict(self,
+                test_dataset: Dataset,
+                ignore_keys: Optional[List[str]] = None,
+                metric_key_prefix: str = "test",
+                max_length: Optional[int] = None,
+                num_beams: Optional[int] = None) -> PredictionOutput:
         """
         Run prediction and returns predictions and potential metrics.
 
@@ -122,13 +126,12 @@ class Seq2SeqTrainer(Trainer):
         self._num_beams = num_beams if num_beams is not None else self.args.generation_num_beams
         return super().predict(test_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
 
-    def prediction_step(
-        self,
-        model: nn.Module,
-        inputs: Dict[str, Union[torch.Tensor, Any]],
-        prediction_loss_only: bool,
-        ignore_keys: Optional[List[str]] = None,
-    ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
+    def prediction_step(self,
+                model: nn.Module,
+                inputs: Dict[str, Union[torch.Tensor, Any]],
+                prediction_loss_only: bool,
+                ignore_keys: Optional[List[str]] = None) -> Tuple[Optional[float],
+                                                                  Optional[torch.Tensor], Optional[torch.Tensor]]:
         """
         Perform an evaluation step on `model` using `inputs`.
 
@@ -210,7 +213,10 @@ class Seq2SeqTrainer(Trainer):
 
         return (loss, generated_tokens, labels)
 
-    def _pad_tensors_to_max_len(self, tensor, max_length):
+    def _pad_tensors_to_max_len(self,
+                                tensor: torch.Tensor,
+                                max_length: int):
+        """Pads the tokens of sequences to the maximum length using 1."""
         if self.tokenizer is not None and hasattr(self.tokenizer, "pad_token_id"):
             # If PAD token is not defined at least EOS token has to be defined
             pad_token_id = (
@@ -230,7 +236,19 @@ class Seq2SeqTrainer(Trainer):
 
 
 class ConstrainedSeq2SeqTrainer(Seq2SeqTrainer):
-    def __init__(self, decoding_type_schema=None, source_prefix=None, *args, **kwargs):
+    """Trainer for event extraction based on the Sequence-to-Sequence (Seq2Seq) paradigm with constraint decoding.
+
+    Trainer for event extraction based on the Sequence-to-Sequence (Seq2Seq) paradigm with constraint decoding, training
+    the model based on the given dataset. The trainer predicts the labels, calculates the loss and metrics, and update
+    the parameters in each iteration.
+    """
+
+    def __init__(self,
+                 decoding_type_schema=None,
+                 source_prefix: Optional[str] = None,
+                 *args,
+                 **kwargs) -> None:
+        """Constructs a `ConstrainedSeq2SeqTrainer`."""
         super().__init__(*args, **kwargs)
 
         self.decoding_type_schema = decoding_type_schema
@@ -248,13 +266,12 @@ class ConstrainedSeq2SeqTrainer(Seq2SeqTrainer):
                                                             type_schema=self.decoding_type_schema,
                                                             source_prefix=source_prefix)
 
-    def prediction_step(
-        self,
-        model: nn.Module,
-        inputs: Dict[str, Union[torch.Tensor, Any]],
-        prediction_loss_only: bool,
-        ignore_keys: Optional[List[str]] = None,
-    ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
+    def prediction_step(self,
+                        model: nn.Module,
+                        inputs: Dict[str, Union[torch.Tensor, Any]],
+                        prediction_loss_only: bool,
+                        ignore_keys: Optional[List[str]] = None) -> Tuple[Optional[float],
+                                                                          Optional[torch.Tensor], Optional[torch.Tensor]]:
         """
         Perform an evaluation step on `model` using `inputs`.
 
@@ -276,6 +293,7 @@ class ConstrainedSeq2SeqTrainer(Seq2SeqTrainer):
             labels (each being optional).
         """
         def prefix_allowed_tokens_fn(batch_id, sent):
+            """Performs constraint decoding on the given batch and sentences."""
             src_sentence = inputs['input_ids'][batch_id]
             return self.constraint_decoder.constraint_decoding(batch_id=batch_id,
                                                                src_sentence=src_sentence,
@@ -343,6 +361,7 @@ class ConstrainedSeq2SeqTrainer(Seq2SeqTrainer):
         return (loss, generated_tokens, labels)
 
     def _pad_tensors_to_max_len(self, tensor, max_length):
+        """Pads the tokens of sequences to the maximum length using 1."""
         if self.tokenizer is not None and hasattr(self.tokenizer, "pad_token_id"):
             # If PAD token is not defined at least EOS token has to be defined
             pad_token_id = (

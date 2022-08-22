@@ -1,3 +1,5 @@
+# Copyright ONEIE from https://blender.cs.illinois.edu/software/oneie/
+
 """
 This script extracts IE annotations from ACE2005 (LDC2006T06).
 
