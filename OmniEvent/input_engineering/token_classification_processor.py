@@ -145,18 +145,12 @@ class EAETCProcessor(EAEDataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            true_type = event["type"]
-                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_type = true_type
-                            else:
-                                pred_type = self.event_preds[trigger_idx]
-
+                            pred_type = self.get_single_pred(trigger_idx, input_file, true_type=event["type"])
                             trigger_idx += 1
 
                             if self.config.eae_eval_mode in ['default', 'loose'] and pred_type == "NA":
                                 continue
 
-                            args_for_trigger = set()
                             positive_offsets = []
                             for argument in trigger["arguments"]:
                                 for mention in argument["mentions"]:
@@ -171,144 +165,33 @@ class EAETCProcessor(EAEDataProcessor):
                                         argument_right=mention["position"][1],
                                         labels=argument["role"],
                                     )
-                                    args_for_trigger.add(mention['mention_id'])
                                     positive_offsets.append(mention["position"])
                                     self.examples.append(example)
-                            if "entities" in item:
-                                for entity in item["entities"]:
-                                    # check whether the entity is an argument
-                                    is_argument = False
-                                    for mention in entity["mentions"]:
-                                        if mention["mention_id"] in args_for_trigger:
-                                            is_argument = True
-                                            break
-                                    if is_argument:
-                                        continue
-                                    # negative arguments
-                                    for mention in entity["mentions"]:
-                                        example = EAEInputExample(
-                                            example_id=trigger["id"],
-                                            text=item["text"],
-                                            pred_type=pred_type,
-                                            true_type=event["type"],
-                                            trigger_left=trigger["position"][0],
-                                            trigger_right=trigger["position"][1],
-                                            argument_left=mention["position"][0],
-                                            argument_right=mention["position"][1],
-                                            labels="NA",
-                                        )
-                                        if "train" in input_file or self.config.golden_trigger:
-                                            example.pred_type = event["type"]
-                                        self.examples.append(example)
-                            else:
-                                for neg in item["negative_triggers"]:
-                                    is_argument = False
-                                    neg_set = set(range(neg["position"][0], neg["position"][1]))
-                                    for pos_offset in positive_offsets:
-                                        pos_set = set(range(pos_offset[0], pos_offset[1]))
-                                        if not pos_set.isdisjoint(neg_set):
-                                            is_argument = True
-                                            break
-                                    if is_argument:
-                                        continue
-                                    example = EAEInputExample(
-                                        example_id=trigger["id"],
-                                        text=item["text"],
-                                        pred_type=pred_type,
-                                        true_type=event["type"],
-                                        trigger_left=trigger["position"][0],
-                                        trigger_right=trigger["position"][1],
-                                        argument_left=neg["position"][0],
-                                        argument_right=neg["position"][1],
-                                        labels="NA",
-                                    )
-                                    if "train" in input_file or self.config.golden_trigger:
-                                        example.pred_type = event["type"]
-                                    self.examples.append(example)
+
+                            self.add_negative_arguments(item=item, trigger=trigger, pred_type=pred_type,
+                                                        true_type=event["type"], positive_offsets=positive_offsets)
 
                     # negative triggers
                     for trigger in item["negative_triggers"]:
                         if self.config.eae_eval_mode in ['default', 'strict']:
-                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_type = "NA"
-                            else:
-                                pred_type = self.event_preds[trigger_idx]
-
+                            pred_type = self.get_single_pred(trigger_idx, input_file, true_type="NA")
                             if pred_type != "NA":
-                                if "entities" in item:
-                                    for entity in item["entities"]:
-                                        for mention in entity["mentions"]:
-                                            example = EAEInputExample(
-                                                example_id=trigger_idx,
-                                                text=item["text"],
-                                                pred_type=pred_type,
-                                                true_type="NA",
-                                                trigger_left=trigger["position"][0],
-                                                trigger_right=trigger["position"][1],
-                                                argument_left=mention["position"][0],
-                                                argument_right=mention["position"][1],
-                                                labels="NA",
-                                            )
-                                            self.examples.append(example)
-                                else:
-                                    for neg in item["negative_triggers"]:
-                                        example = EAEInputExample(
-                                            example_id=trigger_idx,
-                                            text=item["text"],
-                                            pred_type=pred_type,
-                                            true_type=event["type"],
-                                            trigger_left=trigger["position"][0],
-                                            trigger_right=trigger["position"][1],
-                                            argument_left=neg["position"][0],
-                                            argument_right=neg["position"][1],
-                                            labels="NA",
-                                        )
-                                        if "train" in input_file or self.config.golden_trigger:
-                                            example.pred_type = event["type"]
-                                        self.examples.append(example)
+                                self.add_negative_arguments(item=item, trigger=trigger, pred_type=pred_type,
+                                                            true_type="NA")
                         trigger_idx += 1
-                else:
+
+                if "candidates" in item:
                     for candi in item["candidates"]:
                         pred_type = self.event_preds[trigger_idx]   # we can only use pred type here, gold not available
                         if pred_type != "NA":
-                            if "entities" in item:
-                                for entity in item["entities"]:
-                                    for mention in entity["mentions"]:
-                                        example = EAEInputExample(
-                                            example_id=trigger_idx,
-                                            text=item["text"],
-                                            pred_type=pred_type,
-                                            true_type="NA",
-                                            trigger_left=candi["position"][0],
-                                            trigger_right=candi["position"][1],
-                                            argument_left=mention["position"][0],
-                                            argument_right=mention["position"][1],
-                                            labels="NA",
-                                        )
-                                        self.examples.append(example)
-                            else:
-                                for neg in item["negative_triggers"]:
-                                    example = EAEInputExample(
-                                        example_id=trigger_idx,
-                                        text=item["text"],
-                                        pred_type=pred_type,
-                                        true_type=event["type"],
-                                        trigger_left=trigger["position"][0],
-                                        trigger_right=trigger["position"][1],
-                                        argument_left=neg["position"][0],
-                                        argument_right=neg["position"][1],
-                                        labels="NA",
-                                    )
-                                    if "train" in input_file or self.config.golden_trigger:
-                                        example.pred_type = event["type"]
-                                    self.examples.append(example)
-
+                            self.add_negative_arguments(item=item, trigger=candi, pred_type=pred_type, true_type="NA")
                         trigger_idx += 1
+
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-    def insert_marker(self,
-                      text: str,
+    @staticmethod
+    def insert_marker(text: str,
                       type: str,
                       trigger_position: List[int],
                       argument_position: List[int],

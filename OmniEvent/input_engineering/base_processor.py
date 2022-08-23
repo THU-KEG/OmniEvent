@@ -416,6 +416,47 @@ class EAEDataProcessor(Dataset):
             ids.append(example.example_id)
         return ids
 
+    def get_single_pred(self, trigger_idx, input_file, true_type):
+        if self.is_training or "train" in input_file or self.config.golden_trigger or self.event_preds is None:
+            pred_type = true_type
+        else:
+            pred_type = self.event_preds[trigger_idx]
+        return pred_type
+
+    @staticmethod
+    def check_is_argument(mention=None, positive_offsets=None):
+        is_argument = False
+        mention_set = set(range(mention["position"][0], mention["position"][1]))
+        for pos_offset in positive_offsets:
+            pos_set = set(range(pos_offset[0], pos_offset[1]))
+            if not pos_set.isdisjoint(mention_set):
+                is_argument = True
+                break
+        return is_argument
+
+    def add_negative_arguments(self, item, trigger, pred_type, true_type, positive_offsets=None):
+        if "entities" in item:
+            neg_arg_candidates = [men for ent in item["entities"] for men in ent["mentions"]]
+        else:
+            neg_arg_candidates = item["negative_triggers"]
+
+        for mention in neg_arg_candidates:
+            is_argument = self.check_is_argument(mention, positive_offsets) if positive_offsets else False
+            if not is_argument:
+                # negative arguments
+                example = EAEInputExample(
+                    example_id=trigger["id"],
+                    text=item["text"],
+                    pred_type=pred_type,
+                    true_type=true_type,
+                    trigger_left=trigger["position"][0],
+                    trigger_right=trigger["position"][1],
+                    argument_left=mention["position"][0],
+                    argument_right=mention["position"][1],
+                    labels="NA",
+                )
+                self.examples.append(example)
+
     def __len__(self) -> int:
         """Returns the length of the examples."""
         return len(self.input_features)
