@@ -198,22 +198,56 @@ class EAETCProcessor(EAEDataProcessor):
                       markers: Dict[str, str],
                       whitespace: Optional[bool] = True) -> str:
         """Adds a marker at the start and end position of event triggers and argument mentions."""
-        markered_text = ""
+        marked_text = ""
         for i, char in enumerate(text):
             if i == trigger_position[0]:
-                markered_text += markers[type][0]
-                markered_text += " " if whitespace else ""
+                marked_text += markers[type][0]
+                marked_text += " " if whitespace else ""
             if i == argument_position[0]:
-                markered_text += markers["argument"][0]
-                markered_text += " " if whitespace else ""
-            markered_text += char
+                marked_text += markers["argument"][0]
+                marked_text += " " if whitespace else ""
+            marked_text += char
             if i == trigger_position[1] - 1:
-                markered_text += " " if whitespace else ""
-                markered_text += markers[type][1]
+                marked_text += " " if whitespace else ""
+                marked_text += markers[type][1]
             if i == argument_position[1] - 1:
-                markered_text += " " if whitespace else ""
-                markered_text += markers["argument"][1]
-        return markered_text
+                marked_text += " " if whitespace else ""
+                marked_text += markers["argument"][1]
+        return marked_text
+
+    @staticmethod
+    def check_is_argument(mention=None, positive_offsets=None):
+        is_argument = False
+        mention_set = set(range(mention["position"][0], mention["position"][1]))
+        for pos_offset in positive_offsets:
+            pos_set = set(range(pos_offset[0], pos_offset[1]))
+            if not pos_set.isdisjoint(mention_set):
+                is_argument = True
+                break
+        return is_argument
+
+    def add_negative_arguments(self, item, trigger, pred_type, true_type, positive_offsets=None):
+        if "entities" in item:
+            neg_arg_candidates = [men for ent in item["entities"] for men in ent["mentions"]]
+        else:
+            neg_arg_candidates = item["negative_triggers"]
+
+        for mention in neg_arg_candidates:
+            is_argument = self.check_is_argument(mention, positive_offsets) if positive_offsets else False
+            if not is_argument:
+                # negative arguments
+                example = EAEInputExample(
+                    example_id=trigger["id"],
+                    text=item["text"],
+                    pred_type=pred_type,
+                    true_type=true_type,
+                    trigger_left=trigger["position"][0],
+                    trigger_right=trigger["position"][1],
+                    argument_left=mention["position"][0],
+                    argument_right=mention["position"][1],
+                    labels="NA",
+                )
+                self.examples.append(example)
 
     def convert_examples_to_features(self) -> None:
         """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
