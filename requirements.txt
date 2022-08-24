@@ -21,3 +21,5 @@ torch==1.11.0+cu113
 tqdm==4.64.0
 typing_extensions==4.1.1
 urllib3==1.26.9
+protobuf==3.20.1
+jsonlines==3.1.0

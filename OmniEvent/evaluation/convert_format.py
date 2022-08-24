@@ -1,9 +1,10 @@
 import logging
 import os 
-import pdb 
+import pdb
+import numpy as np
 import json 
 from collections import defaultdict
-from typing import List
+from typing import List, Union
 
 from sklearn.metrics import f1_score
 
@@ -20,7 +21,7 @@ from ..input_engineering.input_utils import (
 logger = logging.getLogger(__name__)
 
 
-def get_ace2005_trigger_detection_sl(preds: List[str],
+def get_ace2005_trigger_detection_sl(preds: Union[np.arrary, List[str]],
                                      labels: List[str],
                                      data_file: str,
                                      data_args,
@@ -76,7 +77,7 @@ def get_ace2005_trigger_detection_sl(preds: List[str],
     return results
 
 
-def get_ace2005_argument_extraction_sl(preds: List[str],
+def get_ace2005_argument_extraction_sl(preds: Union[np.arrary, List[str]],
                                        labels: List[str],
                                        data_file: str,
                                        data_args,

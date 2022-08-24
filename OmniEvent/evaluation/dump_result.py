@@ -2,6 +2,7 @@ from typing import List, Dict, Union
 
 import jsonlines
 import json
+import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 from .metric import select_start_position
@@ -80,8 +81,8 @@ def get_maven_submission(preds: List[str],
             f.write(json.dumps(format_result) + "\n")
 
 
-def get_maven_submission_sl(preds: List[str],
-                            labels: List[str],
+def get_maven_submission_sl(preds: Union[np.arrary, List[str]],
+                            labels: Union[np.arrary, List[str]],
                             is_overflow,
                             result_file: str,
                             type2id: Dict[str, int],
@@ -139,14 +140,10 @@ def get_maven_submission_sl(preds: List[str],
 
 
 def get_maven_submission_seq2seq(preds: List[int],
-                                 labels: List[str],
                                  save_path: str,
-                                 type2id: Dict[str, int],
-                                 tokenizer: str,
-                                 training_args,
                                  data_args) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
-
+    TODO: modify the docstring
     Obtains the instances' predictions in the test file of the MAVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
     paradigm and converts the predictions to the dataset's submission format. The converted predictions are dumped into
     a json file for submission.
@@ -167,10 +164,7 @@ def get_maven_submission_seq2seq(preds: List[int],
         data_args:
             The pre-defined arguments for data processing.
     """
-    decoded_preds = compute_seq_F1(preds, labels, 
-                                    **{"tokenizer": tokenizer, 
-                                       "training_args": training_args, 
-                                       "return_decoded_preds": True})
+    type2id = data_args.type2id
     results = defaultdict(list)
     with open(data_args.test_file, "r") as f:
         lines = f.readlines()
@@ -189,7 +183,7 @@ def get_maven_submission_seq2seq(preds: List[int],
     with open(save_path, "w") as f:
         for id, preds_per_doc in results.items():
             results_per_doc = dict(id=id, predictions=preds_per_doc)
-            f.write(json.dumps(results_per_doc)+"\n")
+            f.write(json.dumps(results_per_doc) + "\n")
 
 
 def get_leven_submission(preds: List[str],
@@ -246,13 +240,10 @@ def get_leven_submission_sl(preds: List[str],
 
 
 def get_leven_submission_seq2seq(preds: List[int],
-                                 labels: List[str],
                                  save_path: str,
-                                 type2id: Dict[str, int],
-                                 tokenizer: str,
-                                 training_args,
                                  data_args):
     """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.
+    TODO: modify the docstring
 
     Obtains the instances' predictions in the test file of the LEVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
     paradigm and converts the predictions to the dataset's submission format. The converted predictions are dumped into
@@ -277,7 +268,7 @@ def get_leven_submission_seq2seq(preds: List[int],
     Returns:
         The parameters of the input are passed to the `get_maven_submission_seq2seq()` method for further predictions.
     """
-    return get_maven_submission_seq2seq(preds, labels, save_path, type2id, tokenizer, training_args, data_args)
+    return get_maven_submission_seq2seq(preds, save_path, data_args)
 
 
 def get_duee_submission():
