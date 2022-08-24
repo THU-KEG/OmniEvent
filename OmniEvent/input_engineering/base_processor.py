@@ -84,7 +84,7 @@ class EDInputFeatures(object):
                  token_type_ids: Optional[List[int]] = None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
-                 labels: Optional[Union[str, List[str]]] = None) -> None:
+                 labels: Optional[List[str]] = None) -> None:
         """Constructs an `EDInputFeatures`."""
         self.example_id = example_id
         self.input_ids = input_ids
@@ -196,7 +196,7 @@ class EAEInputFeatures(object):
                  argument_right: Optional[int] = None,
                  start_positions: Optional[int] = None,
                  end_positions: Optional[int] = None,
-                 labels: Optional[str] = None) -> None:
+                 labels: Optional[Union[str, List[str]]] = None) -> None:
         """Constructs an `EAEInputFeatures`."""
         self.example_id = example_id
         self.input_ids = input_ids

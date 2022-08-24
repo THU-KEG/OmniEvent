@@ -155,25 +155,19 @@ class EAESLProcessor(EAEDataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_type = event["type"]
-                            else:
-                                pred_type = self.event_preds[trigger_idx]
+                            pred_type = self.get_single_pred(trigger_idx, input_file, true_type=event["type"])
                             trigger_idx += 1
 
                             # Evaluation mode for EAE
                             # If the predicted event type is NA, We don't consider the trigger
                             if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
-                            trigger_left, trigger_right = get_left_and_right_pos(text=text, trigger=trigger,
-                                                                                 language=language)
+                            trigger_left, trigger_right = get_left_and_right_pos(text, trigger, language)
                             labels = ["O"] * len(words)
 
                             for argument in trigger["arguments"]:
                                 for mention in argument["mentions"]:
-                                    left_pos, right_pos = get_left_and_right_pos(text=text, trigger=mention,
-                                                                                 language=language)
-
+                                    left_pos, right_pos = get_left_and_right_pos(text, mention, language)
                                     labels[left_pos] = f"B-{argument['role']}"
                                     for i in range(left_pos + 1, right_pos):
                                         labels[i] = f"I-{argument['role']}"
@@ -191,10 +185,7 @@ class EAESLProcessor(EAEDataProcessor):
 
                     # negative triggers
                     for neg in item["negative_triggers"]:
-                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                            pred_type = "NA"
-                        else:
-                            pred_type = self.event_preds[trigger_idx]
+                        pred_type = self.get_single_pred(trigger_idx, input_file, true_type="NA")
                         trigger_idx += 1         
                         if self.config.eae_eval_mode == "loose":
                             continue
@@ -253,7 +244,7 @@ class EAESLProcessor(EAEDataProcessor):
         return final_labels
 
     @staticmethod
-    def insert_marker(text: str,
+    def insert_marker(text: list,
                       event_type: str,
                       labels,
                       trigger_pos: List[int],

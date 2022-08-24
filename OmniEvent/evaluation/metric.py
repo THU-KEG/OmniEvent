@@ -47,7 +47,7 @@ def f1_score_overall(preds: List[str],
 
 def compute_seq_F1(logits: np.ndarray,
                    labels: np.ndarray,
-                   **kwargs) -> Dict[str: int]:
+                   **kwargs) -> Dict[str, int]:
     """Computes the F1 score of the Sequence-to-Sequence (Seq2Seq) paradigm.
 
     Computes the F1 score of the  Sequence-to-Sequence (Seq2Seq) paradigm. The predictions of the model are firstly

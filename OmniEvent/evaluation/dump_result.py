@@ -51,7 +51,7 @@ def get_sentence_arguments(input_sentence):
     return arguments
 
 
-def get_maven_submission(preds: List[str],
+def get_maven_submission(preds: Union[np.array, List[str]],
                          instance_ids: List[str],
                          result_file: str) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset.
@@ -81,8 +81,8 @@ def get_maven_submission(preds: List[str],
             f.write(json.dumps(format_result) + "\n")
 
 
-def get_maven_submission_sl(preds: Union[np.arrary, List[str]],
-                            labels: Union[np.arrary, List[str]],
+def get_maven_submission_sl(preds: Union[np.array, List[str]],
+                            labels: Union[np.array, List[str]],
                             is_overflow,
                             result_file: str,
                             type2id: Dict[str, int],
@@ -139,7 +139,7 @@ def get_maven_submission_sl(preds: Union[np.arrary, List[str]],
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds: List[int],
+def get_maven_submission_seq2seq(preds: Union[np.array, List[str]],
                                  save_path: str,
                                  data_args) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
@@ -186,7 +186,7 @@ def get_maven_submission_seq2seq(preds: List[int],
             f.write(json.dumps(results_per_doc) + "\n")
 
 
-def get_leven_submission(preds: List[str],
+def get_leven_submission(preds: Union[np.array, List[str]],
                          instance_ids: List[str],
                          result_file: str) -> None:
     """Converts the predictions to the submission format of the LEVEN dataset.
@@ -207,8 +207,8 @@ def get_leven_submission(preds: List[str],
     return get_maven_submission(preds, instance_ids, result_file)
 
 
-def get_leven_submission_sl(preds: List[str],
-                            labels: List[str],
+def get_leven_submission_sl(preds: Union[np.array, List[str]],
+                            labels: Union[np.array, List[str]],
                             is_overflow,
                             result_file: str,
                             type2id: Dict[str, int],
@@ -276,8 +276,8 @@ def get_duee_submission():
     pass
 
 
-def get_duee_submission_sl(preds: List[str],
-                           labels: List[str],
+def get_duee_submission_sl(preds: Union[np.array, List[str]],
+                           labels: Union[np.array, List[str]],
                            is_overflow,
                            result_file: str,
                            config) -> List[Dict[str, Union[str, Dict]]]:

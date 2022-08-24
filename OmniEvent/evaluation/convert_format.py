@@ -21,8 +21,8 @@ from ..input_engineering.input_utils import (
 logger = logging.getLogger(__name__)
 
 
-def get_ace2005_trigger_detection_sl(preds: Union[np.arrary, List[str]],
-                                     labels: List[str],
+def get_ace2005_trigger_detection_sl(preds: Union[np.array, List[str]],
+                                     labels: Union[np.array, List[str]],
                                      data_file: str,
                                      data_args,
                                      is_overflow) -> List[str]:
@@ -77,8 +77,8 @@ def get_ace2005_trigger_detection_sl(preds: Union[np.arrary, List[str]],
     return results
 
 
-def get_ace2005_argument_extraction_sl(preds: Union[np.arrary, List[str]],
-                                       labels: List[str],
+def get_ace2005_argument_extraction_sl(preds: Union[np.array, List[str]],
+                                       labels: Union[np.array, List[str]],
                                        data_file: str,
                                        data_args,
                                        is_overflow) -> List[str]:

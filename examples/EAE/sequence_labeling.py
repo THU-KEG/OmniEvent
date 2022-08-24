@@ -115,15 +115,14 @@ trainer.train()
 
 
 if training_args.do_predict:
-    eval_mode = data_args.eae_eval_mode
-    use_gold = data_args.golden_trigger
     logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                     data_args=data_args, data_file=data_args.test_file,
                                                     training_args=training_args)
     preds = np.argmax(logits, axis=-1)
 
     logging.info("\n")
-    logging.info("{}-Evaluate Mode: {}, Golden Trigger: {}-{}".format("-" * 25, eval_mode, use_gold, "-" * 25))
+    logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
+    logging.info("{}-Use Golden Trigger: {}-{}".format("-" * 25, data_args.golden_trigger, "-" * 25))
 
     if data_args.test_exists_labels:
         logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
