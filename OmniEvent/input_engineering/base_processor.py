@@ -194,6 +194,8 @@ class EAEInputFeatures(object):
                  trigger_right: Optional[int] = None,
                  argument_left: Optional[int] = None,
                  argument_right: Optional[int] = None,
+                 start_positions: Optional[int] = None,
+                 end_positions: Optional[int] = None,
                  labels: Optional[str] = None) -> None:
         """Constructs an `EAEInputFeatures`."""
         self.example_id = example_id

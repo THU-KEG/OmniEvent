@@ -33,9 +33,8 @@ else:
 
 # output dir
 model_name_or_path = model_args.model_name_or_path.split("/")[-1]
-output_dir = Path(
-    os.path.join(os.path.join(os.path.join(training_args.output_dir, training_args.task_name), model_args.paradigm),
-                 f"{model_name_or_path}-{model_args.aggregation}"))
+output_dir = Path(training_args.output_dir, training_args.task_name, model_args.paradigm,
+                  f"{model_name_or_path}-{model_args.aggregation}")
 output_dir.mkdir(exist_ok=True, parents=True)
 training_args.output_dir = output_dir
 
