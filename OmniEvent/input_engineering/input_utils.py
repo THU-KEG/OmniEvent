@@ -214,12 +214,13 @@ def get_eae_candidates(item, trigger):
     positive_mentions = set()
     positive_offsets = []
     label_names = []
-    for argument in trigger["arguments"]:
-        for mention in argument["mentions"]:
-            label_names.append(argument["role"])
-            candidates.append(mention)
-            positive_mentions.add(mention["mention_id"])
-            positive_offsets.append(mention["position"])
+    if "arguments" in trigger:
+        for argument in trigger["arguments"]:
+            for mention in argument["mentions"]:
+                label_names.append(argument["role"])
+                candidates.append(mention)
+                positive_mentions.add(mention["mention_id"])
+                positive_offsets.append(mention["position"])
 
     if "entities" in item:
         for entity in item["entities"]:

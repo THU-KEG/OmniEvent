@@ -4,19 +4,22 @@ import sys
 sys.path.append("../../")
 import logging
 
-import numpy as np
+import json
 
 from transformers import set_seed, EarlyStoppingCallback
 
 from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
 from OmniEvent.backbone.backbone import get_backbone
-from OmniEvent.input_engineering.seq2seq_processor import EAESeq2SeqProcessor, type_start, type_end
 from OmniEvent.model.model import get_model
+
+from OmniEvent.input_engineering.input_utils import get_plain_label
+from OmniEvent.input_engineering.seq2seq_processor import EAESeq2SeqProcessor, type_start, type_end
+
 from OmniEvent.evaluation.metric import compute_seq_F1
 from OmniEvent.evaluation.dump_result import get_duee_submission_s2s
 from OmniEvent.evaluation.convert_format import get_ace2005_argument_extraction_s2s
 
-from OmniEvent.evaluation.utils import predict
+from OmniEvent.evaluation.utils import predict, get_pred_s2s
 
 from OmniEvent.trainer_seq2seq import Seq2SeqTrainer, ConstrainedSeq2SeqTrainer
 
@@ -25,8 +28,8 @@ from OmniEvent.trainer_seq2seq import Seq2SeqTrainer, ConstrainedSeq2SeqTrainer
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) >= 2 and sys.argv[2].endswith(".yaml"):
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[2]))
+elif len(sys.argv) >= 2 and sys.argv[-1].endswith(".yaml"):
+    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[-1]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -44,6 +47,16 @@ logging.basicConfig(
     datefmt="%m/%d/%Y %H:%M:%S",
     level=logging.INFO,
 )
+
+# prepare labels
+role2id_path = data_args.role2id_path
+data_args.role2id = {get_plain_label(k): v for k, v in json.load(open(role2id_path)).items()}
+training_args.label_name = ["labels"]
+
+# used for evaluation
+training_args.role2id = data_args.role2id
+data_args.id2role = {id: role for role, id in data_args.role2id.items()}
+
 
 # markers 
 dataset_markers = ["<ace>", "<duee>", "<fewfc>", "<kbp>", "<ere>", "<maven>", "<leven>"]
@@ -95,19 +108,18 @@ if training_args.do_train:
     trainer.train()
 
 if training_args.do_predict:
-    eval_mode = data_args.eae_eval_mode
-    use_gold = data_args.golden_trigger
     logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                     data_args=data_args, data_file=data_args.test_file,
                                                     training_args=training_args)
-    preds = np.argmax(logits, axis=-1)
+    preds = get_pred_s2s(logits, tokenizer, pred_types=training_args.data_for_evaluation["pred_types"])
 
     logging.info("\n")
-    logging.info("{}-Evaluate Mode: {}, Golden Trigger: {}-{}".format("-" * 25, eval_mode, use_gold, "-" * 25))
+    logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
+    logging.info("{}-Use Golden Trigger: {}-{}".format("-" * 25, data_args.golden_trigger, "-" * 25))
 
     if data_args.test_exists_labels:
         logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
-        get_ace2005_argument_extraction_s2s(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+        get_ace2005_argument_extraction_s2s(preds, labels, data_args.test_file, data_args, None)
     else:
         # save name
         aggregation = model_args.aggregation

@@ -47,7 +47,7 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
     logger.info("ED {} preds dumped to {}\n ED finished!".format(mode, save_path))
 
 
-def get_pred_s2s(logits, tokenizer):
+def get_pred_s2s(logits, tokenizer, pred_types=None):
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
 
     def clean_str(x_str):
@@ -58,7 +58,8 @@ def get_pred_s2s(logits, tokenizer):
     preds = list()
     for i, pred in enumerate(decoded_preds):
         pred = clean_str(pred)
-        arguments = extract_argument(pred, i, "NA")
+        pred_type = pred_types[i] if pred_types else "NA"
+        arguments = extract_argument(pred, i, pred_type)
         tmp = dict()
         for arg in arguments:
             tmp[arg[-1]] = arg[-2]

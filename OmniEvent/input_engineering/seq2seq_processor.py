@@ -95,10 +95,7 @@ class EDSeq2SeqProcessor(EDDataProcessor):
                         type = get_plain_label(event["type"])
                         for trigger in event["triggers"]:
                             labels.append(f"{type_start} {type}{split_word} {trigger['trigger_word']} {type_end}")
-                    if len(labels) != 0:
-                        labels = "".join(labels)
-                    else:  # no arguments for the trigger
-                        labels = ""
+                    labels = "".join(labels)
 
                     example = EDInputExample(
                         example_id=idx,
@@ -182,40 +179,34 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
 
                 text = item["text"]
                 words = get_words(text=text, language=language)
-                whitespace = " " if language == "English" else ""
 
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_event_type = event["type"]
-                            else:
-                                pred_event_type = self.event_preds[trigger_idx]
+                            pred_type = self.get_single_pred(trigger_idx, input_file, true_type=event["type"])
+                            pred_type = get_plain_label(pred_type)
                             trigger_idx += 1
 
                             # Evaluation mode for EAE
                             # If the predicted event type is NA, We don't consider the trigger
-                            if self.config.eae_eval_mode in ["default", "loose"] and pred_event_type == "NA":
+                            if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
 
                             labels = []
                             arguments_per_trigger = defaultdict(list)
                             for argument in trigger["arguments"]:
-                                role = argument["role"]
+                                role = get_plain_label(argument["role"])
                                 for mention in argument["mentions"]:
-                                    arguments_per_trigger[argument["role"]].append(mention["mention"])
-                                    labels.append(
-                                        f"{type_start}{whitespace}{role}{split_word}{whitespace}{mention['mention']}{whitespace}{type_end}")
-                            if len(labels) != 0:
-                                labels = "".join(labels)
-                            else:  # no arguments for the trigger
-                                labels = ""
+                                    arguments_per_trigger[role].append(mention["mention"])
+                                    labels.append(f"{type_start} {role}{split_word} {mention['mention']} {type_end}")
+                            labels = "".join(labels)
+
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=trigger_idx - 1,
                                 text=words,
-                                pred_type=pred_event_type,
-                                true_type=event["type"],
+                                pred_type=pred_type,
+                                true_type=get_plain_label(event["type"]),
                                 trigger_left=trigger["position"][0],
                                 trigger_right=trigger["position"][1],
                                 labels=labels,
@@ -224,27 +215,24 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             self.examples.append(example)
                     # negative triggers 
                     for neg_trigger in item["negative_triggers"]:
-                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                            pred_event_type = event["type"]
-                        else:
-                            pred_event_type = self.event_preds[trigger_idx]
+                        pred_type = self.get_single_pred(trigger_idx, input_file, true_type="NA")
+                        pred_type = get_plain_label(pred_type)
                         trigger_idx += 1
 
                         if self.config.eae_eval_mode == "loose":
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
-                            if pred_event_type != "NA":
-                                labels = ""
+                            if pred_type != "NA":
                                 arguments_per_trigger = {}
                                 self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                                 example = EAEInputExample(
                                     example_id=trigger_idx - 1,
                                     text=words,
-                                    pred_type=pred_event_type,
+                                    pred_type=pred_type,
                                     true_type="NA",
                                     trigger_left=neg_trigger["position"][0],
                                     trigger_right=neg_trigger["position"][1],
-                                    labels=labels,
+                                    labels="",
                                     **kwargs,
                                 )
                                 self.examples.append(example)
@@ -252,30 +240,28 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                             raise ValueError("Invaild eac_eval_mode: %s" % self.config.eae_eval_mode)
                 else:
                     for candi in item["candidates"]:
-                        pred_event_type = self.event_preds[trigger_idx]
+                        pred_type = self.event_preds[trigger_idx]
+                        pred_type = get_plain_label(pred_type)
                         trigger_idx += 1
-                        if pred_event_type != "NA":
-                            labels = ""
-                            # labels = f"{type_start}{type_end}"
+                        if pred_type != "NA":
                             arguments_per_trigger = {}
                             self.data_for_evaluation["golden_arguments"].append(dict(arguments_per_trigger))
                             example = EAEInputExample(
                                 example_id=trigger_idx - 1,
                                 text=words,
-                                pred_type=pred_event_type,
+                                pred_type=pred_type,
                                 true_type="NA",  # true type not given, set to NA.
                                 trigger_left=candi["position"][0],
                                 trigger_right=candi["position"][1],
-                                labels=labels,
+                                labels="",
                                 **kwargs,
                             )
                             self.examples.append(example)
             if self.event_preds is not None:
                 assert trigger_idx == len(self.event_preds)
 
-
-    def insert_marker(self,
-                      tokens: List[str],
+    @staticmethod
+    def insert_marker(tokens: List[str],
                       trigger_pos: List[int],
                       markers: List,
                       whitespace: Optional[bool] = True) -> List[str]:

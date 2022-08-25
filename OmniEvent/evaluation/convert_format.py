@@ -328,15 +328,12 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
         lines = f.readlines()
         for line in lines:
             item = json.loads(line.strip())
-            # preds per index 
-            preds_per_idx = []
-            for pred in preds:
-                if pred[-1] == trigger_idx:
-                    preds_per_idx.append(pred)
+            # preds per index
+            preds_per_idx = preds[eae_instance_idx]
 
             for event in item["events"]:
                 for trigger in event["triggers"]:
-                    true_type = event["type"]
+                    true_type = get_plain_label(event["type"])
                     pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
                     trigger_idx += 1
 
@@ -346,19 +343,20 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
 
                     # get candidates 
                     candidates, labels_per_idx = get_eae_candidates(item, trigger)
+                    for i, label in enumerate(labels_per_idx):
+                        labels_per_idx[i] = get_plain_label(label)
                     all_labels.extend(labels_per_idx)
 
                     # loop for converting
                     for candidate in candidates:
-                        # get word positions
+                        # get candidate word
                         char_pos = candidate["position"]
-
-                        # get predictions
-                        candidate_mention = item["text"][char_pos[0]:char_pos[1]]
+                        word = item["text"][char_pos[0]:char_pos[1]]
                         pred_type = "NA"
-                        for pred in preds_per_idx:
-                            if pred[-1] == candidate_mention:
-                                pred_type = pred[-2]
+
+                        if word in preds_per_idx and preds_per_idx[word] in data_args.role2id:
+                            pred_type = preds_per_idx[word]
+
                         # record results
                         results.append(pred_type)
                     eae_instance_idx += 1
@@ -371,21 +369,24 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
 
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
-                        candidates = []
-                        for neg in item["negative_triggers"]:
-                            candidates.append(neg)
+                        # get candidates
+                        candidates, labels_per_idx = get_eae_candidates(item, trigger)
+                        for i, label in enumerate(labels_per_idx):
+                            labels_per_idx[i] = get_plain_label(label)
+                        all_labels.extend(labels_per_idx)
+                        # candidates = []
+                        # for neg in item["negative_triggers"]:
+                        #     candidates.append(neg)
 
                         # loop for converting
                         for candidate in candidates:
-                            # get word positions
+                            # get candidate word
                             char_pos = candidate["position"]
+                            word = item["text"][char_pos[0]:char_pos[1]]
 
-                            # get predictions
-                            candidate_mention = item["text"][char_pos[0]:char_pos[1]]
                             pred_type = "NA"
-                            for pred in preds_per_idx:
-                                if pred[-1] == candidate_mention:
-                                    pred_type = pred[-2]
+                            if word in preds_per_idx and preds_per_idx[word] in data_args.role2id:
+                                pred_type = preds_per_idx[word]
                             # record results
                             results.append(pred_type)
 
@@ -397,6 +398,6 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
     pos_labels.remove("NA")
     micro_f1 = f1_score(all_labels, results, labels=pos_labels, average="micro") * 100.0
 
-    logger.info("Number of Instances: {}".format(eval_mode, eae_instance_idx))
+    logger.info("Number of Instances: {}".format(eae_instance_idx))
     logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
     return results

@@ -49,14 +49,11 @@ logging.basicConfig(
 )
 
 # prepare labels
-role2id_path = data_args.role2id_path
-data_args.role2id = json.load(open(role2id_path))
+data_args.role2id = json.load(open(data_args.role2id_path))
+data_args.role2id = get_bio_labels(data_args.role2id)
 model_args.num_labels = len(data_args.role2id)
-training_args.label_name = ["labels"]
 
-if model_args.paradigm == "sequence_labeling":
-    data_args.role2id = get_bio_labels(data_args.role2id)
-    model_args.num_labels = len(data_args.role2id)
+training_args.label_name = ["labels"]
 
 # used for evaluation
 training_args.role2id = data_args.role2id 
