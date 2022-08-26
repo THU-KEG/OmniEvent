@@ -257,8 +257,9 @@ class EAESeq2SeqProcessor(EAEDataProcessor):
                                 **kwargs,
                             )
                             self.examples.append(example)
-            if self.event_preds is not None:
+            if self.event_preds is not None and not self.config.golden_trigger:
                 assert trigger_idx == len(self.event_preds)
+            print('there are {} examples'.format(len(self.examples)))
 
     @staticmethod
     def insert_marker(tokens: List[str],

@@ -328,8 +328,6 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
         lines = f.readlines()
         for line in lines:
             item = json.loads(line.strip())
-            # preds per index
-            preds_per_idx = preds[eae_instance_idx]
 
             for event in item["events"]:
                 for trigger in event["triggers"]:
@@ -341,6 +339,8 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                         if pred_type == "NA":
                             continue
 
+                    # preds per index
+                    preds_per_idx = preds[eae_instance_idx]
                     # get candidates 
                     candidates, labels_per_idx = get_eae_candidates(item, trigger)
                     for i, label in enumerate(labels_per_idx):
@@ -369,14 +369,14 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
 
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
+                        # preds per index
+                        preds_per_idx = preds[eae_instance_idx]
+
                         # get candidates
                         candidates, labels_per_idx = get_eae_candidates(item, trigger)
                         for i, label in enumerate(labels_per_idx):
                             labels_per_idx[i] = get_plain_label(label)
                         all_labels.extend(labels_per_idx)
-                        # candidates = []
-                        # for neg in item["negative_triggers"]:
-                        #     candidates.append(neg)
 
                         # loop for converting
                         for candidate in candidates:
