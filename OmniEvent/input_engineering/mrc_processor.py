@@ -51,23 +51,20 @@ class EAEMRCProcessor(EAEDataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                                pred_event_type = event["type"]
-                            else:
-                                pred_event_type = self.event_preds[trigger_idx]
+                            pred_type = self.get_single_pred(trigger_idx, input_file, true_type=event["type"])
                             trigger_idx += 1
 
                             # Evaluation mode for EAE
                             # If predicted event type is NA:
                             #   in [default] and [loose] modes, we don't consider the trigger
                             #   in [strict] mode, we consider the trigger
-                            if self.config.eae_eval_mode in ["default", "loose"] and pred_event_type == "NA":
+                            if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
 
                             # golden label for the trigger
                             arguments_per_trigger = dict(id=trigger_idx-1,
                                                          arguments=[],
-                                                         pred_type=pred_event_type,
+                                                         pred_type=pred_type,
                                                          true_type=event["type"])
                             for argument in trigger["arguments"]:
                                 arguments_per_role = dict(role=argument["role"], mentions=[])
@@ -81,7 +78,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 arguments_per_trigger["arguments"].append(arguments_per_role)
                             self.data_for_evaluation["golden_arguments"].append(arguments_per_trigger)
 
-                            if pred_event_type == "NA":
+                            if pred_type == "NA":
                                 assert self.config.eae_eval_mode == "strict"
                                 # in strict mode, we add the gold args for the trigger but do not make predictions
                                 continue
@@ -90,16 +87,16 @@ class EAEMRCProcessor(EAEDataProcessor):
                                                                                  trigger=trigger,
                                                                                  language=self.config.language)
 
-                            for role in query_templates[pred_event_type].keys():
-                                query = query_templates[pred_event_type][role][template_id]
+                            for role in query_templates[pred_type].keys():
+                                query = query_templates[pred_type][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(trigger["trigger_word"])[0])
                                 query = get_words(text=query, language=self.config.language)
                                 if self.is_training:
                                     no_answer = True
                                     for argument in trigger["arguments"]:
-                                        if argument["role"] not in query_templates[pred_event_type]:
+                                        if argument["role"] not in query_templates[pred_type]:
                                             logger.warning(
-                                                "No template for %s in %s" % (argument["role"], pred_event_type))
+                                                "No template for %s in %s" % (argument["role"], pred_type))
                                             pass
                                         if argument["role"] != role:
                                             continue
@@ -111,7 +108,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             example = EAEInputExample(
                                                 example_id=trigger_idx-1,
                                                 text=words,
-                                                pred_type=pred_event_type,
+                                                pred_type=pred_type,
                                                 true_type=event["type"],
                                                 input_template=query,
                                                 trigger_left=trigger_left,
@@ -125,7 +122,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         example = EAEInputExample(
                                             example_id=trigger_idx-1,
                                             text=words,
-                                            pred_type=pred_event_type,
+                                            pred_type=pred_type,
                                             true_type=event["type"],
                                             input_template=query,
                                             trigger_left=trigger_left,
@@ -140,7 +137,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     example = EAEInputExample(
                                         example_id=trigger_idx-1,
                                         text=words,
-                                        pred_type=pred_event_type,
+                                        pred_type=pred_type,
                                         true_type=event["type"],
                                         input_template=query,
                                         trigger_left=trigger_left,
@@ -152,22 +149,19 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     self.examples.append(example)
                     # negative triggers
                     for neg_trigger in item["negative_triggers"]:
-                        if self.is_training or self.config.golden_trigger or self.event_preds is None:
-                            pred_event_type = "NA"
-                        else:
-                            pred_event_type = self.event_preds[trigger_idx]
-
+                        pred_type = self.get_single_pred(trigger_idx, input_file, true_type="NA")
                         trigger_idx += 1
+
                         if self.config.eae_eval_mode == "loose":
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
-                            if pred_event_type == "NA":
+                            if pred_type == "NA":
                                 continue
                             trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
                                                                                  trigger=neg_trigger,
                                                                                  language=self.config.language)
-                            for role in query_templates[pred_event_type].keys():
-                                query = query_templates[pred_event_type][role][template_id]
+                            for role in query_templates[pred_type].keys():
+                                query = query_templates[pred_type][role][template_id]
                                 query = query.replace("[trigger]",
                                                       self.tokenizer.tokenize(neg_trigger["trigger_word"])[0])
                                 query = get_words(text=query, language=self.config.language)
@@ -175,7 +169,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 example = EAEInputExample(
                                     example_id=trigger_idx-1,
                                     text=words,
-                                    pred_type=pred_event_type,
+                                    pred_type=pred_type,
                                     true_type="NA",
                                     input_template=query,
                                     trigger_left=trigger_left,
@@ -193,18 +187,18 @@ class EAEMRCProcessor(EAEDataProcessor):
                         trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
                                                                              trigger=candi,
                                                                              language=self.config.language)
-                        pred_event_type = self.event_preds[trigger_idx]
+                        pred_type = self.event_preds[trigger_idx]
                         trigger_idx += 1
-                        if pred_event_type != "NA":
-                            for role in query_templates[pred_event_type].keys():
-                                query = query_templates[pred_event_type][role][template_id]
+                        if pred_type != "NA":
+                            for role in query_templates[pred_type].keys():
+                                query = query_templates[pred_type][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(candi["trigger_word"])[0])
                                 query = get_words(text=query, language=self.config.language)
                                 # one instance per query
                                 example = EAEInputExample(
                                     example_id=trigger_idx-1,
                                     text=words,
-                                    pred_type=pred_event_type,
+                                    pred_type=pred_type,
                                     true_type="NA",
                                     input_template=query,
                                     trigger_left=trigger_left,
@@ -266,7 +260,7 @@ class EAEMRCProcessor(EAEDataProcessor):
             self.input_features.append(features)
 
     @staticmethod
-    def remove_sub_word(inputs):
+    def remove_sub_word(tokenizer, inputs, word_list):
         """Removes the annotations whose word is a sub-word."""
         outputs = defaultdict(list)
         pre_word_id = -1

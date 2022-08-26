@@ -17,7 +17,7 @@ train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
 # event detection predictions
-golden_trigger: False
+golden_trigger: True
 train_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/train_preds.json
 validation_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/valid_preds.json
 test_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/test_preds.json
@@ -34,7 +34,8 @@ truncate_seq2seq_output: True
 model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: none 
+aggregation: none
+head_type: mrc
 
 # training config #
 num_train_epochs: 6

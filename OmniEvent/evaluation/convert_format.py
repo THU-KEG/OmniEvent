@@ -235,8 +235,9 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                         # get predictions
                         pred_type = "NA"
                         for pred in preds_per_idx:
-                            if pred[1] == (left_pos, right_pos):
-                                pred_type = pred[0].split("_")[0]
+                            if pred[1] == (left_pos, right_pos-1):
+                                pred_type = pred[0].split("_")[-1]
+
                         # record results
                         results.append(pred_type)
                     eae_instance_idx += 1
@@ -249,9 +250,9 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
-                        candidates = []
-                        for neg in item["negative_triggers"]:
-                            candidates.append(neg)
+                        # get candidates
+                        candidates, labels_per_idx = get_eae_candidates(item, trigger)
+                        all_labels.extend(labels_per_idx)
 
                         # loop for converting
                         for candidate in candidates:
@@ -261,14 +262,14 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                             # get predictions
                             pred_type = "NA"
                             for pred in preds_per_idx:
-                                if pred[1] == (left_pos, right_pos):
-                                    pred_type = pred[0].split("_")[0]
+                                if pred[1] == (left_pos, right_pos-1):
+                                    pred_type = pred[0].split("_")[-1]
                             # record results
                             results.append(pred_type)
 
                         eae_instance_idx += 1
 
-        assert len(preds) == eae_instance_idx
+        # assert len(preds) == eae_instance_idx
         
     pos_labels = list(data_args.role2id.keys())
     pos_labels.remove("NA")

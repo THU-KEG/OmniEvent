@@ -1,7 +1,7 @@
 seed: 42
 do_train: True
 do_predict: True
-do_ED_infer: False
+do_ED_infer: True
 
 paradigm: sequence_labeling
 
