@@ -3,10 +3,9 @@ import json
 import logging
 
 from .whitespace_tokenizer import WordLevelTokenizer
+from typing import Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
-
-from typing import Dict, List, Optional, Union
 
 
 def get_bio_labels(original_labels: List[str],
@@ -168,7 +167,7 @@ def get_word_ids(tokenizer, outputs, word_list):
     tokens = tokenizer.convert_ids_to_tokens(outputs["input_ids"])
     word_ids = []
     word_idx = 0
-    # import pdb; pdb.set_trace()
+
     for token in tokens:
         if token not in word_list and token != "[UNK]":
             word_ids.append(None)
@@ -186,7 +185,7 @@ def check_pred_len(pred, item, language):
             logger.warning("There might be special tokens in the input text: {}".format(item["text"]))
 
     elif language == "Chinese":
-        if len(pred) != len("".join(item["text"].split())): # remove space token
+        if len(pred) != len("".join(item["text"].split())):  # remove space token
             logger.warning("There might be special tokens in the input text: {}".format(item["text"]))
     else:
         raise NotImplementedError

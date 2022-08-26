@@ -1,12 +1,9 @@
-
 import os
 import torch
 import torch.nn as nn
 
-from typing import Tuple, Dict, Optional, Union
-
+from typing import Dict, Optional, Union
 from transformers import BartForConditionalGeneration, MT5ForConditionalGeneration, T5ForConditionalGeneration
-
 
 from OmniEvent.aggregation.aggregation import get_aggregation, aggregate
 from OmniEvent.head.head import get_head
@@ -82,7 +79,6 @@ class BaseModel(nn.Module):
         return model
 
 
-
 class ModelForTokenClassification(BaseModel):
     """BERT model for token classification.
 
@@ -111,7 +107,6 @@ class ModelForTokenClassification(BaseModel):
         self.backbone = backbone
         self.aggregation = get_aggregation(config)
         self.cls_head = get_head(config)
-
 
     def forward(self,
                 input_ids: torch.Tensor,
@@ -173,7 +168,6 @@ class ModelForSequenceLabeling(BaseModel):
         self.backbone = backbone
         self.cls_head = LinearHead(config)
         self.head = get_head(config)
-
 
     def forward(self,
                 input_ids: torch.Tensor,
@@ -272,5 +266,5 @@ class ModelForMRC(BaseModel):
             end_loss = loss_fct(end_logits, argument_right)
             total_loss = (start_loss + end_loss) / 2
 
-        logits = torch.cat((start_logits, end_logits), dim=-1) # [batch_size, seq_length*2]
+        logits = torch.cat((start_logits, end_logits), dim=-1)  # [batch_size, seq_length*2]
         return dict(loss=total_loss, logits=logits)

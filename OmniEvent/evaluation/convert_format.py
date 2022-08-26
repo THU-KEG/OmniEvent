@@ -1,13 +1,9 @@
+import json
 import logging
-import os 
-import pdb
 import numpy as np
-import json 
-from collections import defaultdict
+
 from typing import List, Union
-
 from sklearn.metrics import f1_score
-
 from .metric import select_start_position, compute_unified_micro_f1
 from .dump_result import get_pred_per_mention
 from ..input_engineering.input_utils import (

@@ -44,10 +44,12 @@ class EAEMRCProcessor(EAEDataProcessor):
         query_templates = read_query_templates(self.config.prompt_file,
                                                translate=self.config.dataset_name == "ACE2005-ZH")
         template_id = self.config.mrc_template_id
+        language = self.config.language
         with open(input_file, "r", encoding="utf-8") as f:
             for idx, line in enumerate(tqdm(f.readlines(), desc="Reading from %s" % input_file)):
                 item = json.loads(line.strip())
-                words = get_words(text=item["text"], language=self.config.language)
+                text = item["text"]
+                words = get_words(text=text, language=language)
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
@@ -69,9 +71,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                             for argument in trigger["arguments"]:
                                 arguments_per_role = dict(role=argument["role"], mentions=[])
                                 for mention in argument["mentions"]:
-                                    left_pos, right_pos = get_left_and_right_pos(text=item["text"],
-                                                                                 trigger=mention,
-                                                                                 language=self.config.language)
+                                    left_pos, right_pos = get_left_and_right_pos(text, mention, language)
                                     arguments_per_role["mentions"].append({
                                         "position": [left_pos, right_pos - 1]
                                     })
@@ -83,14 +83,12 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 # in strict mode, we add the gold args for the trigger but do not make predictions
                                 continue
 
-                            trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
-                                                                                 trigger=trigger,
-                                                                                 language=self.config.language)
+                            trigger_left, trigger_right = get_left_and_right_pos(text, trigger, language)
 
                             for role in query_templates[pred_type].keys():
                                 query = query_templates[pred_type][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(trigger["trigger_word"])[0])
-                                query = get_words(text=query, language=self.config.language)
+                                query = get_words(text=query, language=language)
                                 if self.is_training:
                                     no_answer = True
                                     for argument in trigger["arguments"]:
@@ -102,9 +100,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             continue
                                         no_answer = False
                                         for mention in argument["mentions"]:
-                                            left_pos, right_pos = get_left_and_right_pos(text=item["text"],
-                                                                                         trigger=mention,
-                                                                                         language=self.config.language)
+                                            left_pos, right_pos = get_left_and_right_pos(text, mention, language)
                                             example = EAEInputExample(
                                                 example_id=trigger_idx-1,
                                                 text=words,
@@ -157,9 +153,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                         elif self.config.eae_eval_mode in ["default", "strict"]:
                             if pred_type == "NA":
                                 continue
-                            trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
-                                                                                 trigger=neg_trigger,
-                                                                                 language=self.config.language)
+                            trigger_left, trigger_right = get_left_and_right_pos(text, neg_trigger, language)
+
                             for role in query_templates[pred_type].keys():
                                 query = query_templates[pred_type][role][template_id]
                                 query = query.replace("[trigger]",
@@ -184,16 +179,15 @@ class EAEMRCProcessor(EAEDataProcessor):
                             raise ValueError("Invalid eae_eval_mode: %s" % self.config.eae_eval_mode)
                 else:
                     for candi in item["candidates"]:
-                        trigger_left, trigger_right = get_left_and_right_pos(text=item["text"],
-                                                                             trigger=candi,
-                                                                             language=self.config.language)
+                        trigger_left, trigger_right = get_left_and_right_pos(text, candi, language)
+
                         pred_type = self.event_preds[trigger_idx]
                         trigger_idx += 1
                         if pred_type != "NA":
                             for role in query_templates[pred_type].keys():
                                 query = query_templates[pred_type][role][template_id]
                                 query = query.replace("[trigger]", self.tokenizer.tokenize(candi["trigger_word"])[0])
-                                query = get_words(text=query, language=self.config.language)
+                                query = get_words(text=query, language=language)
                                 # one instance per query
                                 example = EAEInputExample(
                                     example_id=trigger_idx-1,
@@ -255,7 +249,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                 attention_mask=attention_mask,
                 token_type_ids=token_type_ids,
                 argument_left=start_position,
-                argument_right=end_position
+                argument_right=end_position,
             )
             self.input_features.append(features)
 

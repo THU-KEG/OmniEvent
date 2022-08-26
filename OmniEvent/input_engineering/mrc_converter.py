@@ -1,9 +1,8 @@
 import collections
 import logging
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
-
-from typing import Dict, List, Optional
 
 
 def read_query_templates(prompt_file: str,
@@ -172,7 +171,8 @@ def make_predictions(all_start_logits, all_end_logits, training_args):
         predictions_per_query = []
         for _, pred in enumerate(prelim_predictions[:max_num_pred_per_arg]):
             na_prob = (start_logits[0] + end_logits[0]) - (pred.start_logit + pred.end_logit)
-            predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob, data_for_evaluation["ids"][example_id]))
+            predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob,
+                                          data_for_evaluation["ids"][example_id]))
         final_all_predictions.extend(predictions_per_query)
 
     logger.info("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
@@ -231,7 +231,6 @@ def compute_mrc_F1_cls(all_predictions, all_labels):
         if argument[-2] < best_na_thresh:
             final_new_preds.append(argument[:-2] + argument[-1:])  # no na_prob
 
-    # pdb.set_trace()
     # get results (classification)
     gold_arg_n, pred_arg_n, pred_in_gold_n, gold_in_pred_n = 0, 0, 0, 0
     # pred_arg_n
