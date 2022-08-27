@@ -30,7 +30,7 @@ aggregation: marker
 head_scale: 2
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 5
 max_seq_length: 256
 max_out_length: 256
 dataloader_num_workers: 2

@@ -112,23 +112,19 @@ trainer.train()
 
 
 if training_args.do_predict:
-    logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
-                                                    data_args=data_args, data_file=data_args.test_file,
-                                                    training_args=training_args)
-    preds = np.argmax(logits, axis=-1)
+    for gold, mode in [(True, 'default'), (False, 'default'), (False, 'loose'), (False, 'strict')]:
+        data_args.golden_trigger = gold
+        data_args.eae_eval_mode = mode
 
-    logging.info("\n")
-    logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
-    logging.info("{}-Use Golden Trigger: {}-{}".format("-" * 25, data_args.golden_trigger, "-" * 25))
+        logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                                        data_args=data_args, data_file=data_args.test_file,
+                                                        training_args=training_args)
+        preds = np.argmax(logits, axis=-1)
 
-    if data_args.test_exists_labels:
-        logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
-        get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
-    else:
-        # save name
-        aggregation = model_args.aggregation
-        save_path = os.path.join(training_args.output_dir, f"{model_name_or_path}-{aggregation}.jsonl")
+        logging.info("\n")
+        logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
+        logging.info("{}-Use Golden Trigger: {}-{}".format("-" * 25, data_args.golden_trigger, "-" * 25))
 
-        if data_args.dataset_name == "DuEE1.0":
-            logging.info("Start to get DuEE Submission"+"-"*25)
-            get_duee_submission_sl(preds, labels, test_dataset.is_overflow, save_path, data_args)
+        if data_args.test_exists_labels:
+            logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
+            get_ace2005_argument_extraction_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)

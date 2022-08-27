@@ -155,7 +155,7 @@ def get_ace2005_argument_extraction_sl(preds: Union[np.array, List[str]],
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
                         if not is_overflow[eae_instance_idx]:
-                            check_pred_len(pred=preds[eae_instance_idx], item=item)
+                            check_pred_len(pred=preds[eae_instance_idx], item=item, language=language)
 
                         candidates = []
                         for neg in item["negative_triggers"]:

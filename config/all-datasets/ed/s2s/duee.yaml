@@ -61,5 +61,5 @@ save_strategy: epoch
 save_steps: 500
 
 # split inference #
-split_infer: False 
-split_infer_size: 500
+split_infer: True
+split_infer_size: 2000

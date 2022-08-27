@@ -7,7 +7,7 @@ import random
 import jsonlines
 
 from tqdm import tqdm
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 random.seed(42)
 

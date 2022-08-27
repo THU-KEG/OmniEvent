@@ -107,11 +107,14 @@ trainer.train()
 
 
 if training_args.do_predict:
-    logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
-                                                    data_args=data_args, data_file=data_args.test_file,
-                                                    training_args=training_args)
-    logging.info("\n")
-    logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
-    logging.info("{}-Use Golden Trigger: {}-{}".format("-" * 25, data_args.golden_trigger, "-" * 25))
-    logging.info("{} test performance: {}".format(data_args.dataset_name, metrics))
+    for gold, mode in [(True, 'default'), (False, 'default'), (False, 'loose'), (False, 'strict')]:
+        data_args.golden_trigger = gold
+        data_args.eae_eval_mode = mode
+        logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+                                                        data_args=data_args, data_file=data_args.test_file,
+                                                        training_args=training_args)
+        logging.info("\n")
+        logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
+        logging.info("{}-Use Golden Trigger: {}-{}".format("-" * 25, data_args.golden_trigger, "-" * 25))
+        logging.info("{} test performance: {}".format(data_args.dataset_name, metrics))
 

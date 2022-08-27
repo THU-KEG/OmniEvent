@@ -129,5 +129,5 @@ if training_args.do_predict:
 
 
 if training_args.do_ED_infer:
-    for mode in ["train", "valid", "test"]:
+    for mode in ["valid", "test"]:
         dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args, training_args, mode=mode)
