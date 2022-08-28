@@ -4,8 +4,7 @@ import dataclasses
 
 from pathlib import Path 
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
-from argparse import Namespace
+from typing import Optional
 from transformers import TrainingArguments, HfArgumentParser
 
 from .utils import check_web_and_convert_path
@@ -36,13 +35,16 @@ class DataArguments:
         default=None, metadata={"help": "A jsonl file containing the test data."}
     )
     train_pred_file: Optional[str] = field(
-        default=None, metadata={"help": "A jsonl file containing the predicted event triggers for training data. (Only meaningful for EAE)"}
+        default=None, metadata={
+            "help": "A jsonl file containing the predicted event triggers for training data. (Only meaningful for EAE)"}
     )
     validation_pred_file: Optional[str] = field(
-        default=None, metadata={"help": "A jsonl file containing the predicted event triggers for validation data. (Only meaningful for EAE)"}
+        default=None, metadata={
+            "help": "A jsonl file containing the predicted event triggers for valid data. (Only meaningful for EAE)"}
     )
     test_pred_file: Optional[str] = field(
-        default=None, metadata={"help": "A jsonl file containing the predicted event triggers test data. (Only meaningful for EAE)"}
+        default=None, metadata={
+            "help": "A jsonl file containing the predicted event triggers test data. (Only meaningful for EAE)"}
     )
     template_file: Optional[str] = field(
         default=None, metadata={"help": "Path to template file. (Only meaningful for mrc paradigm)"}
@@ -95,7 +97,7 @@ class DataArguments:
         }
     )
     truncate_in_batch: bool = field(
-        default=True, 
+        default=False,
         metadata={
             "help": "whether truncate in batch. False only if mrc."
         }
@@ -286,7 +288,7 @@ class TrainingArguments(TrainingArguments):
     pipeline: bool = field(
         default=False,
         metadata={
-            "help": "Model parallerism."
+            "help": "Model parallelism."
         }
     )
 

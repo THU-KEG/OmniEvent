@@ -123,7 +123,7 @@ if training_args.do_predict:
         elif data_args.dataset_name == "LEVEN":
             get_leven_submission_seq2seq(preds, save_path, data_args)
         else:
-            raise NotImplementedError
+            pass
 
         logging.info("{} submission file generated at {}".format(data_args.dataset_name, save_path))
 

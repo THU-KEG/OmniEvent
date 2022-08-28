@@ -19,7 +19,7 @@ test_file: ../../data/processed/MAVEN/test.unified.jsonl
 
 # config for data processor #
 return_token_type_ids: True
-truncate_in_batch: False
+truncate_in_batch: True
 truncate_seq2seq_output: False
 
 # model config #
