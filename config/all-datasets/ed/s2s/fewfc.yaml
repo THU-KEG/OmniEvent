@@ -18,7 +18,7 @@ validation_file: ../../data/processed/FewFC/dev_base.unified.json
 test_file: ../../data/processed/FewFC/test_base.unified.json
 
 # config for data processor #
-truncate_in_batch: True 
+truncate_in_batch: False
 return_token_type_ids: False 
 truncate_seq2seq_output: True 
 

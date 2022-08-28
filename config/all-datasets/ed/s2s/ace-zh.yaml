@@ -18,7 +18,7 @@ validation_file: ../../data/processed/ace2005-zh/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-zh/test.unified.jsonl
 
 # config for data processor #
-truncate_in_batch: True 
+truncate_in_batch: False
 return_token_type_ids: False 
 truncate_seq2seq_output: True 
 

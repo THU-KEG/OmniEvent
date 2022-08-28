@@ -6,16 +6,16 @@ do_ED_infer: True
 # top-level config #
 paradigm: token_classification
 task_name: ED
-dataset_name: ACE2005
+dataset_name: ACE2005-EN
 language: English
 test_exists_labels: True
 
 # file path # 
 output_dir: output/ACE2005-EN
-type2id_path: ../../data/processed/ace2005/label2id.json 
-train_file: ../../data/processed/ace2005/train.unified.jsonl
-validation_file: ../../data/processed/ace2005/valid.unified.jsonl
-test_file: ../../data/processed/ace2005/test.unified.jsonl
+type2id_path: ../../data/processed/ace2005-en/label2id.json
+train_file: ../../data/processed/ace2005-en/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-en/test.unified.jsonl
 
 # config for data processor #
 return_token_type_ids: True 

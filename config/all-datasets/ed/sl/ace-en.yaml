@@ -6,7 +6,7 @@ do_ED_infer: True
 # top-level config #
 paradigm: sequence_labeling
 task_name: ED
-dataset_name: ACE2005
+dataset_name: ACE2005-EN
 language: English
 test_exists_labels: True
 

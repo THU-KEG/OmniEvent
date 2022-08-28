@@ -5,7 +5,7 @@ do_predict: True
 # top-level config #
 paradigm: token_classification
 task_name: EAE
-dataset_name: ACE2005
+dataset_name: ACE2005-EN
 language: English
 test_exists_labels: True
 
