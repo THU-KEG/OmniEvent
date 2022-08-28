@@ -1,7 +1,27 @@
 # OmniEvent
 
 ## Overview
- 
+Event Extraction
+Event Extraction toolkit that provides comprehensive implementations of state-of-the-art methods 
+along with unified workflows of data processing and model evaluation. 
+
+### Features
+- **Comprehensive Implementations**
+  - All sub-tasks, Event Detection, Event Argument Extraction and Event Extraction, are considered.
+  - Various paradigms, [Token Classification](), Sequence Labeling, [MRC(QA)]() and [Seq2Seq](), are deployed.
+  - Transformers-based ([BERT](), [T5](), etc.) and classical models (CNN, LSTM, CRF, etc.) are implemented.
+  - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
+- **Unified Benchmark & Evaluation** 
+  - Different datasets for event detection and extraction are processed into a [unified format]().
+  - Predicted results of different paradigms are all converted into word level for comparable evaluation.
+- **Support Big Model Training & Inference**
+  - Efficient training and inference of big models for event extraction are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
+- **Easy to Use and Highly Extensible**
+  - Datasets can be downloaded (if open-sourced) and processed with a single command.
+  - OmniEvent is fully compatible with 🤗 [Transformers](https://github.com/huggingface/transformers) and adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer) for training and evaluation.
+  - Users can adopt existing models directly or adapt OmniEvent to build customized models at will.  
+
+
 
 ## Installation
 
