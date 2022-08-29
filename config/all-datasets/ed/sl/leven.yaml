@@ -19,7 +19,7 @@ test_file: ../../data/processed/LEVEN/test.unified.jsonl
 
 # config for data processor #
 return_token_type_ids: True
-truncate_in_batch: True
+truncate_in_batch: False
 truncate_seq2seq_output: False
 
 # model config #
@@ -36,9 +36,9 @@ dataloader_num_workers: 2
 
 per_device_train_batch_size: 8
 per_device_eval_batch_size: 8
-gradient_accumulation_steps: 2
+gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
-learning_rate: 5.0e-5
+learning_rate: 3.0e-5
 weight_decay: 1.0e-5
 warmup_ratio: 0.1
 max_grad_norm: 1
