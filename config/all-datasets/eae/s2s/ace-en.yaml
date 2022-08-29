@@ -11,11 +11,11 @@ test_exists_labels: True
 
 # file path #
 output_dir: output/ACE2005-EN
-type2id_path: ../../data/processed/ace2005/label2id.json
-role2id_path: ../../data/processed/ace2005/role2id.json
-train_file: ../../data/processed/ace2005/train.unified.jsonl
-validation_file: ../../data/processed/ace2005/valid.unified.jsonl
-test_file: ../../data/processed/ace2005/test.unified.jsonl
+type2id_path: ../../data/processed/ace2005-en/label2id.json
+role2id_path: ../../data/processed/ace2005-en/role2id.json
+train_file: ../../data/processed/ace2005-en/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-en/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
 train_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/train_preds.json
