@@ -208,9 +208,31 @@ def get_ed_candidates_per_item(item):
     return candidates, label_names
 
 
+def check_is_argument(mention=None, positive_offsets=None):
+    is_argument = False
+    if positive_offsets:
+        mention_set = set(range(mention["position"][0], mention["position"][1]))
+        for pos_offset in positive_offsets:
+            pos_set = set(range(pos_offset[0], pos_offset[1]))
+            if not pos_set.isdisjoint(mention_set):
+                is_argument = True
+                break
+    return is_argument
+
+
+def get_negative_argument_candidates(item, positive_offsets=None):
+    if "entities" in item:
+        neg_arg_candidates = []
+        for entity in item["entities"]:
+            ent_is_arg = any([check_is_argument(men, positive_offsets) for men in entity["mentions"]])
+            neg_arg_candidates.extend([] if ent_is_arg else entity["mentions"])
+    else:
+        neg_arg_candidates = item["negative_triggers"]
+    return neg_arg_candidates
+
+
 def get_eae_candidates(item, trigger):
     candidates = []
-    positive_mentions = set()
     positive_offsets = []
     label_names = []
     if "arguments" in trigger:
@@ -218,34 +240,13 @@ def get_eae_candidates(item, trigger):
             for mention in argument["mentions"]:
                 label_names.append(argument["role"])
                 candidates.append(mention)
-                positive_mentions.add(mention["mention_id"])
                 positive_offsets.append(mention["position"])
 
-    if "entities" in item:
-        for entity in item["entities"]:
-            # check whether the entity is an argument
-            is_argument = False
-            for mention in entity["mentions"]:
-                if mention["mention_id"] in positive_mentions:
-                    is_argument = True
-                    break
-            if is_argument:
-                continue
-            # negative arguments
-            for mention in entity["mentions"]:
-                label_names.append("NA")
-                candidates.append(mention)
-    else:
-        for neg in item["negative_triggers"]:
-            is_argument = False
-            neg_set = set(range(neg["position"][0], neg["position"][1]))
-            for pos_offset in positive_offsets:
-                pos_set = set(range(pos_offset[0], pos_offset[1]))
-                if not pos_set.isdisjoint(neg_set):
-                    is_argument = True
-                    break
-            if is_argument:
-                continue
+    neg_arg_candidates = get_negative_argument_candidates(item, positive_offsets=positive_offsets)
+
+    for neg in neg_arg_candidates:
+        is_argument = check_is_argument(neg, positive_offsets)
+        if not is_argument:
             label_names.append("NA")
             candidates.append(neg)
 

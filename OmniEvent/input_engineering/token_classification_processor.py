@@ -4,6 +4,7 @@ import logging
 from tqdm import tqdm
 from typing import List, Optional, Dict
 
+from .input_utils import check_is_argument, get_negative_argument_candidates
 from .base_processor import (
     EDDataProcessor,
     EDInputExample,
@@ -215,25 +216,11 @@ class EAETCProcessor(EAEDataProcessor):
                 marked_text += markers["argument"][1]
         return marked_text
 
-    @staticmethod
-    def check_is_argument(mention=None, positive_offsets=None):
-        is_argument = False
-        mention_set = set(range(mention["position"][0], mention["position"][1]))
-        for pos_offset in positive_offsets:
-            pos_set = set(range(pos_offset[0], pos_offset[1]))
-            if not pos_set.isdisjoint(mention_set):
-                is_argument = True
-                break
-        return is_argument
-
     def add_negative_arguments(self, item, trigger, pred_type, true_type, positive_offsets=None):
-        if "entities" in item:
-            neg_arg_candidates = [men for ent in item["entities"] for men in ent["mentions"]]
-        else:
-            neg_arg_candidates = item["negative_triggers"]
+        neg_arg_candidates = get_negative_argument_candidates(item, positive_offsets=positive_offsets)
 
         for mention in neg_arg_candidates:
-            is_argument = self.check_is_argument(mention, positive_offsets) if positive_offsets else False
+            is_argument = check_is_argument(mention, positive_offsets)
             if not is_argument:
                 # negative arguments
                 example = EAEInputExample(
