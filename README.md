@@ -1,8 +1,7 @@
 # OmniEvent
 
 ## Overview
-Event Extraction
-Event Extraction toolkit that provides comprehensive implementations of state-of-the-art methods 
+OmniEvent is a powerful Event Extraction toolkit that provides comprehensive implementations of state-of-the-art methods 
 along with unified workflows of data processing and model evaluation. 
 
 ### Features
