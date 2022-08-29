@@ -15,7 +15,7 @@ along with unified workflows of data processing and model evaluation.
   - Predicted results of different paradigms are all converted into word level for comparable evaluation.
 - **Support Big Model Training & Inference**
   - Efficient training and inference of big models for event extraction are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
-- **Easy to Use and Highly Extensible**
+- **Easy to Use & Highly Extensible**
   - Datasets can be downloaded (if open-sourced) and processed with a single command.
   - OmniEvent is fully compatible with 🤗 [Transformers](https://github.com/huggingface/transformers) and adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer) for training and evaluation.
   - Users can adopt existing models directly or adapt OmniEvent to build customized models at will.  
