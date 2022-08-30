@@ -135,7 +135,7 @@ tensorflow_code
 # Models
 proc_data
 OpenEE/OpenEE_Model
-OmniEvent/OmniEvent_Model
+**/OmniEvent_Model
 
 # examples
 runs
