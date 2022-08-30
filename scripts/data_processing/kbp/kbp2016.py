@@ -1,3 +1,4 @@
+import argparse
 import copy
 import re
 import json
@@ -10,66 +11,6 @@ from typing import Dict, List, Union
 from xml.dom.minidom import parse
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
-
-
-class Config(object):
-    """The configurations of this project.
-
-    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
-    path of the pilot and evaluation dataset.
-
-    Attributes:
-        DATA_FOLDER (`str`):
-            A string indicating the folder containing all the datasets.
-        PILOT_DATA_FOLDER (`str`):
-            A string indicating the folder containing the annotation folder and source text folder of the pilot data.
-        PILOT_GOLD_FOLDER (`str`):
-            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
-            documents of the pilot data.
-        PILOT_SOURCE_FOLDER (`str`):
-            A string indicating the folder containing the source texts of the documents, corresponding to the documents
-            under the `GOLD_FOLDER` folder of the pilot data.
-        EVAL_DATA_FOLDER (`str`):
-            A string indicating the folder containing the annotation folder and source text folder of the evaluation
-            data.
-        EVAL_GOLD_FOLDER_DF (`str`):
-            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
-            documents of the evaluation data, in which the source text of the documents are discussion forum texts.
-        EVAL_GOLD_FOLDER_NW (`str`):
-            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
-            documents of the evaluation data, in which the source text of the documents are newswires.
-        EVAL_SOURCE_FOLDER_DF (`str`):
-            A string indicating the folder containing the source texts of the documents, corresponding to the documents
-            under the `EVAL_GOLD_FOLDER_DF` folder of the evaluation data.
-        EVAL_SOURCE_FOLDER_NW (`str`):
-            A string indicating the folder containing the source texts of the documents, corresponding to the documents
-            under the `EVAL_GOLD_FOLDER_NW` folder of the evaluation data.
-        SAVE_DATA_FOLDER (`str`):
-            A string indicating the folder of saving the manipulated dataset.
-    """
-
-    def __init__(self):
-        # The configuration of the data folder.
-        self.DATA_FOLDER = "../../../data"
-
-        # The configurations of the pilot data.
-        self.PILOT_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_event_arg_comp_train_eval_2016-2017/"
-                                                                "data/2016/pilot")
-        self.PILOT_GOLD_FOLDER = os.path.join(self.PILOT_DATA_FOLDER, "gold_standard/ere")
-        self.PILOT_SOURCE_FOLDER = os.path.join(self.PILOT_DATA_FOLDER, "source_corpus")
-
-        # The configurations of the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_event_arg_comp_train_eval_2016-2017/"
-                                                               "data/2016/eval")
-        self.EVAL_GOLD_FOLDER_DF = os.path.join(self.EVAL_DATA_FOLDER, "gold_standard/eng/df/ere")
-        self.EVAL_GOLD_FOLDER_NW = os.path.join(self.EVAL_DATA_FOLDER, "gold_standard/eng/nw/ere")
-        self.EVAL_SOURCE_FOLDER_DF = os.path.join(self.DATA_FOLDER, "tac_kbp_eval_src_2016-2017/data/2016/eng/df")
-        self.EVAL_SOURCE_FOLDER_NW = os.path.join(self.DATA_FOLDER, "tac_kbp_eval_src_2016-2017/data/2016/eng/nw")
-
-        # The configuration of the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "processed", "TAC-KBP2016")
-        if not os.path.exists(self.SAVE_DATA_FOLDER):
-            os.mkdir(self.SAVE_DATA_FOLDER)
 
 
 def read_eval(eval_gold_folder_df: str,
@@ -938,20 +879,30 @@ def to_jsonl(filename: str,
 
 
 if __name__ == "__main__":
-    config = Config()
+    arg_parser = argparse.ArgumentParser(description="TAC-KBP2016")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/"
+                                                            "tac_kbp_event_arg_comp_train_eval_2016-2017")
+    arg_parser.add_argument("--source_dir", type=str, default="../../../data/original/"
+                                                            "tac_kbp_eval_src_2016-2017")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/TAC-KBP2016")
+    args = arg_parser.parse_args()
+    os.makedirs(args.save_dir, exist_ok=True)
 
     # Construct the pilot and evaluation documents.
     pilot_documents_sent, pilot_documents_without_event \
-        = read_xml(config.PILOT_GOLD_FOLDER, config.PILOT_SOURCE_FOLDER, mode="pilot")
+        = read_xml(os.path.join(args.data_dir, "data/2016/pilot/gold_standard/ere"),
+                   os.path.join(args.data_dir, "data/2016/pilot/source_corpus"), mode="pilot")
     eval_documents_sent, eval_documents_without_event \
-        = read_eval(config.EVAL_GOLD_FOLDER_DF, config.EVAL_GOLD_FOLDER_NW,
-                    config.EVAL_SOURCE_FOLDER_DF, config.EVAL_SOURCE_FOLDER_NW)
+        = read_eval(os.path.join(args.data_dir, "data/2016/eval/gold_standard/eng/df/ere"),
+                    os.path.join(args.data_dir, "data/2016/eval/gold_standard/eng/nw/ere"),
+                    os.path.join(args.source_dir, "data/2016/eng/df"),
+                    os.path.join(args.source_dir, "data/2016/eng/nw"))
 
     # Save the documents into jsonl files.
     all_train_data = generate_negative_trigger(pilot_documents_sent, pilot_documents_without_event)
-    json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, "pilot.json"), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "pilot.unified.jsonl"), config.SAVE_DATA_FOLDER, all_train_data)
+    json.dump(all_train_data, open(os.path.join(args.save_dir, "pilot.json"), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, "pilot.unified.jsonl"), args.save_dir, all_train_data)
 
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
-    json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, "test.json"), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "test.unified.jsonl"), config.SAVE_DATA_FOLDER, all_test_data)
+    json.dump(all_test_data, open(os.path.join(args.save_dir, "test.json"), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, "test.unified.jsonl"), args.save_dir, all_test_data)

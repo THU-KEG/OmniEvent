@@ -2,6 +2,7 @@ import copy
 import json
 from typing import List, Dict, Union
 
+import argparse
 import jsonlines
 import os
 import re
@@ -11,52 +12,6 @@ from tqdm import tqdm
 from xml.dom.minidom import parse
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
-
-
-class Config(object):
-    """The configurations of this project.
-
-    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
-    path of the evaluation dataset.
-
-    Attributes:
-        DATA_FOLDER (`str`):
-            A string indicating the folder containing all the datasets.
-        EVAL_DATA_FOLDER (`str`):
-            A string indicating the folder containing the annotation folder and source text folder of the evaluation
-            data.
-        EVAL_GOLD_FOLDER_DF (`str`):
-            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
-            documents of the evaluation data, in which the source text of the documents are discussion forum texts.
-        EVAL_GOLD_FOLDER_NW (`str`):
-            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
-            documents of the evaluation data, in which the source text of the documents are newswires.
-        EVAL_SOURCE_FOLDER_DF (`str`):
-            A string indicating the folder containing the source texts of the documents, corresponding to the documents
-            under the `EVAL_GOLD_FOLDER_DF` folder of the evaluation data.
-        EVAL_SOURCE_FOLDER_NW (`str`):
-            A string indicating the folder containing the source texts of the documents, corresponding to the documents
-            under the `EVAL_GOLD_FOLDER_NW` folder of the evaluation data.
-        SAVE_DATA_FOLDER (`str`):
-            A string indicating the folder of saving the manipulated dataset.
-    """
-
-    def __init__(self):
-        # The configuration for the project (current) folder.
-        self.DATA_FOLDER = "../../../data"
-
-        # The configurations for the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_event_arg_comp_train_eval_2016-2017/"
-                                                               "data/2017/eval/eng")
-        self.EVAL_GOLD_FOLDER_DF = os.path.join(self.EVAL_DATA_FOLDER, "df/ere")
-        self.EVAL_GOLD_FOLDER_NW = os.path.join(self.EVAL_DATA_FOLDER, "nw/ere")
-        self.EVAL_SOURCE_FOLDER_DF = os.path.join(self.DATA_FOLDER, "tac_kbp_eval_src_2016-2017/data/2017/eng/df")
-        self.EVAL_SOURCE_FOLDER_NW = os.path.join(self.DATA_FOLDER, "tac_kbp_eval_src_2016-2017/data/2017/eng/nw")
-
-        # The configurations for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "processed", "TAC-KBP2017")
-        if not os.path.exists(self.SAVE_DATA_FOLDER):
-            os.mkdir(self.SAVE_DATA_FOLDER)
 
 
 def read_eval(eval_gold_folder_df: str,
@@ -913,14 +868,23 @@ def to_jsonl(filename: str,
 
 
 if __name__ == "__main__":
-    config = Config()
+    arg_parser = argparse.ArgumentParser(description="TAC-KBP2017")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/"
+                                                            "tac_kbp_event_arg_comp_train_eval_2016-2017")
+    arg_parser.add_argument("--source_dir", type=str, default="../../../data/original/"
+                                                              "tac_kbp_eval_src_2016-2017")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/TAC-KBP2017")
+    args = arg_parser.parse_args()
+    os.makedirs(args.save_dir, exist_ok=True)
 
     # Construct the evaluation documents.
     eval_documents_sent, eval_documents_without_event \
-        = read_eval(config.EVAL_GOLD_FOLDER_DF, config.EVAL_GOLD_FOLDER_NW,
-                    config.EVAL_SOURCE_FOLDER_DF, config.EVAL_SOURCE_FOLDER_NW)
+        = read_eval(os.path.join(args.data_dir, "data/2017/eval/eng/df/ere"),
+                    os.path.join(args.data_dir, "data/2017/eval/eng/nw/ere"),
+                    os.path.join(args.source_dir, "data/2017/eng/df"),
+                    os.path.join(args.source_dir, "data/2017/eng/nw"))
 
     # Save the documents into jsonl file.
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
-    json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, "test.json"), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, "test.unified.jsonl"), config.SAVE_DATA_FOLDER, all_test_data)
+    json.dump(all_test_data, open(os.path.join(args.save_dir, "test.json"), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, "test.unified.jsonl"), args.save_dir, all_test_data)
