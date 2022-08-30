@@ -1,3 +1,4 @@
+import argparse
 import re
 import os
 import json
@@ -192,7 +193,7 @@ def convert_fewfc_to_unified(data_path: str,
                              tokenizer: Optional[str] = "jieba") -> List[Dict]:
     """Converts FewFC dataset to the unified format.
 
-    Extracts the information from the original FewFC dataset and convert the format to a unified OpenEE dataset. The
+    Extracts the information from the original FewFC dataset and convert the format to a unified OmniEvent dataset. The
     converted dataset is written to a json file.
 
     Args:
@@ -206,7 +207,7 @@ def convert_fewfc_to_unified(data_path: str,
     Returns:
         formatted_data (`List[Dict]`):
             A list of dictionaries representing the manipulated dataset of FewFC after converting its format into a
-            unified OpenEE dataset.
+            unified OmniEvent dataset.
     """
     fewfc_data = []
     with open(data_path, 'r', encoding='utf-8') as f:
@@ -306,9 +307,9 @@ def convert_fewfc_to_unified(data_path: str,
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(fewfc_data), data_path))
 
-    data_path = '/data/processed'.join(data_path.split('/data'))
+    data_path = '/data/processed'.join(data_path.split('/data/original')).replace('_base', '')
     if dump:
-        with jsonlines.open(data_path.replace(".json", ".unified.json"), "w") as f:
+        with jsonlines.open(data_path.replace(".json", ".unified.jsonl"), "w") as f:
             for item in formatted_data:
                 jsonlines.Writer.write(f, item)
 
@@ -316,17 +317,22 @@ def convert_fewfc_to_unified(data_path: str,
 
 
 if __name__ == "__main__":
-    os.makedirs("../../../data/processed/FewFC/", exist_ok=True)
+    arg_parser = argparse.ArgumentParser(description="FewFC")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/FewFC")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/FewFC")
+    args = arg_parser.parse_args()
 
-    with open("../../../data/processed/FewFC/label2id.json", "w", encoding="utf-8") as f:
+    os.makedirs(args.save_dir, exist_ok=True)
+    with open(os.path.join(args.save_dir, "label2id.json"), "w", encoding="utf-8") as f:
         json.dump(label2id, f, indent=4, ensure_ascii=False)
 
-    get_role2id(train_file="../../../data/FewFC/train_base.json",
-                test_file="../../../data/FewFC/test_base.json",
-                output_file="../../../data/processed/FewFC/role2id.json")
-    if not os.path.exists("../../../data/FewFC/dev_base.json"):
-        split_training_data("../../../data/FewFC/train_base.json", "../../../data/FewFC/dev_base.json")
+    get_role2id(train_file=os.path.join(args.data_dir, "train_base.json"),
+                test_file=os.path.join(args.data_dir, "test_base.json"),
+                output_file=os.path.join(args.save_dir, "role2id.json"))
+    if not os.path.exists(os.path.join(args.data_dir, "valid_base.json")):
+        split_training_data(train_file=os.path.join(args.data_dir, "train_base.json"),
+                            dev_file=os.path.join(args.data_dir, "valid_base.json"))
 
-    convert_fewfc_to_unified("../../../data/FewFC/train_base.json")
-    convert_fewfc_to_unified("../../../data/FewFC/dev_base.json")
-    convert_fewfc_to_unified("../../../data/FewFC/test_base.json")
+    convert_fewfc_to_unified(os.path.join(args.data_dir, "train_base.json"))
+    convert_fewfc_to_unified(os.path.join(args.data_dir, "valid_base.json"))
+    convert_fewfc_to_unified(os.path.join(args.data_dir, "test_base.json"))
