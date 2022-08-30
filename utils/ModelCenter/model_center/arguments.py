@@ -90,6 +90,10 @@ def add_training_args(parser: argparse.ArgumentParser):
     group.add_argument('--truncate_seq2seq_output', action="store_true")
     group.add_argument('--do_train', action="store_true")
     group.add_argument('--do_test', action="store_true")
+    group.add_argument('--task', type=str, default="ED",
+                        help="Task Name. Selected in ['ED', 'EAE']")
+    group.add_argument('--checkpoint_path', type=str, default=None,
+                        help="Checkpoint path.")
 
 
     # Learning rate.

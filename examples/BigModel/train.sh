@@ -15,8 +15,9 @@ BASE_PATH=$PWD
 VERSION="large"
 
 OPTS=""
+OPTS+= "--task EAE"
 OPTS+=" --base-path ${BASE_PATH}"
-OPTS+=" --model-config configs/mt5-${VERSION}/"
+OPTS+=" --model-config mt5-${VERSION}/"
 OPTS+=" --epochs 10"
 OPTS+=" --do_train"
 OPTS+=" --do_test"
@@ -41,9 +42,8 @@ OPTS+=" --max_seq_length 160"
 OPTS+=" --max_out_length 128" 
 OPTS+=" --truncate_in_batch"
 OPTS+=" --truncate_seq2seq_output"
-# OPTS+=" --load ${BASE_PATH}/results/t5-v1_1-${VERSION}.pt"
 
 CMD="python3 -m torch.distributed.launch ${DISTRIBUTED_ARGS} ${BASE_PATH}/train.py ${OPTS}"
 echo ${CMD}
 
-${CMD} 2>&1 | tee ${BASE_PATH}/logs/t5-v1_1_superglue/finetune-t5-v1_1-${VERSION}-${DATASET}.log
+${CMD} 2>&1 | tee ${BASE_PATH}/logs/finetune-mt5-${VERSION}-${DATASET}.log

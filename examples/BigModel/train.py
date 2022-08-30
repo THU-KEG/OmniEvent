@@ -2,7 +2,8 @@ import time
 import random
 import os
 import csv
-import sys 
+import sys
+
 sys.path.append("../../")
 
 import copy 
@@ -19,7 +20,7 @@ from model_center.dataset.t5dataset import DATASET
 from model_center.utils import print_inspect
 from model_center.dataset import DistributedDataLoader
 
-from OmniEvent.input_engineering.seq2seq_processor import EAESeq2SeqProcessor, extract_argument
+from OmniEvent.input_engineering.seq2seq_processor import EDSeq2SeqProcessor, EAESeq2SeqProcessor, extract_argument
 from OmniEvent.evaluation.metric import f1_score_overall
 
 from transformers import (
@@ -89,7 +90,9 @@ def setup_model_and_optimizer(args):
     tokenizer = get_tokenizer(args.model_config)
     # get the model
     model = get_model(args.model_config)
-    # model.load_state_dict(torch.load(os.path.join(args.save, args.save_name)))
+    if args.checkpoint_path is not None:
+        bmt.print_rank("Load trained checkpoint from %s" % args.checkpoint_path)
+        model.load_state_dict(torch.load(args.checkpoint_path))
     bmt.synchronize()
     # get the optimizer and lr_scheduler
     optimizer = get_optimizer(args, model)
@@ -112,10 +115,17 @@ def initialize():
 
 
 def prepare_dataset(args, tokenizer):
+    processor_cls = None 
+    if args.task == "ED":
+        processor_cls = EDSeq2SeqProcessor
+    elif args.task == "EAE":
+        processor_cls = EAESeq2SeqProcessor
+    else:
+        raise ValueError("Invalid task name: %s" % args.task)
     dataset = {}
-    dataset["train"] = EAESeq2SeqProcessor(args, tokenizer, args.train_file, args.train_pred_file, True)
-    dataset["dev"] = EAESeq2SeqProcessor(args, tokenizer, args.validation_file, args.validation_pred_file, True)
-    dataset["test"] = EAESeq2SeqProcessor(args, tokenizer, args.test_file, args.test_pred_file, True)
+    dataset["train"] = processor_cls(args, tokenizer, args.train_file, args.train_pred_file, True)
+    dataset["dev"] = processor_cls(args, tokenizer, args.validation_file, args.validation_pred_file, True)
+    dataset["test"] = processor_cls(args, tokenizer, args.test_file, args.test_pred_file, True)
     return dataset
 
 

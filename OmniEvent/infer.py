@@ -117,7 +117,7 @@ def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="E
             eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae")
         else:
             eae_model, eae_tokenizer = model, tokenizer
-        instances = prepare_for_eae_from_input([text], triggers, [schema])
+        instances = prepare_for_eae_from_input([text], [triggers], [schema])
         arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances)
         results = get_eae_result(instances, arguments)
     elif task == "EE":
