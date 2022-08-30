@@ -168,7 +168,7 @@ def get_maven_submission_sl(preds: Union[np.array, List[str]],
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds: Union[np.array, List[str]],
+def get_maven_submission_seq2seq(preds: List[Dict[str, str]],
                                  save_path: str,
                                  data_args) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
@@ -268,7 +268,7 @@ def get_leven_submission_sl(preds: Union[np.array, List[str]],
     return get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config)
 
 
-def get_leven_submission_seq2seq(preds: List[int],
+def get_leven_submission_seq2seq(preds: List[Dict[str, str]],
                                  save_path: str,
                                  data_args):
     """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.

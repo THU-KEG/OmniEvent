@@ -236,6 +236,7 @@ class EDDataProcessor(Dataset):
         self.tokenizer = tokenizer
         self.examples = []
         self.input_features = []
+        self.is_overflow = []
 
     def read_examples(self,
                       input_file: str):
@@ -345,6 +346,7 @@ class EAEDataProcessor(Dataset):
             self.config.role2id["X"] = -100
         self.examples = []
         self.input_features = []
+        self.is_overflow = []
         # data for trainer evaluation 
         self.data_for_evaluation = {}
         # event prediction file path 
@@ -367,7 +369,7 @@ class EAEDataProcessor(Dataset):
         """Converts the `EAEInputExample`s into `EAEInputFeatures`s."""
         raise NotImplementedError
 
-    def get_data_for_evaluation(self) -> Dict[str, Union[int, str]]:
+    def get_data_for_evaluation(self) -> Dict[str, Union[int, List[str]]]:
         """Obtains the data for evaluation."""
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()

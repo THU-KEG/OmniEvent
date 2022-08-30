@@ -6,6 +6,7 @@ import jsonlines
 import numpy as np
 
 from tqdm import tqdm
+from pathlib import Path
 from typing import List, Dict, Union, Tuple
 from transformers import PreTrainedTokenizer
 
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 def dump_preds(trainer: Union[Trainer, Seq2SeqTrainer],
                tokenizer: PreTrainedTokenizer,
                data_class: type,
-               output_dir: str,
+               output_dir: Union[str,Path],
                model_args: ModelArguments,
                data_args: DataArguments,
                training_args: TrainingArguments,
