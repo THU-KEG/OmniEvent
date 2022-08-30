@@ -2,6 +2,7 @@ import copy
 import json
 from typing import List, Dict, Union
 
+import argparse
 import jsonlines
 import os
 import re
@@ -10,62 +11,6 @@ from nltk.tokenize.punkt import PunktSentenceTokenizer
 from tqdm import tqdm
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
-
-
-class Config(object):
-    """The configurations of this project.
-
-    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
-    path of the pilot and evaluation dataset.
-
-    Attributes:
-        DATA_FOLDER (`str`):
-            A string indicating the folder containing all the datasets.
-        TRAIN_DATA_FOLDER (`str`):
-            A string indicating the folder containing the annotation folder and source text folder of the training data.
-        TRAIN_SOURCE_FOLDER (`str`):
-            A string indicating the folder containing the source texts of the documents of the training data.
-        TRAIN_TOKEN_FOLDER (`str`):
-            A string indicating the folder containing the correspondences between token ids and character positions
-            of each document of the training data.
-        TRAIN_ANNOTATION_TBF (`str`):
-            A string indicating the path of the `annotation.tbf` file of the training data.
-        EVAL_DATA_FOLDER (`str`):
-            A string indicating the folder containing the annotation folder and source text folder of the evaluation
-            data.
-        EVAL_SOURCE_FOLDER (`str`):
-            A string indicating the folder containing the source texts of the documents of the evaluation data.
-        EVAL_TOKEN_FOLDER (`str`):
-            A string indicating the folder containing the correspondences between token ids and character positions
-            of each document of the evaluation data.
-        EVAL_ANNOTATION_TBF (`str`):
-            A string indicating the path of the `annotation.tbf` file of the evaluation data.
-        SAVE_DATA_FOLDER (`str`):
-            A string indicating the folder of saving the manipulated dataset.
-    """
-
-    def __init__(self):
-        # The configuration of the data folder.
-        self.DATA_FOLDER = "../../../data"
-
-        # The configurations of the training data.
-        self.TRAIN_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_eng_event_nugget_detect_coref_2014-2015/data"
-                                                                "/2014/training")
-        self.TRAIN_SOURCE_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, "source")
-        self.TRAIN_TOKEN_FOLDER = os.path.join(self.TRAIN_DATA_FOLDER, "token_offset")
-        self.TRAIN_ANNOTATION_TBF = os.path.join(self.TRAIN_DATA_FOLDER, "annotation/annotation.tbf")
-
-        # The configurations of the evaluation data.
-        self.EVAL_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "tac_kbp_eng_event_nugget_detect_coref_2014-2015/data"
-                                                               "/2014/eval")
-        self.EVAL_SOURCE_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, "source")
-        self.EVAL_TOKEN_FOLDER = os.path.join(self.EVAL_DATA_FOLDER, "token_offset")
-        self.EVAL_ANNOTATION_TBF = os.path.join(self.EVAL_DATA_FOLDER, "annotation/annotation.tbf")
-
-        # The configuration of the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.DATA_FOLDER, "processed", "TAC-KBP2014")
-        if not os.path.exists(self.SAVE_DATA_FOLDER):
-            os.mkdir(self.SAVE_DATA_FOLDER)
 
 
 def read_annotation(ann_file_tbf: str,
@@ -630,19 +575,28 @@ def to_jsonl(filename: str,
 
 
 if __name__ == "__main__":
-    config = Config()
+    arg_parser = argparse.ArgumentParser(description="TAC-KBP2014")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/"
+                                                            "tac_kbp_eng_event_nugget_detect_coref_2014-2015")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/TAC-KBP2014")
+    args = arg_parser.parse_args()
+    os.makedirs(args.save_dir, exist_ok=True)
 
     # Construct the training and evaluation documents.
     train_documents_sent, train_documents_without_event \
-        = read_annotation(config.TRAIN_ANNOTATION_TBF, config.TRAIN_SOURCE_FOLDER, config.TRAIN_TOKEN_FOLDER)
+        = read_annotation(os.path.join(args.data_dir, "data/2014/training/annotation/annotation.tbf"),
+                          os.path.join(args.data_dir, "data/2014/training/source"),
+                          os.path.join(args.data_dir, "data/2014/training/token_offset"))
     eval_documents_sent, eval_documents_without_event \
-        = read_annotation(config.EVAL_ANNOTATION_TBF, config.EVAL_SOURCE_FOLDER, config.EVAL_TOKEN_FOLDER)
+        = read_annotation(os.path.join(args.data_dir, "data/2014/eval/annotation/annotation.tbf"),
+                          os.path.join(args.data_dir, "data/2014/eval/source"),
+                          os.path.join(args.data_dir, "data/2014/eval/token_offset"))
 
     # Save the documents into jsonl files.
     all_train_data = generate_negative_trigger(train_documents_sent, train_documents_without_event)
-    json.dump(all_train_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'train.json'), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'train.unified.jsonl'), config.SAVE_DATA_FOLDER, all_train_data)
+    json.dump(all_train_data, open(os.path.join(args.save_dir, 'train.json'), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, 'train.unified.jsonl'), args.save_dir, all_train_data)
 
     all_test_data = generate_negative_trigger(eval_documents_sent, eval_documents_without_event)
-    json.dump(all_test_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'test.json'), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'test.unified.jsonl'), config.SAVE_DATA_FOLDER, all_test_data)
+    json.dump(all_test_data, open(os.path.join(args.save_dir, 'test.json'), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, 'test.unified.jsonl'), args.save_dir, all_test_data)
