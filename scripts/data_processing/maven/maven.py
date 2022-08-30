@@ -1,4 +1,5 @@
-import os 
+import argparse
+import os
 import pdb 
 import json 
 
@@ -8,22 +9,25 @@ from typing import Dict, List, Optional
 
 
 def convert_maven_to_unified(data_path: str,
+                             save_path: str,
                              dump: Optional[bool] = True) -> List[Dict]:
     """Converts MAVEN dataset to the unified format.
 
-    Extracts the information from the original MAVEN dataset and convert its format to a unified OpenEE dataset. The
+    Extracts the information from the original MAVEN dataset and convert its format to a unified OmniEvent dataset. The
     converted dataset is finally written to a json file.
 
     Args:
         data_path (`str`):
             A string indicating the path of the original MAVEN dataset.
+        save_path (`str`):
+            A string indicating the path to save the unified MAVEN dataset.
         dump (`bool`, `optional`, defaults to `True`):
             A boolean variable indicating whether or not writing the manipulated dataset to a json file.
 
     Returns:
         formatted_data (`List[Dict]`):
             A list of dictionaries representing the manipulated dataset of MAVEN after converting its format into a
-            unified OpenEE dataset.
+            unified OmniEvent dataset.
     """
     # Load the maven dataset.
     maven_data = []
@@ -100,10 +104,9 @@ def convert_maven_to_unified(data_path: str,
             formatted_data.append(instance)
     print("We get {} instances.".format(len(formatted_data)))
     if "train" in data_path:
-        io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-1]).split('/data'))
-        json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w"), indent=4)
+        json.dump(label2id, open(os.path.join(save_path, "label2id.json"), "w"), indent=4)
 
-    data_path = '/data/processed'.join(data_path.split('/data'))
+    data_path = '/data/processed'.join(data_path.split('/data/original'))
     if dump:
         with open(data_path.replace(".jsonl", ".unified.jsonl"), 'w') as f:
             for item in formatted_data:
@@ -112,7 +115,12 @@ def convert_maven_to_unified(data_path: str,
 
 
 if __name__ == "__main__":
-    os.makedirs("../../../data/processed/MAVEN/", exist_ok=True)
-    convert_maven_to_unified("../../../data/MAVEN/train.jsonl")
-    convert_maven_to_unified("../../../data/MAVEN/valid.jsonl")
-    convert_maven_to_unified("../../../data/MAVEN/test.jsonl")
+    arg_parser = argparse.ArgumentParser(description="MAVEN")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/MAVEN")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/MAVEN")
+    args = arg_parser.parse_args()
+
+    os.makedirs(args.save_dir, exist_ok=True)
+    convert_maven_to_unified(os.path.join(args.data_dir, "train.jsonl"), args.save_dir)
+    convert_maven_to_unified(os.path.join(args.data_dir, "valid.jsonl"), args.save_dir)
+    convert_maven_to_unified(os.path.join(args.data_dir, "test.jsonl"), args.save_dir)
