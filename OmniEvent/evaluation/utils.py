@@ -1,19 +1,59 @@
 import os
 import json
-import logging
 import shutil
-
+import logging
 import jsonlines
 import numpy as np
 
 from tqdm import tqdm
-from .convert_format import get_ace2005_trigger_detection_sl, get_ace2005_trigger_detection_s2s
+from typing import List, Dict, Union, Tuple
+from transformers import PreTrainedTokenizer
+
+from ..trainer import Trainer
+from ..trainer_seq2seq import Seq2SeqTrainer
+from ..arguments import DataArguments, ModelArguments, TrainingArguments
 from ..input_engineering.seq2seq_processor import extract_argument
+from ..input_engineering.base_processor import EDDataProcessor, EAEDataProcessor
+
+from .convert_format import get_ace2005_trigger_detection_sl, get_ace2005_trigger_detection_s2s
 
 logger = logging.getLogger(__name__)
 
 
-def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args, training_args, mode="train"):
+def dump_preds(trainer: Union[Trainer, Seq2SeqTrainer],
+               tokenizer: PreTrainedTokenizer,
+               data_class: type,
+               output_dir: str,
+               model_args: ModelArguments,
+               data_args: DataArguments,
+               training_args: TrainingArguments,
+               mode: str = "train",
+               ) -> None:
+    """Dump the Event Detection predictions for each token in the dataset.
+
+    Save the Event Detection predictions for further use in the Event Argument Extraction task.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`PreTrainedTokenizer`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        output_dir (`str`):
+            The file path to dump the event detection predictions.
+        model_args (`ModelArguments`):
+            The pre-defined arguments for model configuration.
+        data_args (`DataArguments`):
+            The pre-defined arguments for data processing.
+        training_args (`TrainingArguments`):
+            The pre-defined arguments for training event detection model.
+        mode (`str`):
+            The mode of the prediction, can be 'train', 'valid' or 'test'.
+
+    Returns:
+        None
+    """
     if mode == "train":
         data_file = data_args.train_file
     elif mode == "valid":
@@ -27,7 +67,7 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
                                                data_args=data_args, data_file=data_file,
                                                training_args=training_args)
     logger.info("\n")
-    logger.info("{}-Dump Preds-{}{}".format("-"*25, mode, "-"*25))
+    logger.info("{}-Dump Preds-{}{}".format("-" * 25, mode, "-" * 25))
     logger.info("Test file: {}, Metrics: {}, Split_Infer: {}".format(data_file, metrics, data_args.split_infer))
 
     preds = get_pred_s2s(logits, tokenizer) if model_args.paradigm == "seq2seq" else np.argmax(logits, axis=-1)
@@ -47,7 +87,29 @@ def dump_preds(trainer, tokenizer, data_class, output_dir, model_args, data_args
     logger.info("ED {} preds dumped to {}\n ED finished!".format(mode, save_path))
 
 
-def get_pred_s2s(logits, tokenizer, pred_types=None):
+def get_pred_s2s(logits: np.array,
+                 tokenizer: PreTrainedTokenizer,
+                 pred_types: List[str] = None,
+                 ) -> List[Dict[str, str]]:
+    # TODO: the output data structure should be checked
+    """Convert Seq2Seq output logits to textual Event Type Prediction or Argument Role Prediction.
+
+    Convert Seq2Seq output logits to textual Event Type Prediction in Event Detection task,
+        or to textual Argument Role Prediction in Event Argument Extraction task.
+
+    Args:
+        logits (`np.array`):
+            The decoded logits of the Seq2Seq model.
+        tokenizer (`PreTrainedTokenizer`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        pred_types (`List[str]`):
+            The event detection predictions, only used in Event Argument Extraction task.
+
+    Returns:
+        preds (`List[Dict[str, str]]`):
+            The textual predictions of the Event Type or Argument Role.
+    """
+
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)
 
     def clean_str(x_str):
@@ -68,7 +130,43 @@ def get_pred_s2s(logits, tokenizer, pred_types=None):
     return preds
 
 
-def predict(trainer, tokenizer, data_class, data_args, data_file, training_args):
+def predict(trainer: Union[Trainer, Seq2SeqTrainer],
+            tokenizer: PreTrainedTokenizer,
+            data_class: type,
+            data_args: DataArguments,
+            data_file: str,
+            training_args: TrainingArguments,
+            ) -> Tuple[np.array, np.array, Dict, Union[EDDataProcessor, EAEDataProcessor]]:
+    """Predicts the test set of the Event Detection task or Event Argument Extraction task.
+
+    Predicts the test set of the event detection task. The prediction of logits and labels, evaluation metrics' results,
+    and the dataset would be returned.
+
+    Args:
+        trainer:
+            The trainer for event detection.
+        tokenizer (`PreTrainedTokenizer`):
+            A string indicating the tokenizer proposed for the tokenization process.
+        data_class:
+            The processor of the input data.
+        data_args:
+            The pre-defined arguments for data processing.
+        data_file (`str`):
+            A string representing the file path of the dataset.
+        training_args (`TrainingArguments`):
+            The pre-defined arguments for training.
+
+    Returns:
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels: (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
+        metrics:
+            The evaluation metrics result based on the predictions and annotations.
+        dataset:
+            An instance of the testing dataset.
+    """
+
     if training_args.task_name == "ED":
         pred_func = predict_sub_ed if data_args.split_infer else predict_ed
         return pred_func(trainer, tokenizer, data_class, data_args, data_file)
@@ -81,7 +179,32 @@ def predict(trainer, tokenizer, data_class, data_args, data_file, training_args)
         raise NotImplementedError
 
 
-def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
+def get_sub_files(input_test_file: str,
+                  input_test_pred_file: str = None,
+                  sub_size: int = 5000,
+                  ) -> Union[List[str], Tuple[List[str], List[str]]]:
+    """Split a large data file into several small data files for evaluation.
+
+    Sometimes, the test data file can be too large to make prediction due to GPU memory constrain.
+    Therefore, we split the large file into several smaller ones and make predictions on each.
+
+    Args:
+        input_test_file (`str`):
+            The path to the large data file that needs to split.
+        input_test_pred_file (`str`):
+            The path to the Event Detection Predictions of the input_test_file.
+            Only used in Event Argument Extraction task.
+        sub_size (`int`):
+            The number of items contained each split file.
+
+    Returns:
+        if input_test_pred_file is not None: (Event Argument Extraction task)
+            output_test_files, output_pred_files:
+                The lists of paths to the split files.
+        else:
+            output_test_files:
+                The list of paths to the split files.
+    """
     test_data = list(jsonlines.open(input_test_file))
     sub_data_folder = '/'.join(input_test_file.split('/')[:-1]) + '/test_cache/'
 
@@ -93,15 +216,16 @@ def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
     os.makedirs(sub_data_folder, exist_ok=False)
     output_test_files = []
 
+    pred_data, sub_pred_folder = None, None
+    output_pred_files = []
     if input_test_pred_file:
         pred_data = json.load(open(input_test_pred_file, encoding='utf-8'))
         sub_pred_folder = '/'.join(input_test_pred_file.split('/')[:-1]) + '/test_cache/'
         os.makedirs(sub_pred_folder, exist_ok=True)
-        output_pred_files = []
 
     pred_start = 0
     for sub_id, i in enumerate(range(0, len(test_data), sub_size)):
-        test_data_sub = test_data[i: i+sub_size]
+        test_data_sub = test_data[i: i + sub_size]
         test_file_sub = sub_data_folder + 'sub-{}.json'.format(sub_id)
 
         with jsonlines.open(test_file_sub, 'w') as f:
@@ -128,11 +252,12 @@ def get_sub_files(input_test_file, input_test_pred_file=None, sub_size=5000):
     return output_test_files
 
 
-def predict_ed(trainer,
-               tokenizer: str,
-               data_class,
+def predict_ed(trainer: Union[Trainer, Seq2SeqTrainer],
+               tokenizer: PreTrainedTokenizer,
+               data_class: type,
                data_args,
-               data_file: str):
+               data_file: str,
+               ) -> Tuple[np.array, np.array, Dict, EDDataProcessor]:
     """Predicts the test set of the event detection task.
 
     Predicts the test set of the event detection task. The prediction of logits and labels, evaluation metrics' results,
@@ -141,7 +266,7 @@ def predict_ed(trainer,
     Args:
         trainer:
             The trainer for event detection.
-        tokenizer (`str`):
+        tokenizer (`PreTrainedTokenizer`):
             A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
@@ -168,11 +293,12 @@ def predict_ed(trainer,
     return logits, labels, metrics, dataset
 
 
-def predict_sub_ed(trainer,
-                   tokenizer: str,
-                   data_class,
-                   data_args,
-                   data_file: str):
+def predict_sub_ed(trainer: Union[Trainer, Seq2SeqTrainer],
+                   tokenizer: PreTrainedTokenizer,
+                   data_class: type,
+                   data_args: DataArguments,
+                   data_file: str,
+                   ) -> Tuple[np.array, np.array, Dict, EDDataProcessor]:
     """Predicts the test set of the event detection task of subfile datasets.
 
     Predicts the test set of the event detection task of a list of datasets. The prediction of logits and labels are
@@ -183,7 +309,7 @@ def predict_sub_ed(trainer,
     Args:
         trainer:
             The trainer for event detection.
-        tokenizer (`str`):
+        tokenizer (`PreTrainedTokenizer`):
             A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
@@ -223,11 +349,12 @@ def predict_sub_ed(trainer,
     return logits, labels, metrics, dataset
 
 
-def predict_eae(trainer,
-                tokenizer: str,
-                data_class,
-                data_args,
-                training_args):
+def predict_eae(trainer: Union[Trainer, Seq2SeqTrainer],
+                tokenizer: PreTrainedTokenizer,
+                data_class: type,
+                data_args: DataArguments,
+                training_args: TrainingArguments,
+                ) -> Tuple[np.array, np.array, Dict, EAEDataProcessor]:
     """Predicts the test set of the event argument extraction task.
 
     Predicts the test set of the event argument extraction task. The prediction of logits and labels, evaluation
@@ -236,7 +363,7 @@ def predict_eae(trainer,
     Args:
         trainer:
             The trainer for event detection.
-        tokenizer (`str`):
+        tokenizer (`PreTrainedTokenizer`):
             A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
@@ -262,11 +389,12 @@ def predict_eae(trainer,
     return logits, labels, metrics, test_dataset
 
 
-def predict_sub_eae(trainer,
-                    tokenizer: str,
-                    data_class,
-                    data_args,
-                    training_args):
+def predict_sub_eae(trainer: Union[Trainer, Seq2SeqTrainer],
+                    tokenizer: PreTrainedTokenizer,
+                    data_class: type,
+                    data_args: DataArguments,
+                    training_args: TrainingArguments,
+                    ) -> Tuple[np.array, np.array, Dict, EDDataProcessor]:
     """Predicts the test set of the event detection task of subfile datasets.
 
     Predicts the test set of the event detection task of a list of datasets. The prediction of logits and labels are
@@ -277,7 +405,7 @@ def predict_sub_eae(trainer,
     Args:
         trainer:
             The trainer for event detection.
-        tokenizer (`str`):
+        tokenizer (`PreTrainedTokenizer`):
             A string indicating the tokenizer proposed for the tokenization process.
         data_class:
             The processor of the input data.
