@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import jsonlines
@@ -6,22 +7,25 @@ from typing import Dict, List
 
 
 def convert_leven_to_unified(data_path: str,
+                             save_path: str,
                              dump=True) -> List[Dict]:
     """Convert LEVEN dataset to the unified format.
 
-    Extract the information from the original LEVEN dataset and convert the format to a unified OpenEE dataset. The
+    Extract the information from the original LEVEN dataset and convert the format to a unified OmniEvent dataset. The
     converted dataset is written to a json file.
 
     Args:
         data_path (`str`):
             A string indicating the path of the original LEVEN dataset.
+        save_path (`str`):
+            A string indicating the path to save the unified LEVEN dataset.
         dump (`bool`, `optional`, defaults to `True`):
             A boolean variable indicating whether or not writing the manipulated dataset to a json file.
 
     Returns:
         formatted_data (`List[Dict]`):
             A list of dictionaries representing the manipulated dataset of LEVEN after converting its format into a
-            unified OpenEE dataset.
+            unified OmniEvent dataset.
     """
     leven_data = list(jsonlines.open(data_path))
 
@@ -95,12 +99,11 @@ def convert_leven_to_unified(data_path: str,
 
     print("We get {} instances for [{}].".format(len(formatted_data), data_path))
     if "train" in data_path:
-        io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-1]).split('/data'))
         label2id = dict(sorted(list(label2id.items()), key=lambda x: x[1]))
-        json.dump(label2id, open(os.path.join(io_dir, "label2id.json"), "w", encoding='utf-8'),
+        json.dump(label2id, open(os.path.join(save_path, "label2id.json"), "w", encoding='utf-8'),
                   indent=4, ensure_ascii=False)
 
-    data_path = '/data/processed'.join(data_path.split('/data'))
+    data_path = '/data/processed'.join(data_path.split('/data/original'))
     if dump:
         with jsonlines.open(data_path.replace(".jsonl", ".unified.jsonl"), "w") as f:
             for item in formatted_data:
@@ -110,7 +113,12 @@ def convert_leven_to_unified(data_path: str,
 
 
 if __name__ == "__main__":
-    os.makedirs("../../../data/processed/LEVEN/", exist_ok=True)
-    convert_leven_to_unified("../../../data/LEVEN/train.jsonl")
-    convert_leven_to_unified("../../../data/LEVEN/valid.jsonl")
-    convert_leven_to_unified("../../../data/LEVEN/test.jsonl")
+    arg_parser = argparse.ArgumentParser(description="LEVEN")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/LEVEN")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/LEVEN")
+    args = arg_parser.parse_args()
+
+    os.makedirs(args.save_dir, exist_ok=True)
+    convert_leven_to_unified(os.path.join(args.data_dir, "train.jsonl"), args.save_dir)
+    convert_leven_to_unified(os.path.join(args.data_dir, "valid.jsonl"), args.save_dir)
+    convert_leven_to_unified(os.path.join(args.data_dir, "test.jsonl"), args.save_dir)
