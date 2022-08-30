@@ -883,7 +883,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/"
                                                             "tac_kbp_event_arg_comp_train_eval_2016-2017")
     arg_parser.add_argument("--source_dir", type=str, default="../../../data/original/"
-                                                            "tac_kbp_eval_src_2016-2017")
+                                                              "tac_kbp_eval_src_2016-2017")
     arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/TAC-KBP2016")
     args = arg_parser.parse_args()
     os.makedirs(args.save_dir, exist_ok=True)
