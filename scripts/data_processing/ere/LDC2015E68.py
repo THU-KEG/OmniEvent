@@ -1,3 +1,4 @@
+import argparse
 import copy
 import json
 import jsonlines
@@ -5,50 +6,12 @@ import os
 import pdb
 import re
 
-import sys
-sys.path.append("../")
-
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 from tqdm import tqdm
 from typing import Dict, List, Union
 from xml.dom.minidom import parse
 
 from utils import token_pos_to_char_pos, generate_negative_trigger
-
-
-class Config(object):
-    """The configurations of this project.
-
-    The configurations of this project, configuring the annotation path, source text folder path, and saving folder
-    path of the dataset.
-
-    Attributes:
-        ALL_DATA_FOLDER (`str`):
-            A string indicating the folder containing all the datasets.
-        DATA_FOLDER (`str`):
-            A string indicating the folder containing the annotation folder and source text folder.
-        GOLD_FOLDER (`str`):
-            A string indicating the folder containing the annotations of event triggers, arguments, and entities of the
-            documents.
-        SOURCE_FOLDER (`str`):
-            A string indicating the folder containing the source texts of the documents, corresponding to the documents
-            under the `GOLD_FOLDER` folder.
-        SAVE_DATA_FOLDER (`str`):
-            A string indicating the folder of saving the manipulated dataset.
-    """
-    def __init__(self):
-        # The configuration for the project (current) folder.
-        self.ALL_DATA_FOLDER = "../../../data"
-
-        # The configurations for the data.
-        self.DATA_FOLDER = os.path.join(self.ALL_DATA_FOLDER, "LDC2015E68/data")
-        self.GOLD_FOLDER = os.path.join(self.DATA_FOLDER, "ere")
-        self.SOURCE_FOLDER = os.path.join(self.DATA_FOLDER, "source")
-
-        # The configuration for the saving path.
-        self.SAVE_DATA_FOLDER = os.path.join(self.ALL_DATA_FOLDER, "processed/ere")
-        if not os.path.exists(self.SAVE_DATA_FOLDER):
-            os.mkdir(self.SAVE_DATA_FOLDER)
 
 
 def read_xml(gold_folder: str,
@@ -828,12 +791,17 @@ def to_jsonl(filename: str,
 
 
 if __name__ == "__main__":
-    config = Config()
+    arg_parser = argparse.ArgumentParser(description="LDC2015E68")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/LDC2015E68")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/LDC2015E68")
+    args = arg_parser.parse_args()
+    os.makedirs(args.save_dir, exist_ok=True)
 
     # Construct the documents of the dataset.
-    documents_sent, documents_without_events = read_xml(config.GOLD_FOLDER, config.SOURCE_FOLDER)
+    documents_sent, documents_without_events \
+        = read_xml(os.path.join(args.data_dir, "data/ere"), os.path.join(args.data_dir, "data/source"))
 
     # Save the documents into jsonl file.
     all_data = generate_negative_trigger(documents_sent, documents_without_events)
-    json.dump(all_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E68.json'), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E68.unified.jsonl'), config.SAVE_DATA_FOLDER, all_data)
+    json.dump(all_data, open(os.path.join(args.save_dir, 'LDC2015E68.json'), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, 'LDC2015E68.unified.jsonl'), args.save_dir, all_data)
