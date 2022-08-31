@@ -4,6 +4,7 @@ import json
 import uuid
 import jieba
 import random
+import argparse
 import jsonlines
 
 from tqdm import tqdm
@@ -33,7 +34,7 @@ def generate_label2id_role2id(data_path: str):
             if role["role"] not in role2id:
                 role2id[role["role"]] = len(role2id)
 
-    io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-2]).split('/data'))
+    io_dir = '/data/processed'.join("/".join(data_path.split("/")[:-2]).split('/data/original'))
     with open(os.path.join(io_dir, "label2id.json"), "w", encoding="utf-8") as f:
         json.dump(label2id, f, indent=4, ensure_ascii=False)
 
@@ -260,9 +261,10 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(dueefin_data), data_path))
 
-    data_path = '/data/processed'.join('/'.join(data_path.split('/')[:-1]).split('/data'))
+    data_path = '/data/processed'.join('/'.join(data_path.split('/')[:-1]).split('/data/original'))
     if dump:
-        with jsonlines.open(data_path.replace(".json", ".unified.json"), "w") as f:
+        with jsonlines.open(data_path.replace(".json", ".unified.jsonl").replace('duee_fin_', '')
+                                     .replace('dev', 'valid').replace('test2', 'test'), "w") as f:
             for item in formatted_data:
                 jsonlines.Writer.write(f, item)
 
@@ -270,8 +272,13 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
 
 
 if __name__ == "__main__":
-    os.makedirs("../../../data/processed/DuEE-fin/", exist_ok=True)
-    generate_label2id_role2id("../../../data/DuEE-fin/duee_fin_schema/duee_fin_event_schema.json")
-    convert_dueefin_to_unified("../../../data/DuEE-fin/duee_fin_train.json/duee_fin_train.json")
-    convert_dueefin_to_unified("../../../data/DuEE-fin/duee_fin_dev.json/duee_fin_dev.json")
-    convert_dueefin_to_unified("../../../data/DuEE-fin/duee_fin_test2.json/duee_fin_test2.json")
+    arg_parser = argparse.ArgumentParser(description="DuEE-Fin")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/DuEE-fin")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/DuEE-fin")
+    args = arg_parser.parse_args()
+
+    os.makedirs(args.save_dir, exist_ok=True)
+    generate_label2id_role2id(os.path.join(args.data_dir, "duee_fin_schema/duee_fin_event_schema.json"))
+    convert_dueefin_to_unified(os.path.join(args.data_dir, "duee_fin_train.json/duee_fin_train.json"))
+    convert_dueefin_to_unified(os.path.join(args.data_dir, "duee_fin_dev.json/duee_fin_dev.json"))
+    convert_dueefin_to_unified(os.path.join(args.data_dir, "duee_fin_test2.json/duee_fin_test2.json"))

@@ -1,15 +1,35 @@
-from typing import List, Dict, Union
-
 import jsonlines
 import json
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
+from typing import List, Dict, Union
 from .metric import select_start_position
 from ..input_engineering.input_utils import check_pred_len, get_left_and_right_pos
 
 
-def get_pred_per_mention(pos_start, pos_end, preds, id2label):
+def get_pred_per_mention(pos_start: int,
+                         pos_end: int,
+                         preds: List[str],
+                         id2label: Dict[int, str]) -> str:
+    """Get the predicted event type or argument role for each mention in Sequence Labeling (SL) paradigm.
+
+    The predictions of Sequence Labeling (SL) paradigm are sequences of tokens. This function is get the prediction for
+    each single mention, given the sequence predictions.
+
+    Args:
+        pos_start (`int`):
+            The start position of the mention in the sequence of tokens.
+        pos_end (`int`):
+            The end position of the mention in the sequence of tokens.
+        preds (`List[str]`):
+            The predictions of the sequence of tokens.
+        id2label (`Dict[int, str]`):
+            A dictionary that contains the mapping from id to textual label.
+
+    Returns:
+        A string which represents the predicted label.
+    """
     if pos_start == pos_end or\
             pos_end > len(preds) or \
             id2label[int(preds[pos_start])] == "O" or \
@@ -24,7 +44,16 @@ def get_pred_per_mention(pos_start, pos_end, preds, id2label):
     return list(predictions)[0]
 
 
-def get_sentence_arguments(input_sentence):
+def get_sentence_arguments(input_sentence: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Get the predicted arguments from a sentence in the Sequence Labeling paradigm.
+
+    Args:
+        input_sentence (`List[Dict[str, str]]`):
+            A list of dictionaries each of which contains the word and the corresponding bio-role.
+    Returns:
+        arguments (`List[Dict[str, str]]`):
+            A list of dictionaries each of which contains the word and the corresponding role.
+    """
     input_sentence.append({"role": "NA", "word": "<EOS>"})
     arguments = []
 
@@ -139,7 +168,7 @@ def get_maven_submission_sl(preds: Union[np.array, List[str]],
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds: Union[np.array, List[str]],
+def get_maven_submission_seq2seq(preds: List[Dict[str, str]],
                                  save_path: str,
                                  data_args) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
@@ -239,7 +268,7 @@ def get_leven_submission_sl(preds: Union[np.array, List[str]],
     return get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config)
 
 
-def get_leven_submission_seq2seq(preds: List[int],
+def get_leven_submission_seq2seq(preds: List[Dict[str, str]],
                                  save_path: str,
                                  data_args):
     """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.

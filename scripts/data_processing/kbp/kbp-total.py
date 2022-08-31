@@ -243,7 +243,7 @@ if __name__ == "__main__":
     output_dir = "../../../data/processed/TAC-KBP/"
     os.makedirs(output_dir, exist_ok=True)
     is_eae_14_15 = False  # kbp2014 and kbp2015 do not have EAE data currently.
-    dump = False
+    dump = True
 
     kbp2014 = list(jsonlines.open(input_dir + 'TAC-KBP2014/train.unified.jsonl')) + list(
         jsonlines.open(input_dir + '/TAC-KBP2014/test.unified.jsonl'))
@@ -253,9 +253,9 @@ if __name__ == "__main__":
         jsonlines.open(input_dir + '/TAC-KBP2016/test.unified.jsonl'))
     kbp2017 = list(jsonlines.open(input_dir + 'TAC-KBP2017/test.unified.jsonl'))
 
-    ldc2015e29 = list(jsonlines.open(input_dir + 'ere/LDC2015E29.unified.jsonl'))
-    ldc2015e68 = list(jsonlines.open(input_dir + 'ere/LDC2015E68.unified.jsonl'))
-    ldc2015e78 = list(jsonlines.open(input_dir + 'ere/LDC2015E78.unified.jsonl'))
+    ldc2015e29 = list(jsonlines.open(input_dir + 'LDC2015E29/LDC2015E29.unified.jsonl'))
+    ldc2015e68 = list(jsonlines.open(input_dir + 'LDC2015E68/LDC2015E68.unified.jsonl'))
+    ldc2015e78 = list(jsonlines.open(input_dir + 'LDC2015E78/LDC2015E78.unified.jsonl'))
 
     if is_eae_14_15:
         train_and_valid = ldc2015e29 + ldc2015e68 + ldc2015e78 + kbp2016 + kbp2014 + kbp2015

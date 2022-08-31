@@ -3,7 +3,7 @@ import json
 import logging
 import numpy as np
 
-from typing import List, Union
+from typing import List
 from sklearn.metrics import f1_score
 from .metric import select_start_position, compute_unified_micro_f1
 from .dump_result import get_pred_per_mention
@@ -18,8 +18,8 @@ from ..input_engineering.input_utils import (
 logger = logging.getLogger(__name__)
 
 
-def get_ace2005_trigger_detection_sl(preds: Union[np.array, List[str]],
-                                     labels: Union[np.array, List[str]],
+def get_ace2005_trigger_detection_sl(preds: np.array,
+                                     labels: np.array,
                                      data_file: str,
                                      data_args,
                                      is_overflow) -> List[str]:
@@ -29,9 +29,9 @@ def get_ace2005_trigger_detection_sl(preds: Union[np.array, List[str]],
     predicting the labels and calculating the micro F1 score based on the predictions and labels.
 
     Args:
-        preds (`List[str]`):
+        preds (`np.array`):
             A list of strings indicating the predicted types of the instances.
-        labels (`List[str]`):
+        labels (`np.array`):
             A list of strings indicating the actual labels of the instances.
         data_file (`str`):
             A string indicating the path of the testing data file.
@@ -74,8 +74,8 @@ def get_ace2005_trigger_detection_sl(preds: Union[np.array, List[str]],
     return results
 
 
-def get_ace2005_argument_extraction_sl(preds: Union[np.array, List[str]],
-                                       labels: Union[np.array, List[str]],
+def get_ace2005_argument_extraction_sl(preds: np.array,
+                                       labels: np.array,
                                        data_file: str,
                                        data_args,
                                        is_overflow) -> List[str]:
@@ -86,9 +86,9 @@ def get_ace2005_argument_extraction_sl(preds: Union[np.array, List[str]],
     predictions and labels.
 
     Args:
-        preds (`List[str]`):
+        preds (`np.array`):
             A list of strings indicating the predicted types of the instances.
-        labels (`List[str]`):
+        labels (`np.array`):
             A list of strings indicating the actual labels of the instances.
         data_file (`str`):
             A string indicating the path of the testing data file.

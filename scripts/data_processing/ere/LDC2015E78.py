@@ -1,11 +1,9 @@
+import argparse
 import copy
 import json
 import jsonlines
 import os
 import re
-
-import sys
-sys.path.append("../")
 
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 from tqdm import tqdm
@@ -828,12 +826,17 @@ def to_jsonl(filename: str,
 
 
 if __name__ == "__main__":
-    config = Config()
+    arg_parser = argparse.ArgumentParser(description="LDC2015E78")
+    arg_parser.add_argument("--data_dir", type=str, default="../../../data/original/LDC2015E78")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/LDC2015E78")
+    args = arg_parser.parse_args()
+    os.makedirs(args.save_dir, exist_ok=True)
 
     # Construct the documents of the dataset.
-    documents_sent, documents_without_events = read_xml(config.GOLD_FOLDER, config.SOURCE_FOLDER)
+    documents_sent, documents_without_events \
+        = read_xml(os.path.join(args.data_dir, "data/eng/ere"), os.path.join(args.data_dir, "data/eng/translation"))
 
     # Save the documents into jsonl file.
     all_data = generate_negative_trigger(documents_sent, documents_without_events)
-    json.dump(all_data, open(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E78.json'), "w"), indent=4)
-    to_jsonl(os.path.join(config.SAVE_DATA_FOLDER, 'LDC2015E78.unified.jsonl'), config.SAVE_DATA_FOLDER, all_data)
+    json.dump(all_data, open(os.path.join(args.save_dir, 'LDC2015E78.json'), "w"), indent=4)
+    to_jsonl(os.path.join(args.save_dir, 'LDC2015E78.unified.jsonl'), args.save_dir, all_data)
