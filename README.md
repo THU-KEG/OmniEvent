@@ -79,9 +79,9 @@ We keep track of the configurations of dataset, model and training parameters vi
 >>> from OmniEvent.input_engineering.seq2seq_processor import type_start, type_end
 
 >>> parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
->>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/ed/s2s/maven.yaml")
+>>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/ed/s2s/ace2005-en.yaml")
 
->>> training_args.output_dir = 'output/MAVEN/ED/seq2seq/mt5-base/'
+>>> training_args.output_dir = 'output/ACE2005-EN/ED/seq2seq/mt5-base/'
 >>> data_args.markers = ["<event>", "</event>", type_start, type_end]
 ```
 
