@@ -1,3 +1,4 @@
+import copy 
 import json
 import logging
 import numpy as np
@@ -138,10 +139,13 @@ def get_ace2005_argument_extraction_sl(preds: Union[np.array, List[str]],
 
                     # loop for converting
                     for candidate in candidates:
-                        # get word positions
-                        left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
-                        # get predictions
-                        pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
+                        if true_type == pred_type:
+                            # get word positions
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            # get predictions
+                            pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
+                        else:
+                            pred = "NA"
                         # record results
                         results.append(pred)
                     eae_instance_idx += 1
@@ -226,16 +230,18 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
                     # loop for converting
                     for candidate in candidates:
-                        # get word positions
-                        left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
-                        # get predictions
-                        pred_type = "NA"
-                        for pred in preds_per_idx:
-                            if pred[1] == (left_pos, right_pos-1):
-                                pred_type = pred[0].split("_")[-1]
-
+                        if pred_type == true_type:
+                            # get word positions
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            # get predictions
+                            pred_role = "NA"
+                            for pred in preds_per_idx:
+                                if pred[1] == (left_pos, right_pos-1):
+                                    pred_role = pred[0].split("_")[-1]
+                        else:
+                            pred_role = "NA"
                         # record results
-                        results.append(pred_type)
+                        results.append(pred_role)
                     eae_instance_idx += 1
 
             # negative triggers
@@ -256,12 +262,12 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                             left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
 
                             # get predictions
-                            pred_type = "NA"
+                            pred_role = "NA"
                             for pred in preds_per_idx:
                                 if pred[1] == (left_pos, right_pos-1):
-                                    pred_type = pred[0].split("_")[-1]
+                                    pred_role = pred[0].split("_")[-1]
                             # record results
-                            results.append(pred_type)
+                            results.append(pred_role)
 
                         eae_instance_idx += 1
 
@@ -284,7 +290,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
         lines = f.readlines()
         for idx, line in enumerate(lines):
             item = json.loads(line.strip())
-            preds_per_idx = preds[idx]
+            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda item:item[1])
 
             candidates, labels_per_item = get_ed_candidates_per_item(item=item)
             for i, label in enumerate(labels_per_item):
@@ -294,11 +300,18 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
             # loop for converting 
             for candidate in candidates:
                 pred_type = "NA"
-
                 word = candidate["trigger_word"]
-                if word in preds_per_idx and preds_per_idx[word] in data_args.type2id:
-                    pred_type = preds_per_idx[word]
-
+                # find role and remove
+                remove_idx = None 
+                for i, pred in enumerate(preds_per_idx):
+                    if pred[0] == word:
+                        if pred[1] in data_args.type2id:
+                            pred_type = pred[1]
+                        remove_idx = i
+                        break 
+                if remove_idx is not None:
+                    preds_per_idx.remove(preds_per_idx[remove_idx])
+                # record results
                 results.append(pred_type)
 
     if "events" in item:
@@ -337,7 +350,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                             continue
 
                     # preds per index
-                    preds_per_idx = preds[eae_instance_idx]
+                    preds_per_idx = sorted(copy.deepcopy(preds[eae_instance_idx]), key=lambda item: item[1])
                     # get candidates 
                     candidates, labels_per_idx = get_eae_candidates(item, trigger)
                     for i, label in enumerate(labels_per_idx):
@@ -346,16 +359,25 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
 
                     # loop for converting
                     for candidate in candidates:
-                        # get candidate word
-                        char_pos = candidate["position"]
-                        word = item["text"][char_pos[0]:char_pos[1]]
-                        pred_type = "NA"
-
-                        if word in preds_per_idx and preds_per_idx[word] in data_args.role2id:
-                            pred_type = preds_per_idx[word]
-
+                        if pred_type == true_type:
+                            # get candidate word
+                            char_pos = candidate["position"]
+                            word = item["text"][char_pos[0]:char_pos[1]]
+                            pred_role = "NA"
+                            # find role and remove
+                            remove_idx = None 
+                            for i, pred in enumerate(preds_per_idx):
+                                if pred[0] == word:
+                                    if pred[1] in data_args.role2id:
+                                        pred_role = pred[1]
+                                    remove_idx = i
+                                    break 
+                            if remove_idx is not None:
+                                preds_per_idx.remove(preds_per_idx[remove_idx])
+                        else:
+                            pred_role = "NA"
                         # record results
-                        results.append(pred_type)
+                        results.append(pred_role)
                     eae_instance_idx += 1
 
             # negative triggers
@@ -381,11 +403,11 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                             char_pos = candidate["position"]
                             word = item["text"][char_pos[0]:char_pos[1]]
 
-                            pred_type = "NA"
+                            pred_role = "NA"
                             if word in preds_per_idx and preds_per_idx[word] in data_args.role2id:
-                                pred_type = preds_per_idx[word]
+                                pred_role = preds_per_idx[word]
                             # record results
-                            results.append(pred_type)
+                            results.append(pred_role)
 
                         eae_instance_idx += 1
 

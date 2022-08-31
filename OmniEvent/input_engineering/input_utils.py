@@ -236,7 +236,8 @@ def get_eae_candidates(item, trigger):
     positive_offsets = []
     label_names = []
     if "arguments" in trigger:
-        for argument in trigger["arguments"]:
+        arguments = sorted(trigger["arguments"], key=lambda item: item["role"])
+        for argument in arguments:
             for mention in argument["mentions"]:
                 label_names.append(argument["role"])
                 candidates.append(mention)

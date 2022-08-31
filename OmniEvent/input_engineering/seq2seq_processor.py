@@ -15,8 +15,8 @@ from .base_processor import (
     EAEInputFeatures,
 )
 
-type_start = "<"
-type_end = ">"
+type_start = "<extra_id_0>"
+type_end = "<extra_id_1>"
 split_word = ":"
 
 logger = logging.getLogger(__name__)

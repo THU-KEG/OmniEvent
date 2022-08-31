@@ -108,7 +108,8 @@ if training_args.do_train:
     trainer.train()
 
 if training_args.do_predict:
-    for gold, mode in [(True, 'default'), (False, 'default'), (False, 'loose'), (False, 'strict')]:
+    # for gold, mode in [(True, 'default'), (False, 'default'), (False, 'loose'), (False, 'strict')]:
+    for gold, mode in [(True, 'default')]:
         data_args.golden_trigger = gold
         data_args.eae_eval_mode = mode
         logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,

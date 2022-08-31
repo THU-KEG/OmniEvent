@@ -60,9 +60,9 @@ def get_pred_s2s(logits, tokenizer, pred_types=None):
         pred = clean_str(pred)
         pred_type = pred_types[i] if pred_types else "NA"
         arguments = extract_argument(pred, i, pred_type)
-        tmp = dict()
+        tmp = list()
         for arg in arguments:
-            tmp[arg[-1]] = arg[-2]
+            tmp.append((arg[-1], arg[-2]))
         preds.append(tmp)
 
     return preds
