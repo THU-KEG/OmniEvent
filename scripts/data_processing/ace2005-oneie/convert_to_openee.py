@@ -2,6 +2,8 @@ import os
 import pdb 
 import sys 
 sys.path.append("..")
+
+import argparse
 import json 
 from pathlib import Path 
 from collections import defaultdict
@@ -157,7 +159,11 @@ def get_ids(data_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    dump_path = Path("../../../data/processed/ace2005-oneie")
+    arg_parser = argparse.ArgumentParser(description="ACE2005-OneIE")
+    arg_parser.add_argument("--save_dir", type=str, default="../../../data/processed/ace2005-oneie")
+    args = arg_parser.parse_args()
+
+    dump_path = Path(args.save_dir)
     dump_path.mkdir(exist_ok=True, parents=True)
     for split in ["train", "dev", "test"]:
         convert_to_openee(f"data/{split}.oneie.json", os.path.join(dump_path, f"{split}.unified.jsonl"))
