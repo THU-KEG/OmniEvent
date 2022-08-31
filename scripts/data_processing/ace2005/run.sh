@@ -7,5 +7,5 @@ fi
 python ace2005.py \
     --data_dir ../../../data/original/ace_2005_td_v7 \
     --ACE_SPLITS splits \
-    --ACE_DUMP ../../../data/processed/ace2005 \
+    --ACE_DUMP ../../../data/processed/ace2005-en \
     --corenlp_path stanford-corenlp-4.4.0 
