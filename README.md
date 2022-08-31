@@ -6,9 +6,9 @@ along with unified workflows of data processing and model evaluation.
 
 ### Features
 - **Comprehensive Implementations**
-  - All sub-tasks, Event Detection, Event Argument Extraction and Event Extraction, are considered.
-  - Various paradigms, [Token Classification](), Sequence Labeling, [MRC(QA)]() and [Seq2Seq](), are deployed.
-  - Transformers-based ([BERT](), [T5](), etc.) and classical models (CNN, LSTM, CRF, etc.) are implemented.
+  - All sub-tasks, ***Event Detection***, ***Event Argument Extraction*** and ***Event Extraction***, are considered.
+  - Various paradigms, ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***, are deployed.
+  - ***Transformers-based*** ([BERT](), [T5](), etc.) and ***classical*** models (CNN, LSTM, CRF, etc.) are implemented.
   - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
 - **Unified Benchmark & Evaluation** 
   - Different datasets for event detection and extraction are processed into a [unified format]().
@@ -26,60 +26,100 @@ along with unified workflows of data processing and model evaluation.
 
 
 ## Easy Start
-Make sure you have installed OmniEvent as instructed above. Then import our package and load pre-trained models.
-Note that it may take a few minutes to download checkpoint for the first time. 
+OmniEvent provides ready-to-use models for the users. Examples are shown below. 
 
+*Make sure you have installed OmniEvent as instructed above. Note that it may take a few minutes to download checkpoint for the first time.*
 ```python
->>> from OpenEE.infer import infer
->>> infer(task="ED", text="U.S. and British troops were moving on the strategic southern port city of Basra Saturday after a massive aerial assault pounded Baghdad at dawn")
->>> infer(task="EAE", text="U.S. and British troops were moving on the strategic southern port city of Basra Saturday after a massive aerial assault pounded Baghdad at dawn")
->>> infer(task="EE", text="U.S. and British troops were moving on the strategic southern port city of Basra Saturday after a massive aerial assault pounded Baghdad at dawn")
+>>> from OmniEvent.infer import infer
+
+>>> text = "U.S. and British troops were moving on the strategic southern port city of Basra Saturday after a massive aerial assault pounded Baghdad at dawn"
+
+>>> # Event Detection (ED) Task
+>>> results = infer(text=text, task="ED")
+>>> print(results[0]["events"])
+[
+    { "type": "attack", "trigger": "assault", "offset": [113, 120]},
+    { "type": "injure", "trigger": "pounded", "offset": [121, 128]}
+]
+
+>>> # Event Argument Extraction (EAE) Task
+>>> infer(text=text, triggers=[("assault", 113, 120), ("pounded", 121, 128)], task="EAE")
+>>> print(results[0]["events"])
+[
+    { "type": "attack", "trigger": "assault", "offset": [113, 120], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}]
+    { "type": "injure", "trigger": "pounded", "offset": [121, 128], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}]}
+]
+
+>>> # Even Extraction (EE) Task
+>>> infer(text=text, task="EE")
+>>> print(results[0]["events"])
+[
+    { "type": "attack", "trigger": "assault", "offset": [113, 120], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}]
+    { "type": "injure", "trigger": "pounded", "offset": [121, 128], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}]}
+]
 ```
 
-## Use OmniEvent
+## Customized Use of OmniEvent
+OmniEvent can help users easily train and evaluate their customized models on a specific dataset. 
 
-### Step1: Process the data into the unified format
+We show a step-by-step example of using OmniEvent to train and evlauate an ***Event Detection*** model on ***ACE-EN*** dataset in the ***Seq2Seq*** paradigm.
+### Step 1: Process the dataset into the unified format
+We provide standard data processing scripts for commonly-adopted datasets. Checkout the details in [scripts/data_processing](./scripts/data_processing).
 ```shell
-cd scripts/data_processing/maven
-python maven.py
+dataset=ace2005-en  # the dataset name
+cd scripts/data_processing/$dataset
+bash run.sh
 ```
 
-### Step2: Set up the training configurations
+### Step 2: Set up the customized configurations
+We keep track of the configurations of dataset, model and training parameters via a single *.yaml file. See [./configs](./configs) for details.
 
 ```python
->>> from OpenEE.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
->>> from OpenEE.input_engineering.seq2seq_processor import type_start, type_end
+>>> from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
+>>> from OmniEvent.input_engineering.seq2seq_processor import type_start, type_end
+
 >>> parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 >>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/ed/s2s/maven.yaml")
+
 >>> training_args.output_dir = 'output/MAVEN/ED/seq2seq/mt5-base/'
 >>> data_args.markers = ["<event>", "</event>", type_start, type_end]
 ```
 
-### Step3: Define the backbone
+### Step 3: Initialize the model and tokenizer
+OmniEvent supports various backbones. The users can specify the model and tokenizer in the config file and initialize them as follows.
 
 ```python
->>> from OpenEE.backbone.backbone import get_backbone
->>> from OpenEE.model.model import get_model
->>> backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
-                                               model_args.model_name_or_path, data_args.markers,
-                                               new_tokens=data_args.markers)
+>>> from OmniEvent.backbone.backbone import get_backbone
+>>> from OmniEvent.model.model import get_model
+
+>>> backbone, tokenizer, config = get_backbone(model_type=model_args.model_type, 
+					       model_name_or_path=model_args.model_name_or_path, 
+					       tokenizer_name=model_args.model_name_or_path, 
+					       markers=data_args.markers,
+					       new_tokens=data_args.markers)
 >>> model = get_model(model_args, backbone)
 >>> model.cuda()
 ```
 
-### Step4: Initialize dataset and evaluation metric
+### Step 4: Initialize dataset and evaluation metric
+OmniEvent prepares the DataProcessor and the corresponding evaluation metrics for different task and paradigms.
+
+***Note that** the metrics here are paradigm-dependent and are **not** used for the final unified evaluation.*
 
 ```python
->>> from OpenEE.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
->>> from OpenEE.evaluation.metric import compute_seq_F1
+>>> from OmniEvent.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
+>>> from OmniEvent.evaluation.metric import compute_seq_F1
+
 >>> train_dataset = data_class(data_args, tokenizer, data_args.train_file)
 >>> eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
 >>> metric_fn = compute_seq_F1
 ```
-### Step5: Define Trainer and train
+### Step 5: Define Trainer and train
+OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer) from 🤗 [Transformers](https://github.com/huggingface/transformers) for training and evaluation.
 
 ```python
->>> from OpenEE.trainer_seq2seq import Seq2SeqTrainer
+>>> from OmniEvent.trainer_seq2seq import Seq2SeqTrainer
+
 >>> trainer = Seq2SeqTrainer(
         args=training_args,
         model=model,
@@ -92,20 +132,30 @@ python maven.py
 >>> trainer.train()
 ```
 
-### Step6: Unified Evaluation
+### Step 6: Unified Evaluation
+Since the metrics in Step 4 depend on the paradigm, it is not fair to directly compare the performance of different paradigms. 
+
+OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to word-level and then evaluated.
 ```python
->>> from OpenEE.evaluation.utils import predict, get_pred_s2s
->>> from OpenEE.evaluation.convert_format import get_ace2005_trigger_detection_s2s
+>>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
+>>> from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
+
 >>> logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                     data_args=data_args, data_file=data_args.test_file,
                                                     training_args=training_args)
+>>> # paradigm-dependent metrics
+>>> print("{} test performance before converting: {}".formate(test_dataset.dataset_name, metrics["test_micro_f1"]))  
+ACE2005-EN test performance before converting: 66.4215686224377
+
 >>> preds = get_pred_s2s(logits, tokenizer)
->>> print("test performance before converting: {}".format(metrics))
 >>> # convert to word-level prediction and evaluate
 >>> pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, None)
+ACE2005-EN test performance after converting: 67.41016109045849
 ```
+For those datasets whose test set annotations are not given, such as MAVEN and LEVEN, OmniEvent provide APIs to generate submission files. See [dump_result.py](./OmniEvent/evaluation/dump_result.py) for details.
 
 ## Datasets & Models Support
+
 
 Datasets
 <table>
