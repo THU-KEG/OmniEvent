@@ -10,7 +10,7 @@ from .dump_result import get_pred_per_mention
 from ..input_engineering.input_utils import (
     get_left_and_right_pos,
     check_pred_len,
-    get_ed_candidates_per_item,
+    get_ed_candidates,
     get_eae_candidates,
     get_event_preds,
     get_plain_label,
@@ -59,7 +59,7 @@ def get_ace2005_trigger_detection_sl(preds: np.array,
             if not is_overflow[i]:
                 check_pred_len(pred=preds[i], item=item, language=language)
 
-            candidates, label_names_per_item = get_ed_candidates_per_item(item=item)
+            candidates, label_names_per_item = get_ed_candidates(item=item)
             label_names.extend(label_names_per_item)
 
             # loop for converting
@@ -293,7 +293,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
             item = json.loads(line.strip())
             preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
 
-            candidates, labels_per_item = get_ed_candidates_per_item(item=item)
+            candidates, labels_per_item = get_ed_candidates(item=item)
             for i, label in enumerate(labels_per_item):
                 labels_per_item[i] = get_plain_label(label)
             label_names.extend(labels_per_item)
@@ -345,9 +345,6 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                 for trigger in event["triggers"]:
                     true_type = event["type"]
                     pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
-
-                    # true_type = get_plain_label(event["type"])
-                    # pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
                     trigger_idx += 1
 
                     if eval_mode in ['default', 'loose']:

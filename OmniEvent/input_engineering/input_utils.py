@@ -191,7 +191,7 @@ def check_pred_len(pred, item, language):
         raise NotImplementedError
 
 
-def get_ed_candidates_per_item(item):
+def get_ed_candidates(item):
     candidates = []
     label_names = []
     if "events" in item:
