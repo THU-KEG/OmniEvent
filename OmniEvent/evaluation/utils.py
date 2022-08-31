@@ -91,8 +91,7 @@ def dump_preds(trainer: Union[Trainer, Seq2SeqTrainer],
 def get_pred_s2s(logits: np.array,
                  tokenizer: PreTrainedTokenizer,
                  pred_types: List[str] = None,
-                 ) -> List[Dict[str, str]]:
-    # TODO: the output data structure should be checked
+                 ) -> List[List[Tuple[str, str]]]:
     """Convert Seq2Seq output logits to textual Event Type Prediction or Argument Role Prediction.
 
     Convert Seq2Seq output logits to textual Event Type Prediction in Event Detection task,
@@ -107,8 +106,9 @@ def get_pred_s2s(logits: np.array,
             The event detection predictions, only used in Event Argument Extraction task.
 
     Returns:
-        preds (`List[Dict[str, str]]`):
+        preds (`List[List[Tuple[str, str]]]`):
             The textual predictions of the Event Type or Argument Role.
+            A list of tuple lists, in which each tuple is (argument, role) or (trigger, event_type)
     """
 
     decoded_preds = tokenizer.batch_decode(logits, skip_special_tokens=False)

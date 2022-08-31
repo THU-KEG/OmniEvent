@@ -35,6 +35,7 @@ model_type: bert
 model_name_or_path: bert-base-chinese
 hidden_size: 768
 aggregation: none
+head_type: mrc
 
 # training config #
 num_train_epochs: 6

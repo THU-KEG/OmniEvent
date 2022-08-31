@@ -14,6 +14,7 @@ from ..input_engineering.input_utils import (
     get_eae_candidates,
     get_event_preds,
     get_plain_label,
+    str_full_to_half,
 )
 logger = logging.getLogger(__name__)
 
@@ -290,7 +291,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
         lines = f.readlines()
         for idx, line in enumerate(lines):
             item = json.loads(line.strip())
-            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda item:item[1])
+            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
 
             candidates, labels_per_item = get_ed_candidates_per_item(item=item)
             for i, label in enumerate(labels_per_item):
@@ -301,6 +302,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
             for candidate in candidates:
                 pred_type = "NA"
                 word = candidate["trigger_word"]
+                word = str_full_to_half(word)  # TODO: move this conversion to data processing.
                 # find role and remove
                 remove_idx = None 
                 for i, pred in enumerate(preds_per_idx):
@@ -341,8 +343,11 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
 
             for event in item["events"]:
                 for trigger in event["triggers"]:
-                    true_type = get_plain_label(event["type"])
+                    true_type = event["type"]
                     pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
+
+                    # true_type = get_plain_label(event["type"])
+                    # pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
                     trigger_idx += 1
 
                     if eval_mode in ['default', 'loose']:
@@ -350,7 +355,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                             continue
 
                     # preds per index
-                    preds_per_idx = sorted(copy.deepcopy(preds[eae_instance_idx]), key=lambda item: item[1])
+                    preds_per_idx = sorted(copy.deepcopy(preds[eae_instance_idx]), key=lambda p: p[1])
                     # get candidates 
                     candidates, labels_per_idx = get_eae_candidates(item, trigger)
                     for i, label in enumerate(labels_per_idx):
@@ -363,6 +368,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                             # get candidate word
                             char_pos = candidate["position"]
                             word = item["text"][char_pos[0]:char_pos[1]]
+                            word = str_full_to_half(word)  # TODO: move this conversion to data processing.
                             pred_role = "NA"
                             # find role and remove
                             remove_idx = None 
@@ -389,7 +395,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
                         # preds per index
-                        preds_per_idx = preds[eae_instance_idx]
+                        preds_per_idx = sorted(copy.deepcopy(preds[eae_instance_idx]), key=lambda p: p[1])
 
                         # get candidates
                         candidates, labels_per_idx = get_eae_candidates(item, trigger)
@@ -402,10 +408,19 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                             # get candidate word
                             char_pos = candidate["position"]
                             word = item["text"][char_pos[0]:char_pos[1]]
+                            word = str_full_to_half(word)  # TODO: move this conversion to data processing.
 
                             pred_role = "NA"
-                            if word in preds_per_idx and preds_per_idx[word] in data_args.role2id:
-                                pred_role = preds_per_idx[word]
+                            # find role and remove
+                            remove_idx = None
+                            for i, pred in enumerate(preds_per_idx):
+                                if pred[0] == word:
+                                    if pred[1] in data_args.role2id:
+                                        pred_role = pred[1]
+                                    remove_idx = i
+                                    break
+                            if remove_idx is not None:
+                                preds_per_idx.remove(preds_per_idx[remove_idx])
                             # record results
                             results.append(pred_role)
 
