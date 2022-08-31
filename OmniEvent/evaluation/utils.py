@@ -15,6 +15,7 @@ from ..trainer_seq2seq import Seq2SeqTrainer
 from ..arguments import DataArguments, ModelArguments, TrainingArguments
 from ..input_engineering.seq2seq_processor import extract_argument
 from ..input_engineering.base_processor import EDDataProcessor, EAEDataProcessor
+from ..input_engineering.mrc_converter import make_predictions, find_best_thresh
 
 from .convert_format import get_ace2005_trigger_detection_sl, get_ace2005_trigger_detection_s2s
 
@@ -129,6 +130,42 @@ def get_pred_s2s(logits: np.array,
         preds.append(tmp)
 
     return preds
+
+
+def get_pred_mrc(logits: np.array,
+                 training_args: TrainingArguments,
+                 ) -> List[List[Tuple[str, str]]]:
+    """Convert MRC output logits to textual Event Type Prediction or Argument Role Prediction.
+
+    Convert MRC output logits to textual Event Type Prediction in Event Detection task,
+        or to textual Argument Role Prediction in Event Argument Extraction task.
+
+    Args:
+        logits (`np.array`):
+            The logits output of the MRC model.
+        training_args (`TrainingArguments`):
+            The event detection predictions, only used in Event Argument Extraction task.
+
+    Returns:
+        # TODO: modify here
+        preds (`List[List[Tuple[str, str]]]`):
+            The textual predictions of the Event Type or Argument Role.
+            A list of tuple lists, in which each tuple is (argument, role) or (trigger, event_type)
+    """
+
+    start_logits, end_logits = np.split(logits, 2, axis=-1)
+    all_preds, all_labels = make_predictions(start_logits, end_logits, training_args)
+
+    all_preds = sorted(all_preds, key=lambda x: x[-2])
+    best_na_thresh = find_best_thresh(all_preds, all_labels)
+    logger.info("Best thresh founded. %.6f" % best_na_thresh)
+
+    final_preds = []
+    for argument in all_preds:
+        if argument[-2] < best_na_thresh:
+            final_preds.append(argument[:-2] + argument[-1:])  # no na_prob
+
+    return final_preds
 
 
 def predict(trainer: Union[Trainer, Seq2SeqTrainer],
