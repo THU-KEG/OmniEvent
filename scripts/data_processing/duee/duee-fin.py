@@ -103,6 +103,18 @@ def re_tokenize(token_list: List[str],
     return left + middle_new + right
 
 
+def str_full_to_half(ustring):
+    rstring = ""
+    for uchar in ustring:
+        inside_code = ord(uchar)
+        if inside_code == 12288:   # full width space
+            inside_code = 32
+        elif 65281 <= inside_code <= 65374:    # full width char (exclude space)
+            inside_code -= 65248
+        rstring += chr(inside_code)
+    return rstring
+
+
 def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> list:
     """Convert DuEE-fin dataset to the unified format.
 
@@ -260,6 +272,22 @@ def convert_dueefin_to_unified(data_path: str, dump=True, tokenizer="jieba") -> 
         formatted_data.append(instance)
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(dueefin_data), data_path))
+
+    # Change full punctuations into half.
+    for formatted in formatted_data:
+        formatted["text"] = str_full_to_half(formatted["text"])
+        if "events" in formatted.keys():
+            for event in formatted["events"]:
+                for trigger in event["triggers"]:
+                    trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+                    for argument in trigger["arguments"]:
+                        for mention in argument["mentions"]:
+                            mention["mention"] = str_full_to_half(mention["mention"])
+            for trigger in formatted["negative_triggers"]:
+                trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+        else:
+            for trigger in formatted["candidates"]:
+                trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
 
     data_path = '/data/processed'.join('/'.join(data_path.split('/')[:-1]).split('/data/original'))
     if dump:
