@@ -178,6 +178,8 @@ tags
 
 # output
 output 
+examples/BigModel/results
+
 
 # pycharm
 .idea

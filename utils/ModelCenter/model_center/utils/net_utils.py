@@ -57,7 +57,7 @@ def check_web_and_convert_path(path, load_type): # TODO add hash
             pass
         return path
     else:
-        base_path = "/ldata/ph/ModelCenter-Model"
+        base_path = "~/ModelCenter-Model"
         if bmt.rank() == 0:
             url = f"https://openbmb.oss-cn-hongkong.aliyuncs.com/model_center/{path}"
             try:
