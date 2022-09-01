@@ -126,7 +126,8 @@ def get_words(text: str,
 
 def get_left_and_right_pos(text: str,
                            trigger: Dict[str, Union[int, str, List[int], List[Dict]]],
-                           language: str):
+                           language: str,
+                           keep_space: bool = False):
     """Obtains the word-level position of the trigger word's start and end position.
 
     Obtains the word-level position of the trigger word's start and end position. The method of obtaining the position
@@ -140,17 +141,21 @@ def get_left_and_right_pos(text: str,
             A dictionary containing the trigger word, position, and arguments of an event trigger.
         language (`str`):
             A string indicating the language of the source text and trigger word, English or Chinese.
-
+        keep_space (`bool`):
+            A flag that indicates whether to keep the space in Chinese text during offset calculating.
+                During data preprocessing, the space has to be kept due to the offsets consider space.
+                During evaluation, the space is automatically removed by the tokenizer and the output hidden states do
+                not involve space logits, therefore, offset counting should not keep the space.
     Returns:
-        left_pos (`str`), right_pos (`str`):
-            Two strings indicating the number of words before the start and end position of the trigger word.
+        left_pos (`int`), right_pos (`int`):
+            Two integers indicating the number of words before the start and end position of the trigger word.
     """
     if language == "English":
         left_pos = len(text[:trigger["position"][0]].split())
         right_pos = len(text[:trigger["position"][1]].split())
     elif language == "Chinese":
-        left_pos = trigger["position"][0]
-        right_pos = trigger["position"][1]
+        left_pos = trigger["position"][0] if keep_space else len("".join(text[:trigger["position"][0]].split()))
+        right_pos = trigger["position"][1] if keep_space else len("".join(text[:trigger["position"][1]].split()))
     else:
         raise NotImplementedError
     return left_pos, right_pos

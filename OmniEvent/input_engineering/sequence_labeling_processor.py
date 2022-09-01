@@ -54,7 +54,7 @@ class EDSLProcessor(EDDataProcessor):
                 if "events" in item:
                     for event in item["events"]:
                         for trigger in event["triggers"]:
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=trigger, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text, trigger, language, True)
                             labels[left_pos] = f"B-{event['type']}"
                             for i in range(left_pos + 1, right_pos):
                                 labels[i] = f"I-{event['type']}"
@@ -162,12 +162,12 @@ class EAESLProcessor(EAEDataProcessor):
                             # If the predicted event type is NA, We don't consider the trigger
                             if self.config.eae_eval_mode in ["default", "loose"] and pred_type == "NA":
                                 continue
-                            trigger_left, trigger_right = get_left_and_right_pos(text, trigger, language)
+                            trigger_left, trigger_right = get_left_and_right_pos(text, trigger, language, True)
                             labels = ["O"] * len(words)
 
                             for argument in trigger["arguments"]:
                                 for mention in argument["mentions"]:
-                                    left_pos, right_pos = get_left_and_right_pos(text, mention, language)
+                                    left_pos, right_pos = get_left_and_right_pos(text, mention, language, True)
                                     labels[left_pos] = f"B-{argument['role']}"
                                     for i in range(left_pos + 1, right_pos):
                                         labels[i] = f"I-{argument['role']}"
@@ -191,7 +191,7 @@ class EAESLProcessor(EAEDataProcessor):
                             continue
                         elif self.config.eae_eval_mode in ["default", "strict"]:
                             if pred_type != "NA":
-                                neg_left, neg_right = get_left_and_right_pos(text=text, trigger=neg, language=language)
+                                neg_left, neg_right = get_left_and_right_pos(text, neg, language, True)
                                 example = EAEInputExample(
                                     example_id=item["id"],
                                     text=words,
@@ -206,7 +206,7 @@ class EAESLProcessor(EAEDataProcessor):
                             raise ValueError("Invalid eac_eval_mode: %s" % self.config.eae_eval_mode)
                 else:
                     for can in item["candidates"]:
-                        can_left, can_right = get_left_and_right_pos(text=text, trigger=can, language=language)
+                        can_left, can_right = get_left_and_right_pos(text, can, language, True)
                         labels = ["O"] * len(words)
                         pred_type = self.event_preds[trigger_idx]
                         trigger_idx += 1

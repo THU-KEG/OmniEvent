@@ -125,7 +125,6 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
                 for trigger in event["triggers"]:
                     true_type = event["type"]
                     pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
-
                     trigger_idx += 1
 
                     if eval_mode in ['default', 'loose']:
@@ -139,10 +138,10 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
                     label_names.extend(label_names_per_trigger)
 
                     # loop for converting
-                    for candidate in candidates:
+                    for candi in candidates:
                         if true_type == pred_type:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
                             pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
                         else:
@@ -162,15 +161,13 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
                         if not is_overflow[eae_instance_idx]:
                             check_pred_len(pred=preds[eae_instance_idx], item=item, language=language)
 
-                        candidates = []
-                        for neg in item["negative_triggers"]:
-                            label_names.append("NA")
-                            candidates.append(neg)
+                        candidates, label_names_per_trigger = get_eae_candidates(item=item, trigger=trigger)
+                        label_names.extend(label_names_per_trigger)
 
                         # loop for converting
-                        for candidate in candidates:
+                        for candi in candidates:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
                             pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
                             # record results
@@ -230,10 +227,10 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                     all_labels.extend(labels_per_idx)
 
                     # loop for converting
-                    for candidate in candidates:
+                    for candi in candidates:
                         if pred_type == true_type:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
                             pred_role = "NA"
                             for pred in preds_per_idx:
@@ -258,9 +255,9 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                         all_labels.extend(labels_per_idx)
 
                         # loop for converting
-                        for candidate in candidates:
+                        for candi in candidates:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
 
                             # get predictions
                             pred_role = "NA"
