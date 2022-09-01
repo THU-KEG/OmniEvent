@@ -34,7 +34,8 @@ truncate_seq2seq_output: True
 model_type: bert
 model_name_or_path: bert-base-chinese
 hidden_size: 768
-aggregation: none 
+aggregation: none
+head_type: mrc
 
 # training config #
 num_train_epochs: 10

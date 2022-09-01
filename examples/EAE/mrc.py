@@ -20,7 +20,7 @@ from OmniEvent.model.model import get_model
 from OmniEvent.evaluation.metric import compute_mrc_F1
 from OmniEvent.evaluation.dump_result import get_duee_submission_mrc
 from OmniEvent.evaluation.convert_format import get_ace2005_argument_extraction_mrc
-from OmniEvent.evaluation.utils import predict
+from OmniEvent.evaluation.utils import predict, get_pred_mrc
 
 from OmniEvent.trainer import Trainer
 
@@ -118,9 +118,7 @@ if training_args.do_predict:
         logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                         data_args=data_args, data_file=data_args.test_file,
                                                         training_args=training_args)
-
-        start_logits, end_logits = np.split(logits, 2, axis=-1)
-        preds, _ = make_predictions(start_logits, end_logits, training_args)
+        preds = get_pred_mrc(logits=logits, training_args=training_args)
 
         logging.info("\n")
         logging.info("{}-EAE Evaluate Mode : {}-{}".format("-" * 25, data_args.eae_eval_mode, "-" * 25))
