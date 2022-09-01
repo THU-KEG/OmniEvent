@@ -3,7 +3,7 @@ import json
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 from .metric import select_start_position
 from ..input_engineering.input_utils import check_pred_len, get_left_and_right_pos
 
@@ -168,7 +168,7 @@ def get_maven_submission_sl(preds: Union[np.array, List[str]],
             f.write(json.dumps(results_per_doc)+"\n")
 
 
-def get_maven_submission_seq2seq(preds: List[Dict[str, str]],
+def get_maven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
                                  save_path: str,
                                  data_args) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
@@ -268,7 +268,7 @@ def get_leven_submission_sl(preds: Union[np.array, List[str]],
     return get_maven_submission_sl(preds, labels, is_overflow, result_file, type2id, config)
 
 
-def get_leven_submission_seq2seq(preds: List[Dict[str, str]],
+def get_leven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
                                  save_path: str,
                                  data_args):
     """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.

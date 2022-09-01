@@ -316,7 +316,6 @@ def compute_mrc_F1(logits: np.ndarray,
             A dictionary containing the calculation result of F1 score.
     """
     start_logits, end_logits = np.split(logits, 2, axis=-1)
-    training_args = kwargs["training_args"]
     all_predictions, all_labels = make_predictions(start_logits, end_logits, kwargs["training_args"])
     micro_f1 = compute_mrc_F1_cls(all_predictions, all_labels)
     return {"micro_f1": micro_f1}

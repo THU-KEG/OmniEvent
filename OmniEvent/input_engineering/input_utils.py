@@ -191,7 +191,7 @@ def check_pred_len(pred, item, language):
         raise NotImplementedError
 
 
-def get_ed_candidates_per_item(item):
+def get_ed_candidates(item):
     candidates = []
     label_names = []
     if "events" in item:
@@ -269,3 +269,15 @@ def get_plain_label(input_label):
         return input_label
 
     return "".join("".join(input_label.split(".")[-1].split("-")).split("_")).lower()
+
+
+def str_full_to_half(ustring):
+    rstring = ""
+    for uchar in ustring:
+        inside_code = ord(uchar)
+        if inside_code == 12288:   # full width space
+            inside_code = 32
+        elif 65281 <= inside_code <= 65374:    # full width char (exclude space)
+            inside_code -= 65248
+        rstring += chr(inside_code)
+    return rstring
