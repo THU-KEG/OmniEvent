@@ -184,7 +184,21 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorials
 
-   tutorials/preprocess
+    tutorials/preprocess
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Input Engineering
+
+    input/tokenizer
+    input/whitespace
+    input/base
+    input/token
+    input/labeling
+    input/seq2seq
+    input/mrc_converter
+    input/mrc_processor
+    input/utils
