@@ -52,6 +52,6 @@ if __name__ == "__main__":
     processed_path = "../../data/processed"
     event_schemas = dict()
     for dataset in os.listdir(processed_path):
-        if dataset in ["ace2005-en", ".DS_Store"]:   # use QAEE
+        if dataset in ["ace2005-dygie", ".DS_Store"]:   # use QAEE
             continue
         event_schemas[f"{dataset}"] = gen_prompts(input_folder=os.path.join(processed_path, dataset), dump=True)
