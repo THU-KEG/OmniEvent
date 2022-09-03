@@ -184,6 +184,7 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
 
-   usage
-   api
+   tutorials/preprocess

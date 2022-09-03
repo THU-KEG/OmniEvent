@@ -65,9 +65,9 @@ the DuEE 1.0 dataset, it could be downloaded from [here](https://www.luge.ai/#/l
 
 After downloading the dataset from the Internet, the `run.sh` file under the folder with the same name as the dataset
 should be configured. For example, for the DuEE 1.0 dataset, the `run.sh` file under the path
-`scripts/data_preprocessing/duee` should be configured, in which the `data_dir` path should be the same as the path of
-placing the downloaded dataset, you can also modify the path of the processed dataset by configuring the `save_dir`
-path:
+[`scripts/data_preprocessing/duee`](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing/duee) should
+be configured, in which the `data_dir` path should be the same as the path of placing the downloaded dataset, you can
+also modify the path of the processed dataset by configuring the `save_dir` path:
 
 ```shell
 python duee.py \
