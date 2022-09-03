@@ -30,13 +30,13 @@ example, a piece of data in the unified OmniEvent format could be demonstrated a
     "negative_triggers": [{
         "id": 0,
         "trigger_word": "In",
-        "position": [0, 2]}, ... }], 
+        "position": [0, 2]}, ... ], 
     "entities":  [{
         "type": "PER",
         "mentions": [{
             "id": "m-291",
             "mention": "Chun",
-            "position": [10, 14]}, ... ]}, ...]}
+            "position": [10, 14]}, ... ]}, ... ]}
 ```
 
 ## Supported Datasets
@@ -46,7 +46,7 @@ conversion difficulties. Additional pre-processing scripts are still being devel
 which you wish us to complete in "[Pull requests](https://github.com/THU-KEG/OmniEvent/pulls)". Currently, we have
 developed pre-processing scripts for the following datasets:
 
-- **ACE2005:** ACE2005, ACE2005-DyGIE, ACE2005-OneIE, ACE2005-ZH
+- **ACE2005:** ACE2005-EN, ACE2005-DyGIE, ACE2005-OneIE, ACE2005-ZH
 - **DuEE:** DuEE1.0, DuEE-fin
 - **ERE:** LDC2015E29, LDC2015E68, LDC2015E78
 - **FewFC**

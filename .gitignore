@@ -151,8 +151,8 @@ runs
 serialization_dir
 
 # scripts
-/scripts/data_processing/ace2005/stanford-corenlp-4.4.0
-/scripts/data_processing/ace2005/stanford-corenlp-4.4.0.zip 
+/scripts/data_processing/ace2005-en/stanford-corenlp-4.4.0
+/scripts/data_processing/ace2005-en/stanford-corenlp-4.4.0.zip
 /scripts/data_processing/ace2005-dygie/raw_data 
 /scripts/data_processing/ace2005-dygie/default-settings
 /examples/BigModel/convert
