@@ -13,9 +13,9 @@ test_exists_labels: False
 output_dir: output/DuEE1.0
 type2id_path: ../../data/processed/DuEE1.0/label2id.json
 role2id_path: ../../data/processed/DuEE1.0/role2id.json
-train_file: ../../data/processed/DuEE1.0/train.unified.json
-validation_file: ../../data/processed/DuEE1.0/valid.unified.json
-test_file: ../../data/processed/DuEE1.0/test.unified.json
+train_file: ../../data/processed/DuEE1.0/train.unified.jsonl
+validation_file: ../../data/processed/DuEE1.0/valid.unified.jsonl
+test_file: ../../data/processed/DuEE1.0/test.unified.jsonl
 
 # event detection predictions
 golden_trigger: False

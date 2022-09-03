@@ -13,9 +13,9 @@ test_exists_labels: True
 # file path # 
 output_dir: output/FewFC
 type2id_path: ../../data/processed/FewFC/label2id.json
-train_file: ../../data/processed/FewFC/train.unified.json
-validation_file: ../../data/processed/FewFC/valid.unified.json
-test_file: ../../data/processed/FewFC/test.unified.json
+train_file: ../../data/processed/FewFC/train.unified.jsonl
+validation_file: ../../data/processed/FewFC/valid.unified.jsonl
+test_file: ../../data/processed/FewFC/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True
