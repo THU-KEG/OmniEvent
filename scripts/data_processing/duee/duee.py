@@ -240,19 +240,19 @@ def convert_duee_to_unified(data_path: str,
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(duee_data), data_path))
 
     # Change full punctuations into half.
-    for formatted in formatted_data:
-        formatted["text"] = str_full_to_half(formatted["text"])
-        if "events" in formatted.keys():
-            for event in formatted["events"]:
+    for line in formatted_data:
+        line["text"] = str_full_to_half(line["text"])
+        if "events" in line.keys():
+            for event in line["events"]:
                 for trigger in event["triggers"]:
                     trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
                     for argument in trigger["arguments"]:
                         for mention in argument["mentions"]:
                             mention["mention"] = str_full_to_half(mention["mention"])
-            for trigger in formatted["negative_triggers"]:
+            for trigger in line["negative_triggers"]:
                 trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
         else:
-            for trigger in formatted["candidates"]:
+            for trigger in line["candidates"]:
                 trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
 
     data_path = '/data/processed'.join('/'.join(data_path.split('/')[:-1]).split('/data/original'))
