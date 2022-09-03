@@ -103,7 +103,19 @@ def re_tokenize(token_list: List[str],
     return left + middle_new + right
 
 
-def str_full_to_half(ustring):
+def str_full_to_half(ustring: str) -> str:
+    """Convert a full-width string to a half-width one.
+
+    The corpus of some datasets contain full-width strings, which may bring about unexpected error for mapping the
+    tokens to the original input sentence.
+
+    Args:
+        ustring(`str`):
+            Original string.
+    Returns:
+        rstring (`str`):
+            Output string with the full-width tokens converted
+    """
     rstring = ""
     for uchar in ustring:
         inside_code = ord(uchar)
