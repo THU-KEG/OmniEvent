@@ -1,6 +1,6 @@
 # Collect all the ace data into one directory, for convenience
 
-ace_dir=$1
+ace_dir=../../../data/original/ace_2005_td_v7
 
 original_dir=$ace_dir/data/English
 

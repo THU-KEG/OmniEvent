@@ -240,7 +240,7 @@ if __name__ == "__main__":
             kbp2017 as test set, and the rest data as train and valid sets.
     """
     input_dir = "../../../data/processed/"
-    output_dir = "../../../data/processed/TAC-KBP/"
+    output_dir = "../../../data/processed/RichERE/"
     os.makedirs(output_dir, exist_ok=True)
     is_eae_14_15 = False  # kbp2014 and kbp2015 do not have EAE data currently.
     dump = True

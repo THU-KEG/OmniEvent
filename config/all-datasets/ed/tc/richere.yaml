@@ -4,18 +4,18 @@ do_predict: True
 do_ED_infer: True 
 
 # top-level config #
-paradigm: sequence_labeling
+paradigm: token_classification
 task_name: ED
-dataset_name: TAC-KBP
+dataset_name: RichERE
 language: English
 test_exists_labels: True
 
 # file path #
-output_dir: output/TAC-KBP
-type2id_path: ../../data/processed/TAC-KBP/label2id.json
-train_file: ../../data/processed/TAC-KBP/train.unified.jsonl
-validation_file: ../../data/processed/TAC-KBP/valid.unified.jsonl
-test_file: ../../data/processed/TAC-KBP/test.unified.jsonl
+output_dir: output/RichERE
+type2id_path: ../../data/processed/RichERE/label2id.json
+train_file: ../../data/processed/RichERE/train.unified.jsonl
+validation_file: ../../data/processed/RichERE/valid.unified.jsonl
+test_file: ../../data/processed/RichERE/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: False
@@ -26,10 +26,11 @@ truncate_seq2seq_output: False
 model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
-aggregation: none
+aggregation: marker
+head_scale: 2
 
 # training config #
-num_train_epochs: 30
+num_train_epochs: 5
 max_seq_length: 128
 max_out_length: 128
 dataloader_num_workers: 2

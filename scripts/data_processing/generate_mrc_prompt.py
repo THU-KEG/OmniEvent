@@ -6,7 +6,7 @@ from typing import Dict, List, Optional
 
 
 def gen_prompts(input_folder: Optional[str] = "../../data/processed/ace2005-zh/",
-                dump: Optional[bool] = False) -> Dict[str: List[str]]:
+                dump: Optional[bool] = False) -> Dict[str, List[str]]:
     """Generates prompts for the Machine Reading Comprehension (MRC) model.
 
     Generates prompts for the Machine Reading Comprehension (MRC) model. An event schema containing the argument roles
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     processed_path = "../../data/processed"
     event_schemas = dict()
     for dataset in os.listdir(processed_path):
-        if dataset in ["ace2005", ".DS_Store"]:   # use QAEE
+        if dataset in ["ace2005-en", ".DS_Store"]:   # use QAEE
             continue
         event_schemas[f"{dataset}"] = gen_prompts(input_folder=os.path.join(processed_path, dataset), dump=True)

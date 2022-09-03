@@ -10,17 +10,17 @@ language: English
 test_exists_labels: True
 
 # file path #
-output_dir: output/TAC-KBP
-type2id_path: ../../data/processed/TAC-KBP/label2id.json
-role2id_path: ../../data/processed/TAC-KBP/role2id.json
-train_file: ../../data/processed/TAC-KBP/train.unified.jsonl
-validation_file: ../../data/processed/TAC-KBP/valid.unified.jsonl
-test_file: ../../data/processed/TAC-KBP/test.unified.jsonl
+output_dir: output/RichERE
+type2id_path: ../../data/processed/RichERE/label2id.json
+role2id_path: ../../data/processed/RichERE/role2id.json
+train_file: ../../data/processed/RichERE/train.unified.jsonl
+validation_file: ../../data/processed/RichERE/valid.unified.jsonl
+test_file: ../../data/processed/RichERE/test.unified.jsonl
 # event detection predictions
 golden_trigger: True 
-train_pred_file: output/TAC-KBP/ED/token_classification/bert-base-uncased-marker/train_preds.json
-validation_pred_file: output/TAC-KBP/ED/token_classification/bert-base-uncased-marker/valid_preds.json
-test_pred_file: output/TAC-KBP/ED/token_classification/bert-base-uncased-marker/test_preds.json
+train_pred_file: output/RichERE/ED/token_classification/bert-base-uncased-marker/train_preds.json
+validation_pred_file: output/RichERE/ED/token_classification/bert-base-uncased-marker/valid_preds.json
+test_pred_file: output/RichERE/ED/token_classification/bert-base-uncased-marker/test_preds.json
 
 # config for data processor # 
 truncate_in_batch: True 

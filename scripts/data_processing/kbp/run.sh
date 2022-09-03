@@ -15,5 +15,3 @@ python kbp2017.py \
     --data_dir ../../../data/original/tac_kbp_event_arg_comp_train_eval_2016-2017 \
     --source_dir ../../../data/original/tac_kbp_eval_src_2016-2017 \
     --save_dir ../../../data/processed/TAC-KBP2017
-
-python kbp-total.py

@@ -11,11 +11,11 @@ language: English
 test_exists_labels: True
 
 # file path # 
-output_dir: output/TAC-KBP
-type2id_path: ../../data/processed/TAC-KBP/label2id.json
-train_file: ../../data/processed/TAC-KBP/train.unified.jsonl
-validation_file: ../../data/processed/TAC-KBP/valid.unified.jsonl
-test_file: ../../data/processed/TAC-KBP/test.unified.jsonl
+output_dir: output/RichERE
+type2id_path: ../../data/processed/RichERE/label2id.json
+train_file: ../../data/processed/RichERE/train.unified.jsonl
+validation_file: ../../data/processed/RichERE/valid.unified.jsonl
+test_file: ../../data/processed/RichERE/test.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: True 

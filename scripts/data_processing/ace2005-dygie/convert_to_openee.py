@@ -194,6 +194,7 @@ if __name__ == "__main__":
     dump_path.mkdir(parents=True, exist_ok=True)
     convert_to_sentence()
     for split in ["train", "dev", "test"]:
-        convert_to_openee(f"default-settings/{split}_convert.json", os.path.join(dump_path, f"{split}.unified.jsonl"))
-        generate_negative_trigger(os.path.join(dump_path, f"{split}.unified.jsonl"))
+        out_file = f"{split}.unified.jsonl" if split != "dev" else "valid.unified.jsonl"   # use valid instead of dev
+        convert_to_openee(f"default-settings/{split}_convert.json", os.path.join(dump_path, out_file))
+        generate_negative_trigger(os.path.join(dump_path, out_file))
     get_ids(dump_path)
