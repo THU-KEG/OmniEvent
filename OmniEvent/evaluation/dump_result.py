@@ -1,6 +1,7 @@
 import jsonlines
 import json
 import numpy as np
+import copy
 from tqdm import tqdm
 from collections import defaultdict
 from typing import List, Dict, Union, Tuple
@@ -172,24 +173,17 @@ def get_maven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
                                  save_path: str,
                                  data_args) -> None:
     """Converts the predictions to the submission format of the MAVEN dataset based on the Seq2Seq paradigm.
-    TODO: modify the docstring
+
     Obtains the instances' predictions in the test file of the MAVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
     paradigm and converts the predictions to the dataset's submission format. The converted predictions are dumped into
     a json file for submission.
 
     Args:
-        preds (`List[int]`):
-            A list of integers indicating the predicted type ids of the instances.
-        labels (`List[str]`):
-            A list of strings indicating the actual labels of the instances.
+        preds (`List[List[Tuple[str, str]]]`):
+            The textual predictions of the Event Type or Argument Role.
+            A list of tuple lists, in which each tuple is (argument, role) or (trigger, event_type)
         save_path (`str`):
             A string indicating the path to place the written json file.
-        type2id (`Dict[str, int]`):
-            A dictionary containing the correspondences between event types and ids.
-        tokenizer (`str`):
-            A string representing the tokenization proposed for the tokenization process.
-        training_args:
-            The pre-defined arguments for the training process.
         data_args:
             The pre-defined arguments for data processing.
     """
@@ -197,14 +191,26 @@ def get_maven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
     results = defaultdict(list)
     with open(data_args.test_file, "r") as f:
         lines = f.readlines()
-        for i, line in enumerate(lines):
+        for idx, line in enumerate(lines):
             item = json.loads(line.strip())
+            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
+
             for candidate in item["candidates"]:
+                word = candidate["trigger_word"]
                 pred_type = "NA"
 
-                word = candidate["trigger_word"]
-                if word in preds[i] and preds[i][word] in type2id:
-                    pred_type = preds[i][word]
+                remove_idx = None
+                for i, pred in enumerate(preds_per_idx):
+                    if pred[0] == word:
+                        if pred[1] in data_args.type2id:
+                            pred_type = pred[1]
+                        remove_idx = i
+                        break
+                if remove_idx is not None:
+                    preds_per_idx.remove(preds_per_idx[remove_idx])
+
+                # if word in preds[i] and preds[i][word] in type2id:
+                #     pred_type = preds[i][word]
 
                 # record results
                 results[item["id"]].append({"id": candidate["id"].split("-")[-1], "type_id": int(type2id[pred_type])})
@@ -272,25 +278,17 @@ def get_leven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
                                  save_path: str,
                                  data_args):
     """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.
-    TODO: modify the docstring
 
     Obtains the instances' predictions in the test file of the LEVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
     paradigm and converts the predictions to the dataset's submission format. The converted predictions are dumped into
     a json file for submission.
 
     Args:
-        preds (`List[int]`):
-            A list of integers indicating the predicted type ids of the instances.
-        labels (`List[str]`):
-            A list of strings indicating the actual labels of the instances.
+        preds (`List[List[Tuple[str, str]]]`):
+            The textual predictions of the Event Type or Argument Role.
+            A list of tuple lists, in which each tuple is (argument, role) or (trigger, event_type)
         save_path (`str`):
             A string indicating the path to place the written json file.
-        type2id (`Dict[str, int]`):
-            A dictionary containing the correspondences between event types and ids.
-        tokenizer (`str`):
-            A string representing the tokenization proposed for the tokenization process.
-        training_args:
-            The pre-defined arguments for the training process.
         data_args:
             The pre-defined arguments for data processing.
 
