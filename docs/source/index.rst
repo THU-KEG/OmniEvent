@@ -181,14 +181,18 @@ OmniEvent evaluates models of different paradigms in a unifed manner, where the 
 
 For those datasets whose test set annotations are not given, such as MAVEN and LEVEN, OmniEvent provide APIs to generate submission files. See `dump_result.py <https://github.com/THU-KEG/OmniEvent/OmniEvent/evaluation/dump_result.py>`_) for details.
 
-Contents
---------
-
 .. toctree::
    :maxdepth: 1
    :caption: Tutorials
 
    tutorials/preprocess
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Examples
+
+   examples/examples
+   examples/bigmodel
 
 .. toctree::
    :maxdepth: 1
@@ -217,3 +221,17 @@ Contents
    model/model
    model/smoother
    model/constraint
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Aggregation
+
+   aggregation/aggregation
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Classification Head
+
+   head/head
+   head/classification
+   head/crf
