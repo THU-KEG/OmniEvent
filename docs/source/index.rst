@@ -13,10 +13,10 @@ Features
 - **Comprehensive Implementations**
     - All sub-tasks, **Event Detection**, **Event Argument Extraction** and **Event Extraction**, are considered.
     - Various paradigms, **Token Classification**, **Sequence Labeling**, **MRC (QA)** and **Seq2Seq**, are deployed.
-    - **Transformers-based** (`BERT <#>`_, `T5 <#>`_, etc.) and **classical** models (CNN, LSTM, CRF, etc.) are implemented.
+    - **Transformers-based** (`BERT <https://arxiv.org/pdf/1810.04805.pdf>`_, `T5 <https://arxiv.org/pdf/1910.10683.pdf>`_, etc.) and **classical** models (CNN, LSTM, CRF, etc.) are implemented.
     - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models.
 - **Unified Benchmark & Evaluation**
-    - Different datasets for event detection and extraction are processed into a `unified format <#>`_.
+    - Different datasets for event detection and extraction are processed into a `unified format <https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format>`_.
     - Predicted results of different paradigms are all converted into word level for comparable evaluation.
 - **Support Big Model Training & Inference**
     - Efficient training and inference of big models for event extraction are supported with `BMTrain <https://github.com/OpenBMB/BMTrain>`_.
@@ -71,6 +71,7 @@ Customized Use of OmniEvent
 OmniEvent can help users easily train and evaluate their customized models on a specific dataset.
 
 We show a step-by-step example of using OmniEvent to train and evaluate an **Event Detection** model on **ACE-EN** dataset in the **Seq2Seq** paradigm.
+More examples are shown `here <https://github.com/THU-KEG/OmniEvent/examples>`_.
 
 Step 1: Process the dataset into the unified format
 ```````````````````````````````````````````````````
@@ -94,9 +95,9 @@ We keep track of the configurations of dataset, model and training parameters vi
     >>> from OmniEvent.input_engineering.seq2seq_processor import type_start, type_end
 
     >>> parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
-    >>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/ed/s2s/ace2005-en.yaml")
+    >>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/all-datasets/ed/s2s/ace-en.yaml")
 
-    >>> training_args.output_dir = 'output/ACE2005-EN/ED/seq2seq/mt5-base/'
+    >>> training_args.output_dir = 'output/ACE2005-EN/ED/seq2seq/t5-base/'
     >>> data_args.markers = ["<event>", "</event>", type_start, type_end]
 
 Step 3: Initialize the model and tokenizer
@@ -184,13 +185,13 @@ Contents
 --------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorials
 
    tutorials/preprocess
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Input Engineering
 
    input/tokenizer
@@ -202,3 +203,17 @@ Contents
    input/mrc_converter
    input/mrc
    input/utils
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Backbone
+
+   backbone/backbone
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Model
+
+   model/model
+   model/smoother
+   model/constraint
