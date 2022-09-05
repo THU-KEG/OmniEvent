@@ -1,18 +1,29 @@
-# OmniEvent
+<div align='center'><img src="imgs/Omnievent.png" style="width:256px;"></div>
+
+
 
 ## Overview
-OmniEvent is a powerful Event Extraction toolkit that provides comprehensive implementations of state-of-the-art methods 
-along with unified workflows of data processing and model evaluation. 
+OmniEvent is a powerful event extraction toolkit that provides comprehensive and compact implementations of various event extraction methods. OmniEvent benchmarks existing main-stream event extraction paradigms (token classification, sequence labeling, seq2seq, and machine reading comprehension) on commenly-used English and Chinese datasets. Meanwhile, OmniEvent provides unified evaluation methods and thus a fair comparsion of different models. 
 
-### Features
+### Important Features
 - **Comprehensive Implementations**
   - All sub-tasks, ***Event Detection***, ***Event Argument Extraction*** and ***Event Extraction***, are considered.
   - Various paradigms, ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***, are deployed.
   - ***Transformers-based*** ([BERT](), [T5](), etc.) and ***classical*** models (CNN, LSTM, CRF, etc.) are implemented.
   - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
+- **Modular Implementation**
+  - All methods are decomposed into four parts
+    - **Input Engineering**: Prepare inputs and support various input manipulation, such as prompt.
+    - **backbone**: Encode text into hidden states.
+    - **aggregation**: Aggragate hidden states (e.g., select [CLS], pooling, GCN) for the final event representation. 
+    - **head**: Map the event representation to the final outputs, such as classification head, CRF. 
+
+  - One can combine different modules to design a new model
+
 - **Unified Benchmark & Evaluation** 
   - Different datasets for event detection and extraction are processed into a [unified format]().
   - Predicted results of different paradigms are all converted into word level for comparable evaluation.
+  - Design three evaluation modes (**loose**, **default**, **strict**) for a fair comparison of different methods.
 - **Support Big Model Training & Inference**
   - Efficient training and inference of big models for event extraction are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
 - **Easy to Use & Highly Extensible**
@@ -23,6 +34,8 @@ along with unified workflows of data processing and model evaluation.
 
 
 ## Installation
+
+
 
 
 ## Easy Start
@@ -93,10 +106,10 @@ OmniEvent supports various backbones. The users can specify the model and tokeni
 >>> from OmniEvent.model.model import get_model
 
 >>> backbone, tokenizer, config = get_backbone(model_type=model_args.model_type, 
-					       model_name_or_path=model_args.model_name_or_path, 
-					       tokenizer_name=model_args.model_name_or_path, 
-					       markers=data_args.markers,
-					       new_tokens=data_args.markers)
+                           model_name_or_path=model_args.model_name_or_path, 
+                           tokenizer_name=model_args.model_name_or_path, 
+                           markers=data_args.markers,
+                           new_tokens=data_args.markers)
 >>> model = get_model(model_args, backbone)
 >>> model.cuda()
 ```
@@ -159,93 +172,94 @@ For those datasets whose test set annotations are not given, such as MAVEN and L
 
 Datasets
 <table>
-	<tr>
-	    <th>Language</th>
-	    <th>Domain</th>
-	    <th>Task</th>  
-	    <th>Dataset</th>  
-	</tr >
-	<tr >
-	    <td rowspan="6">English</td>
-	    <td>General</td>
-	    <td>ED</td>
-	    <td>MAVEN</td>
-	</tr>
-	<tr>
-	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>ACE-EN</td>
-	</tr>
-	<tr>
-	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>ACE-DYGIE</td>
-	</tr>
-	<tr>
-	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>ACE-ONEID</td>
-	</tr>
-	<tr>
- 	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>KBP</td>
-	</tr>
-	<tr>
- 	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>ERE</td>
-	</tr>
-	<tr>
-	    <td rowspan="4">Chinese</td>
-	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>ACE-ZH</td>
-	</tr>
-	<tr>
-	    <td>General</td>
-	    <td>ED&EAE</td>
-	    <td>DuEE</td>
-	</tr>
-	<tr>
-	    <td >Legal</td>
-	    <td>ED</td>
-	    <td>LEVEN</td>
-	</tr>
-	<tr>
-	    <td >Financial</td>
-	    <td>ED&EAE</td>
-	    <td>FewFC</td>
+    <tr>
+        <th>Language</th>
+        <th>Domain</th>
+        <th>Task</th>  
+        <th>Dataset</th>  
+    </tr >
+    <tr >
+        <td rowspan="6">English</td>
+        <td>General</td>
+        <td>ED</td>
+        <td>MAVEN</td>
+    </tr>
+    <tr>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>ACE-EN</td>
+    </tr>
+    <tr>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>ACE-DYGIE</td>
+    </tr>
+    <tr>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>ACE-ONEIE</td>
+    </tr>
+    <tr>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>KBP</td>
+    </tr>
+    <tr>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>ERE</td>
+    </tr>
+    <tr>
+        <td rowspan="4">Chinese</td>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>ACE-ZH</td>
+    </tr>
+    <tr>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>DuEE</td>
+    </tr>
+    <tr>
+        <td >Legal</td>
+        <td>ED</td>
+        <td>LEVEN</td>
+    </tr>
+    <tr>
+        <td >Financial</td>
+        <td>ED&EAE</td>
+        <td>FewFC</td>
+
 
 </table>
 
 Models
 <table>
-	<tr>
-	    <th>Paradigm</th>
-	    <th>Backbone</th>
-	    <th>Aggregation / Head</th>  
-	</tr >
-	<tr >
-	    <td>Token Classification </td>
-	    <td>CNN <br> LSTM <br> BERT <br> RoBERTa </td>
-	    <td>CLS <br> Dynamic Pooling <br> Marker <br> Max Pooling</td>
-	</tr>
-	<tr >
-	    <td>Sequence Labeling </td>
-	    <td>CNN <br> LSTM <br> BERT <br> RoBERTa </td>
-	    <td> CRF Head <br> Classification Head </td>
-	</tr>
-	<tr >
-	    <td>Seq2Seq </td>
-	    <td>T5 <br> MT5 </td>
-	    <td> / </td>
-	</tr>
-	<tr >
-	    <td>MRC </td>
-	    <td>LSTM <br> BERT <br> RoBERTa </td>
-	    <td> Classification Head </td>
-	</tr>
+    <tr>
+        <th>Paradigm</th>
+        <th>Backbone</th>
+        <th>Aggregation / Head</th>  
+    </tr >
+    <tr >
+        <td>Token Classification </td>
+        <td>CNN <br> LSTM <br> BERT <br> RoBERTa </td>
+        <td>CLS <br> Dynamic Pooling <br> Marker <br> Max Pooling</td>
+    </tr>
+    <tr >
+        <td>Sequence Labeling </td>
+        <td>CNN <br> LSTM <br> BERT <br> RoBERTa </td>
+        <td> CRF Head <br> Classification Head </td>
+    </tr>
+    <tr >
+        <td>Seq2Seq </td>
+        <td>T5 <br> MT5 </td>
+        <td> / </td>
+    </tr>
+    <tr >
+        <td>MRC </td>
+        <td>LSTM <br> BERT <br> RoBERTa </td>
+        <td> Classification Head </td>
+    </tr>
 
 
 </table>
