@@ -209,9 +209,6 @@ def get_maven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
                 if remove_idx is not None:
                     preds_per_idx.remove(preds_per_idx[remove_idx])
 
-                # if word in preds[i] and preds[i][word] in type2id:
-                #     pred_type = preds[i][word]
-
                 # record results
                 results[item["id"]].append({"id": candidate["id"].split("-")[-1], "type_id": int(type2id[pred_type])})
     # dump results 
@@ -276,7 +273,7 @@ def get_leven_submission_sl(preds: Union[np.array, List[str]],
 
 def get_leven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
                                  save_path: str,
-                                 data_args):
+                                 data_args) -> None:
     """Converts the predictions to the submission format of the LEVEN dataset based on the Seq2Seq paradigm.
 
     Obtains the instances' predictions in the test file of the LEVEN dataset based on the Sequence-to-Sequence (Seq2Seq)
@@ -295,7 +292,31 @@ def get_leven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
     Returns:
         The parameters of the input are passed to the `get_maven_submission_seq2seq()` method for further predictions.
     """
-    return get_maven_submission_seq2seq(preds, save_path, data_args)
+    type2id = data_args.type2id
+    results = defaultdict(list)
+    with open(data_args.test_file, "r") as f:
+        lines = f.readlines()
+        for idx, line in enumerate(lines):
+            item = json.loads(line.strip())
+            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
+
+            for candidate in item["candidates"]:
+                word = candidate["trigger_word"]
+                pred_type = "NA"
+
+                for i, pred in enumerate(preds_per_idx):
+                    if pred[0] == word:
+                        if pred[1] in data_args.type2id:
+                            pred_type = pred[1]
+                        break
+
+                # record results
+                results[item["id"]].append({"id": candidate["id"].split("-")[-1], "type_id": int(type2id[pred_type])})
+    # dump results
+    with open(save_path, "w") as f:
+        for id, preds_per_doc in results.items():
+            results_per_doc = dict(id=id, predictions=preds_per_doc)
+            f.write(json.dumps(results_per_doc) + "\n")
 
 
 def get_duee_submission():
