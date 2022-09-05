@@ -13,9 +13,9 @@ test_exists_labels: False
 # file path #
 output_dir: output/DuEE1.0
 type2id_path: ../../data/processed/DuEE1.0/label2id.json
-train_file: ../../data/processed/DuEE1.0/duee_train.unified.json
-validation_file: ../../data/processed/DuEE1.0/duee_dev.unified.json
-test_file: ../../data/processed/DuEE1.0/duee_test2.unified.json
+train_file: ../../data/processed/DuEE1.0/train.unified.jsonl
+validation_file: ../../data/processed/DuEE1.0/valid.unified.jsonl
+test_file: ../../data/processed/DuEE1.0/valid.unified.jsonl
 
 # config for data processor #
 truncate_in_batch: False

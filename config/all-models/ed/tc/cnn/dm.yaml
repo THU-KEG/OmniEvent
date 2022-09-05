@@ -14,7 +14,7 @@ test_exists_labels: False
 output_dir: output/ACE2005-dygie
 type2id_path: ../../data/processed/ace2005-dygie/label2id.json
 train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-dygie/dev.unified.jsonl
+validation_file: ../../data/processed/ace2005-dygie/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
 
 # config for data processor #

@@ -6,6 +6,30 @@ from tqdm import tqdm
 from typing import Dict, List
 
 
+def str_full_to_half(ustring: str) -> str:
+    """Convert a full-width string to a half-width one.
+
+    The corpus of some datasets contain full-width strings, which may bring about unexpected error for mapping the
+    tokens to the original input sentence.
+
+    Args:
+        ustring(`str`):
+            Original string.
+    Returns:
+        rstring (`str`):
+            Output string with the full-width tokens converted
+    """
+    rstring = ""
+    for uchar in ustring:
+        inside_code = ord(uchar)
+        if inside_code == 12288:   # full width space
+            inside_code = 32
+        elif 65281 <= inside_code <= 65374:    # full width char (exclude space)
+            inside_code -= 65248
+        rstring += chr(inside_code)
+    return rstring
+
+
 def convert_leven_to_unified(data_path: str,
                              save_path: str,
                              dump=True) -> List[Dict]:
@@ -98,6 +122,20 @@ def convert_leven_to_unified(data_path: str,
             formatted_data.append(instance)
 
     print("We get {} instances for [{}].".format(len(formatted_data), data_path))
+
+    # Change full punctuations into half.
+    for line in formatted_data:
+        line["text"] = str_full_to_half(line["text"])
+        if "events" in line.keys():
+            for event in line["events"]:
+                for trigger in event["triggers"]:
+                    trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+            for trigger in line["negative_triggers"]:
+                trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+        else:
+            for trigger in line["candidates"]:
+                trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+
     if "train" in data_path:
         label2id = dict(sorted(list(label2id.items()), key=lambda x: x[1]))
         json.dump(label2id, open(os.path.join(save_path, "label2id.json"), "w", encoding='utf-8'),

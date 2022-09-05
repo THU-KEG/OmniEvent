@@ -30,13 +30,13 @@ example, a piece of data in the unified OmniEvent format could be demonstrated a
     "negative_triggers": [{
         "id": 0,
         "trigger_word": "In",
-        "position": [0, 2]}, ... }], 
+        "position": [0, 2]}, ... ], 
     "entities":  [{
         "type": "PER",
         "mentions": [{
             "id": "m-291",
             "mention": "Chun",
-            "position": [10, 14]}, ... ]}, ...]}
+            "position": [10, 14]}, ... ]}, ... ]}
 ```
 
 ## Supported Datasets
@@ -46,7 +46,7 @@ conversion difficulties. Additional pre-processing scripts are still being devel
 which you wish us to complete in "[Pull requests](https://github.com/THU-KEG/OmniEvent/pulls)". Currently, we have
 developed pre-processing scripts for the following datasets:
 
-- **ACE2005:** ACE2005, ACE2005-DyGIE, ACE2005-OneIE, ACE2005-ZH
+- **ACE2005:** ACE2005-EN, ACE2005-DyGIE, ACE2005-OneIE, ACE2005-ZH
 - **DuEE:** DuEE1.0, DuEE-fin
 - **ERE:** LDC2015E29, LDC2015E68, LDC2015E78
 - **FewFC**
@@ -65,9 +65,9 @@ the DuEE 1.0 dataset, it could be downloaded from [here](https://www.luge.ai/#/l
 
 After downloading the dataset from the Internet, the `run.sh` file under the folder with the same name as the dataset
 should be configured. For example, for the DuEE 1.0 dataset, the `run.sh` file under the path
-`scripts/data_preprocessing/duee` should be configured, in which the `data_dir` path should be the same as the path of
-placing the downloaded dataset, you can also modify the path of the processed dataset by configuring the `save_dir`
-path:
+[`scripts/data_preprocessing/duee`](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing/duee) should
+be configured, in which the `data_dir` path should be the same as the path of placing the downloaded dataset, you can
+also modify the path of the processed dataset by configuring the `save_dir` path:
 
 ```shell
 python duee.py \

@@ -13,9 +13,9 @@ test_exists_labels: True
 output_dir: output/FewFC
 type2id_path: ../../data/processed/FewFC/label2id.json
 role2id_path: ../../data/processed/FewFC/role2id.json
-train_file: ../../data/processed/FewFC/train_base.unified.json
-validation_file: ../../data/processed/FewFC/dev_base.unified.json
-test_file: ../../data/processed/FewFC/test_base.unified.json
+train_file: ../../data/processed/FewFC/train.unified.jsonl
+validation_file: ../../data/processed/FewFC/valid.unified.jsonl
+test_file: ../../data/processed/FewFC/test.unified.jsonl
 # event detection predictions
 golden_trigger: True
 train_pred_file: output/FewFC/ED/token_classification/bert-base-chinese-marker/train_preds.json

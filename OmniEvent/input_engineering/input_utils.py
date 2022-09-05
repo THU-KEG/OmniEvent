@@ -2,8 +2,11 @@ import os
 import json
 import logging
 
+from pathlib import Path
+from transformers import PreTrainedTokenizer
+from transformers.tokenization_utils import BatchEncoding
 from .whitespace_tokenizer import WordLevelTokenizer
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +129,8 @@ def get_words(text: str,
 
 def get_left_and_right_pos(text: str,
                            trigger: Dict[str, Union[int, str, List[int], List[Dict]]],
-                           language: str):
+                           language: str,
+                           keep_space: bool = False) -> Tuple[int, int]:
     """Obtains the word-level position of the trigger word's start and end position.
 
     Obtains the word-level position of the trigger word's start and end position. The method of obtaining the position
@@ -140,23 +144,46 @@ def get_left_and_right_pos(text: str,
             A dictionary containing the trigger word, position, and arguments of an event trigger.
         language (`str`):
             A string indicating the language of the source text and trigger word, English or Chinese.
-
+        keep_space (`bool`):
+            A flag that indicates whether to keep the space in Chinese text during offset calculating.
+                During data preprocessing, the space has to be kept due to the offsets consider space.
+                During evaluation, the space is automatically removed by the tokenizer and the output hidden states do
+                not involve space logits, therefore, offset counting should not keep the space.
     Returns:
-        left_pos (`str`), right_pos (`str`):
-            Two strings indicating the number of words before the start and end position of the trigger word.
+        left_pos (`int`), right_pos (`int`):
+            Two integers indicating the number of words before the start and end position of the trigger word.
     """
     if language == "English":
         left_pos = len(text[:trigger["position"][0]].split())
         right_pos = len(text[:trigger["position"][1]].split())
     elif language == "Chinese":
-        left_pos = trigger["position"][0]
-        right_pos = trigger["position"][1]
+        left_pos = trigger["position"][0] if keep_space else len("".join(text[:trigger["position"][0]].split()))
+        right_pos = trigger["position"][1] if keep_space else len("".join(text[:trigger["position"][1]].split()))
     else:
         raise NotImplementedError
     return left_pos, right_pos
 
 
-def get_word_ids(tokenizer, outputs, word_list):
+def get_word_ids(tokenizer: PreTrainedTokenizer,
+                 outputs: BatchEncoding,
+                 word_list: List[str]) -> List[int]:
+    """Return a list mapping the tokens to their actual word in the initial sentence for a tokenizer.
+
+    Return a list indicating the word corresponding to each token. Special tokens added by the tokenizer are mapped to
+    None and other tokens are mapped to the index of their corresponding word (several tokens will be mapped to the same
+    word index if they are parts of that word).
+
+    Args:
+        tokenizer (`PreTrainedTokenizer`):
+            The tokenizer that has been used for word tokenization.
+        outputs (`BatchEncoding`):
+            The outputs of the tokenizer.
+        word_list (`List[str]`):
+            A list of word strings.
+    Returns:
+        word_ids (`List[int]`):
+            A list mapping the tokens to their actual word in the initial sentence
+    """
     word_list = [w.lower() for w in word_list]
     try:
         word_ids = outputs.word_ids()
@@ -179,7 +206,25 @@ def get_word_ids(tokenizer, outputs, word_list):
     return word_ids
 
 
-def check_pred_len(pred, item, language):
+def check_pred_len(pred: List[str],
+                   item: Dict[str, Union[str, List[dict]]],
+                   language: str) -> None:
+    """Check whether the length of the prediction sequence equals that of the original word sequence.
+
+    The prediction sequence consists of prediction for each word in the original sentence. Sometimes, there might be
+    special tokens or extra space in the original sentence, and the tokenizer will automatically ignore them, which may
+    cause the output length differs from the input length.
+
+    Args:
+        pred (`List[str]`):
+            A list of predicted event types or argument roles.
+        item (`Dict[str, Union[str, List[dict]]]`):
+            A single item of the training/valid/test data.
+        language ('str'):
+            The language of the input text.
+    Returns:
+        None.
+    """
     if language == "English":
         if len(pred) != len(item["text"].split()):
             logger.warning("There might be special tokens in the input text: {}".format(item["text"]))
@@ -191,7 +236,19 @@ def check_pred_len(pred, item, language):
         raise NotImplementedError
 
 
-def get_ed_candidates(item):
+def get_ed_candidates(item: Dict[str, Union[str, List[dict]]]) -> Tuple[List[dict], List[str]]:
+    """Obtain the candidate tokens for the event detection (ED) task.
+
+    The unified evaluation considers prediction of each token that is possibly a trigger (ED candidate).
+
+    Args:
+        item (`Dict[str, Union[str, List[dict]]]`):
+            A single item of the training/valid/test data.
+    Returns:
+        candidates(`List[dict]`), label_names (`List[str]`):
+            candidates: A list of dictionary that contains the possible trigger.
+            label_names: A list of string contains the ground truth label for each possible trigger.
+    """
     candidates = []
     label_names = []
     if "events" in item:
@@ -208,7 +265,23 @@ def get_ed_candidates(item):
     return candidates, label_names
 
 
-def check_is_argument(mention=None, positive_offsets=None):
+def check_is_argument(mention: Dict[str, Union[str, dict]] = None,
+                      positive_offsets: List[Tuple[int, int]] = None) -> bool:
+    """Check whether a given mention is argument or not.
+
+    Check whether a given mention is argument or not. If it is an argument, we have to exclude it from the negative
+    arguments list.
+
+    Args:
+        mention (`Dict[str, Union[str, dict]]`):
+            The mention that contains the word, position and other meta information like id, etc.
+        positive_offsets (`List[Tuple[int, int]]`):
+            A list that contains the offsets of all the ground truth arguments.
+    Returns:
+        is_argument(`bool`):
+            A flag that indicates whether the mention is an argument or not.
+
+    """
     is_argument = False
     if positive_offsets:
         mention_set = set(range(mention["position"][0], mention["position"][1]))
@@ -220,7 +293,24 @@ def check_is_argument(mention=None, positive_offsets=None):
     return is_argument
 
 
-def get_negative_argument_candidates(item, positive_offsets=None):
+def get_negative_argument_candidates(item: Dict[str, Union[str, List[dict]]],
+                                     positive_offsets: List[Tuple[int, int]] = None,
+                                     ) -> List[Dict[str, Union[str, dict]]]:
+    """Obtain the negative candidate arguments for each trigger in the event argument extraction (EAE) task.
+
+    Obtain the negative candidate arguments, which are not included in the actual arguments list, for the specified
+    trigger. The unified evaluation considers prediction of each token that is possibly an argument (EAE candidate).
+
+    Args:
+        item (`Dict[str, Union[str, List[dict]]]`):
+            A single item of the training/valid/test data.
+        positive_offsets (`List[Tuple[int, int]]`):
+            A list that contains the offsets of all the ground truth arguments.
+    Returns:
+        candidates(`List[dict]`), label_names (`List[str]`):
+            candidates: A list of dictionary that contains the possible arguments.
+            label_names: A list of string contains the ground truth label for each possible argument.
+    """
     if "entities" in item:
         neg_arg_candidates = []
         for entity in item["entities"]:
@@ -231,12 +321,28 @@ def get_negative_argument_candidates(item, positive_offsets=None):
     return neg_arg_candidates
 
 
-def get_eae_candidates(item, trigger):
+def get_eae_candidates(item: Dict[str, Union[str, List[dict]]],
+                       trigger: Dict[str, Union[str, dict]]) -> Tuple[List[dict], List[str]]:
+    """Obtain the candidate arguments for each trigger in the event argument extraction (EAE) task.
+
+    The unified evaluation considers prediction of each token that is possibly an argument (EAE candidate). And the EAE
+    task requires the model to predict the argument role of each candidate given a specific trigger.
+
+    Args:
+        item (`Dict[str, Union[str, List[dict]]]`):
+            A single item of the training/valid/test data.
+        trigger (`Dict[str, Union[str, List[dict]]`):
+            A single item of trigger in the item.
+    Returns:
+        candidates(`List[dict]`), label_names (`List[str]`):
+            candidates: A list of dictionary that contains the possible arguments.
+            label_names: A list of string contains the ground truth label for each possible argument.
+    """
     candidates = []
     positive_offsets = []
     label_names = []
     if "arguments" in trigger:
-        arguments = sorted(trigger["arguments"], key=lambda item: item["role"])
+        arguments = sorted(trigger["arguments"], key=lambda a: a["role"])
         for argument in arguments:
             for mention in argument["mentions"]:
                 label_names.append(argument["role"])
@@ -254,7 +360,19 @@ def get_eae_candidates(item, trigger):
     return candidates, label_names
 
 
-def get_event_preds(pred_file):
+def get_event_preds(pred_file: Union[str, Path]) -> List[str]:
+    """Load the event detection predictions of each token for event argument extraction.
+
+    The Event Argument Extraction task requires the event detection predictions. If the event prediction file exists,
+    we use the predictions by the event detection model. Otherwise, we use the golden event type for each token.
+
+    Args:
+        pred_file (`Union[str, Path]`):
+            The file that contains the event detection predictions for each token.
+    Returns:
+        event_preds (`List[str`]):
+            A list of the predicted event types for each token.
+    """
     if pred_file is not None and os.path.exists(pred_file):
         event_preds = json.load(open(pred_file))
     else:
@@ -264,14 +382,42 @@ def get_event_preds(pred_file):
     return event_preds
 
 
-def get_plain_label(input_label):
+def get_plain_label(input_label: str) -> str:
+    """Convert the formatted original event type or argument role to a plain one.
+
+    This function is used in the Seq2seq paradigm that the model has to generate the event types and argument roles.
+    Some  event types and argument roles are formatted, such as `Attack.Time-Start`, we convert them in to a plain
+    one, like `timestart`, by removing the event type in the front and shifting upper case to lower case.
+
+    Args:
+        input_label (`str`):
+            The original label with format.
+    Returns:
+        return_label (`str`):
+            The plain label without format.
+
+    """
     if input_label == "NA":
         return input_label
 
-    return "".join("".join(input_label.split(".")[-1].split("-")).split("_")).lower()
+    return_label = "".join("".join(input_label.split(".")[-1].split("-")).split("_")).lower()
+
+    return return_label
 
 
-def str_full_to_half(ustring):
+def str_full_to_half(ustring: str) -> str:
+    """Convert a full-width string to a half-width one.
+
+    The corpus of some datasets contain full-width strings, which may bring about unexpected error for mapping the
+    tokens to the original input sentence.
+
+    Args:
+        ustring(`str`):
+            Original string.
+    Returns:
+        rstring (`str`):
+            Output string with the full-width tokens converted
+    """
     rstring = ""
     for uchar in ustring:
         inside_code = ord(uchar)

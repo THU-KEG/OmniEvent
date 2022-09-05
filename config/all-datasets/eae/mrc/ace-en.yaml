@@ -22,7 +22,7 @@ train_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-mar
 validation_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/valid_preds.json
 test_pred_file: output/ACE2005-EN/ED/token_classification/bert-base-uncased-marker/test_preds.json
 # config for some specific paradigms
-prompt_file: ../../data/processed/ace2005/description_queries.csv # used for MRC paradigm
+prompt_file: ../../data/processed/ace2005-en/description_queries.csv # used for MRC paradigm
 mrc_template_id: 0
 
 # config for data processor # 

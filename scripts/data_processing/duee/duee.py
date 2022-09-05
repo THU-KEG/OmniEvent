@@ -103,6 +103,30 @@ def re_tokenize(token_list: List[str],
     return left + middle_new + right
 
 
+def str_full_to_half(ustring: str) -> str:
+    """Convert a full-width string to a half-width one.
+
+    The corpus of some datasets contain full-width strings, which may bring about unexpected error for mapping the
+    tokens to the original input sentence.
+
+    Args:
+        ustring(`str`):
+            Original string.
+    Returns:
+        rstring (`str`):
+            Output string with the full-width tokens converted
+    """
+    rstring = ""
+    for uchar in ustring:
+        inside_code = ord(uchar)
+        if inside_code == 12288:   # full width space
+            inside_code = 32
+        elif 65281 <= inside_code <= 65374:    # full width char (exclude space)
+            inside_code -= 65248
+        rstring += chr(inside_code)
+    return rstring
+
+
 def convert_duee_to_unified(data_path: str,
                             dump: Optional[bool] = True,
                             tokenizer: Optional[str] = "jieba") -> List[Dict[str, Union[str, List[Dict]]]]:
@@ -226,6 +250,22 @@ def convert_duee_to_unified(data_path: str,
         formatted_data.append(instance)
 
     print("We get {}/{} instances for [{}].".format(len(formatted_data), len(duee_data), data_path))
+
+    # Change full punctuations into half.
+    for line in formatted_data:
+        line["text"] = str_full_to_half(line["text"])
+        if "events" in line.keys():
+            for event in line["events"]:
+                for trigger in event["triggers"]:
+                    trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+                    for argument in trigger["arguments"]:
+                        for mention in argument["mentions"]:
+                            mention["mention"] = str_full_to_half(mention["mention"])
+            for trigger in line["negative_triggers"]:
+                trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
+        else:
+            for trigger in line["candidates"]:
+                trigger["trigger_word"] = str_full_to_half(trigger["trigger_word"])
 
     data_path = '/data/processed'.join('/'.join(data_path.split('/')[:-1]).split('/data/original'))
     if dump:

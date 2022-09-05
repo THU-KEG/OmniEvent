@@ -98,6 +98,7 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
         is_overflow:
 
 
+
     Returns:
         results (`List[str]`):
             A list of strings indicating the prediction results of event arguments.
@@ -125,7 +126,6 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
                 for trigger in event["triggers"]:
                     true_type = event["type"]
                     pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
-
                     trigger_idx += 1
 
                     if eval_mode in ['default', 'loose']:
@@ -139,10 +139,10 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
                     label_names.extend(label_names_per_trigger)
 
                     # loop for converting
-                    for candidate in candidates:
+                    for candi in candidates:
                         if true_type == pred_type:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
                             pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
                         else:
@@ -162,15 +162,13 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
                         if not is_overflow[eae_instance_idx]:
                             check_pred_len(pred=preds[eae_instance_idx], item=item, language=language)
 
-                        candidates = []
-                        for neg in item["negative_triggers"]:
-                            label_names.append("NA")
-                            candidates.append(neg)
+                        candidates, label_names_per_trigger = get_eae_candidates(item=item, trigger=trigger)
+                        label_names.extend(label_names_per_trigger)
 
                         # loop for converting
-                        for candidate in candidates:
+                        for candi in candidates:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
                             pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
                             # record results
@@ -190,6 +188,28 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
 
 
 def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_overflow):
+    """Obtains the event argument extraction results of the ACE2005 dataset based on the MRC paradigm.
+
+    Obtains the event argument extraction prediction results of the ACE2005 dataset based on the MRC paradigm,
+    predicting the labels of entities and negative triggers and calculating the micro F1 score based on the
+    predictions and labels.
+
+    Args:
+        preds (`np.array`):
+            A list of strings indicating the predicted types of the instances.
+        labels (`np.array`):
+            A list of strings indicating the actual labels of the instances.
+        data_file (`str`):
+            A string indicating the path of the testing data file.
+        data_args:
+            The pre-defined arguments for data processing.
+        is_overflow:
+
+    Returns:
+        results (`List[str]`):
+            A list of strings indicating the prediction results of event arguments.
+    """
+
     # evaluation mode
     eval_mode = data_args.eae_eval_mode
     golden_trigger = data_args.golden_trigger
@@ -230,10 +250,10 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                     all_labels.extend(labels_per_idx)
 
                     # loop for converting
-                    for candidate in candidates:
+                    for candi in candidates:
                         if pred_type == true_type:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
                             pred_role = "NA"
                             for pred in preds_per_idx:
@@ -258,9 +278,9 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                         all_labels.extend(labels_per_idx)
 
                         # loop for converting
-                        for candidate in candidates:
+                        for candi in candidates:
                             # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candidate, language=language)
+                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
 
                             # get predictions
                             pred_role = "NA"
@@ -284,6 +304,26 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
 
 def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_overflow):
+    """Obtains the event detection prediction results of the ACE2005 dataset based on the Seq2Seq paradigm.
+
+    Obtains the event detection prediction results of the ACE2005 dataset based on the Seq2Seq paradigm,
+    predicting the labels and calculating the micro F1 score based on the predictions and labels.
+
+    Args:
+        preds (`np.array`):
+            A list of strings indicating the predicted types of the instances.
+        labels (`np.array`):
+            A list of strings indicating the actual labels of the instances.
+        data_file (`str`):
+            A string indicating the path of the testing data file.
+        data_args:
+            The pre-defined arguments for data processing.
+        is_overflow:
+
+    Returns:
+        results (`List[str]`):
+            A list of strings indicating the prediction results of event triggers.
+    """
     # get per-word predictions
     results = []
     label_names = []
@@ -324,6 +364,28 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
 
 
 def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_overflow):
+    """Obtains the event argument extraction results of the ACE2005 dataset based on the Seq2Seq paradigm.
+
+    Obtains the event argument extraction prediction results of the ACE2005 dataset based on the Seq2Seq paradigm,
+    predicting the labels of entities and negative triggers and calculating the micro F1 score based on the
+    predictions and labels.
+
+    Args:
+        preds (`np.array`):
+            A list of strings indicating the predicted types of the instances.
+        labels (`np.array`):
+            A list of strings indicating the actual labels of the instances.
+        data_file (`str`):
+            A string indicating the path of the testing data file.
+        data_args:
+            The pre-defined arguments for data processing.
+        is_overflow:
+
+    Returns:
+        results (`List[str]`):
+            A list of strings indicating the prediction results of event arguments.
+    """
+
     # evaluation mode
     eval_mode = data_args.eae_eval_mode
     golden_trigger = data_args.golden_trigger

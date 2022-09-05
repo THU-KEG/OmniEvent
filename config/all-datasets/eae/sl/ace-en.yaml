@@ -5,12 +5,12 @@ do_predict: True
 # top-level config #
 paradigm: sequence_labeling
 task_name: EAE
-dataset_name: ACE2005
+dataset_name: ACE2005-EN
 language: English
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-EN/
+output_dir: output/ACE2005-EN
 type2id_path: ../../data/processed/ace2005-en/label2id.json
 role2id_path: ../../data/processed/ace2005-en/role2id.json
 train_file: ../../data/processed/ace2005-en/train.unified.jsonl

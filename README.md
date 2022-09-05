@@ -9,7 +9,7 @@ OmniEvent is a powerful event extraction toolkit that provides comprehensive and
 - **Comprehensive Implementations**
   - All sub-tasks, ***Event Detection***, ***Event Argument Extraction*** and ***Event Extraction***, are considered.
   - Various paradigms, ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***, are deployed.
-  - ***Transformers-based*** ([BERT](), [T5](), etc.) and ***classical*** models (CNN, LSTM, CRF, etc.) are implemented.
+  - ***Transformers-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** models (CNN, LSTM, CRF, etc.) are implemented.
   - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
 - **Modular Implementation**
   - All methods are decomposed into four parts
@@ -21,7 +21,7 @@ OmniEvent is a powerful event extraction toolkit that provides comprehensive and
   - One can combine different modules to design a new model
 
 - **Unified Benchmark & Evaluation** 
-  - Different datasets for event detection and extraction are processed into a [unified format]().
+  - Different datasets for event detection and extraction are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
   - Predicted results of different paradigms are all converted into word level for comparable evaluation.
   - Design three evaluation modes (**loose**, **default**, **strict**) for a fair comparison of different methods.
 - **Support Big Model Training & Inference**
@@ -76,6 +76,7 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
 OmniEvent can help users easily train and evaluate their customized models on a specific dataset. 
 
 We show a step-by-step example of using OmniEvent to train and evlauate an ***Event Detection*** model on ***ACE-EN*** dataset in the ***Seq2Seq*** paradigm.
+More examples are shown [here](./examples)
 ### Step 1: Process the dataset into the unified format
 We provide standard data processing scripts for commonly-adopted datasets. Checkout the details in [scripts/data_processing](./scripts/data_processing).
 ```shell
@@ -92,9 +93,9 @@ We keep track of the configurations of dataset, model and training parameters vi
 >>> from OmniEvent.input_engineering.seq2seq_processor import type_start, type_end
 
 >>> parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
->>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/ed/s2s/ace2005-en.yaml")
+>>> model_args, data_args, training_args = parser.parse_yaml_file(yaml_file="config/all-datasets/ed/s2s/ace-en.yaml")
 
->>> training_args.output_dir = 'output/ACE2005-EN/ED/seq2seq/mt5-base/'
+>>> training_args.output_dir = 'output/ACE2005-EN/ED/seq2seq/t5-base/'
 >>> data_args.markers = ["<event>", "</event>", type_start, type_end]
 ```
 

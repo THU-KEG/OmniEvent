@@ -3,7 +3,9 @@ from typing import List, Dict, Union, Optional
 from xml.dom.minidom import parse
 from tqdm import tqdm
 # from stanfordcorenlp import StanfordCoreNLP
+
 import jieba
+import jsonlines
 import re
 import pdb 
 import random
@@ -13,6 +15,7 @@ import copy
 import argparse
 from pathlib import Path 
 from collections import defaultdict
+
 
 class Tokenizer():
     """Tokenizer for word and sentence tokenization.
@@ -67,7 +70,6 @@ class Tokenizer():
             result += seg 
         assert len(result) == len(sentence)
         return sents, offsets
-
 
 
 class Extractor():
@@ -160,7 +162,6 @@ class Extractor():
                 new_offsets.append(suboffset)
         return new_sents,new_offsets
 
-
     def correct_offsets(self,
                         sents: List[str],
                         offsets):
@@ -179,7 +180,6 @@ class Extractor():
                     new_offsets_per_sentence.append((offset[0]-minus,offset[1]-minus))
             new_offsets.append(new_offsets_per_sentence)
         return sents,new_offsets
-
 
     def Files_Extract(self) -> None:
         """Extracts the filenames containing events, source texts, and amps."""
@@ -204,7 +204,6 @@ class Extractor():
             evtlen+=len(self.event_files[dir])
         assert evtlen==srclen
         # assert evtlen==599
-
 
     def Entity_Extract(self) -> None:
         """Extracts the entity annotations from the dataset."""
@@ -416,6 +415,18 @@ class Extractor():
                     }
                     self.None_events.append(none_event_summary)
 
+    def str_full_to_half(self, ustring: str) -> str:
+        """Convert a full-width string to a half-width one."""
+        rstring = ""
+        for uchar in ustring:
+            inside_code = ord(uchar)
+            if inside_code == 12288:  # full width space
+                inside_code = 32
+            elif 65281 <= inside_code <= 65374:  # full width char (exclude space)
+                inside_code -= 65248
+            rstring += chr(inside_code)
+        return rstring
+
     def process(self) -> None:
         """Converts the word-level position annotations of event triggers, entities, and none trigger mentions into
            character-level position annotations."""
@@ -518,8 +529,6 @@ class Extractor():
         # record
         self.Events = Events
 
-
-
     def Extract(self) -> None:
         """Extracts the entities, events and negative mentions, splits the training, validation, and testing set,
            and writes the datasets into json files."""
@@ -560,7 +569,6 @@ class Extractor():
             write_to_file(train_files, "train.txt")
             write_to_file(dev_files, "dev.txt")
             write_to_file(test_files, "test.txt")
-            
 
         # Use fix split
         splits = {'train':[],'dev':[],'test':[]}
@@ -572,6 +580,17 @@ class Extractor():
                 while split_file:
                     splits[split].append(split_file)
                     split_file = f.readline().strip()
+
+        for line in self.Events:
+            line["text"] = self.str_full_to_half(line["text"])
+            for event in line["events"]:
+                for trigger in event["triggers"]:
+                    trigger["trigger_word"] = self.str_full_to_half(trigger["trigger_word"])
+                    for argument in trigger["arguments"]:
+                        for mention in argument["mentions"]:
+                            mention["mention"] = self.str_full_to_half(mention["mention"])
+            for trigger in line["negative_triggers"]:
+                trigger["trigger_word"] = self.str_full_to_half(trigger["trigger_word"])
         
         test_files = splits['test']
         dev_files = splits['dev']
@@ -619,7 +638,6 @@ def token_pos_to_char_pos(tokens: List[str],
     sen = "".join(tokens)
     assert sen[char_start:char_end] == word_span
     return [char_start, char_end]
-
 
 
 def filter_special_token(item: Dict[str, Union[str, List]],
@@ -700,7 +718,7 @@ def filter_special_token(item: Dict[str, Union[str, List]],
             mention["mention"] = mention["mention"].replace(special_token, "")
             assert text[mention["position"][0]:mention["position"][1]] == mention["mention"]
     item["text"] = text
-    return item 
+    return item
 
 
 def convert_ace2005_to_unified(output_dir: str,
@@ -723,7 +741,7 @@ def convert_ace2005_to_unified(output_dir: str,
     label2id = dict(NA=0)    
     role2id = dict(NA=0)
     print("We got %d instances" % len(data))
-    with open(os.path.join(output_dir, file_name.replace(".json", ".unified.jsonl")), "w") as f:
+    with jsonlines.open(os.path.join(output_dir, file_name.replace(".json", ".unified.jsonl")), "w") as f:
         for instance in data:
             for event in instance["events"]:
                 if event["type"] not in label2id:
@@ -733,7 +751,7 @@ def convert_ace2005_to_unified(output_dir: str,
                         if argument["role"] not in role2id:
                             role2id[argument["role"]] = len(role2id)
             del instance["file"]
-            f.write(json.dumps(instance)+"\n")
+            jsonlines.Writer.write(f, instance)
     if "train" in file_name:
         json.dump(label2id, open(os.path.join(output_dir, "label2id.json"), "w"), indent=4)
         json.dump(role2id, open(os.path.join(output_dir, "role2id.json"), "w"), indent=4)
@@ -760,4 +778,3 @@ if __name__ == "__main__":
     convert_ace2005_to_unified(args.ACE_DUMP, "train.json")
     convert_ace2005_to_unified(args.ACE_DUMP, "valid.json")
     convert_ace2005_to_unified(args.ACE_DUMP, "test.json")
-

@@ -24,9 +24,8 @@ class EDInputExample(object):
             An integer indicating the left position of the event trigger.
         trigger_right (`int`, `optional`, defaults to `None`):
             An integer indicating the right position of the event trigger.
-        labels (`int`, `optional`, defaults to `None`):
-            A string indicating the label of the event.
-            TODO: The explanation of the variable `labels` should be checked.
+        labels (`str`, `optional`, defaults to `None`):
+            A string indicating the event type of the trigger.
     """
 
     def __init__(self,
@@ -114,7 +113,6 @@ class EAEInputExample(object):
             A string indicating the actual event type from the annotation.
         input_template:
             The input template for the MRC paradigm.
-            TODO: The data type of the variable `input_template` should be configured.
         trigger_left (`int`, `optional`, defaults to `None`):
             An integer indicating the left position of the event trigger.
         trigger_right (`int`, `optional`, defaults to `None`):
@@ -162,7 +160,7 @@ class EAEInputFeatures(object):
 
     Input features of an instance for event argument extraction, representing the basic features of an argument mention,
     including its example id, the indices of tokens in the vocabulary, the attention mask, segment token indices, the
-    start and end position of the event trigger and argument mention, and the label of the event.
+    start and end position of the event trigger and argument mention, and the event type of the trigger.
 
     Attributes:
         example_id (`Union[int, str]`):
@@ -182,7 +180,7 @@ class EAEInputFeatures(object):
         argument_right (`int`, `optional`, defaults to `None`):
             An integer for the right position of the argument mention.
         labels (`str`, `optional`, defaults to `None`):
-            A string indicating the label of the event.
+            A string indicating the event type of the trigger.
     """
 
     def __init__(self,
