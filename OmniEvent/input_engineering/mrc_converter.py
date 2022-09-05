@@ -1,6 +1,7 @@
 import collections
 import logging
 from typing import Dict, List, Optional
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -185,19 +186,12 @@ def find_best_thresh(new_preds, new_all_gold):
     gold_arg_n, pred_arg_n = len(new_all_gold), 0
 
     candidate_preds = []
-    for argument in new_preds:
+    for argument in tqdm(new_preds, desc="Finding best thresh"):
         candidate_preds.append(argument[:-2] + argument[-1:])
         pred_arg_n += 1
 
-        pred_in_gold_n, gold_in_pred_n = 0, 0
-        # pred_in_gold_n
-        for argu in candidate_preds:
-            if argu in new_all_gold:
-                pred_in_gold_n += 1
-        # gold_in_pred_n
-        for argu in new_all_gold:
-            if argu in candidate_preds:
-                gold_in_pred_n += 1
+        pred_in_gold_n = len(set(candidate_preds).intersection(set(new_all_gold)))
+        gold_in_pred_n = len(set(new_all_gold).intersection(set(candidate_preds)))
 
         prec_c, recall_c, f1_c = 0, 0, 0
         if pred_arg_n != 0:

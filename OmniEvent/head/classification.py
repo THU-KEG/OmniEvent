@@ -1,5 +1,4 @@
-from turtle import forward
-import torch 
+import torch
 import torch.nn as nn
 
 
@@ -40,7 +39,7 @@ class MRCHead(nn.Module):
                  config) -> None:
         """Constructs a `MRCHead`."""
         super(MRCHead, self).__init__()
-        self.qa_outputs = nn.Linear(config.hidden_size, 2)
+        self.qa_outputs = nn.Linear(config.hidden_size*config.head_scale, 2)
     
     def forward(self,
                 hidden_state: torch.Tensor):
