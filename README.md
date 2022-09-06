@@ -3,7 +3,7 @@
 
 
 ## Overview
-OmniEvent is a powerful event extraction toolkit that provides comprehensive and compact implementations of various event extraction methods. OmniEvent benchmarks existing main-stream event extraction paradigms (token classification, sequence labeling, seq2seq, and machine reading comprehension) on commenly-used English and Chinese datasets. Meanwhile, OmniEvent provides unified evaluation methods and thus a fair comparsion of different models. 
+OmniEvent is a powerful event extraction toolkit that provides comprehensive and compact implementations of various event extraction methods. OmniEvent benchmarks existing main-stream event extraction paradigms (token classification, sequence labeling, seq2seq, and machine reading comprehension) on commonly-used English and Chinese datasets. Meanwhile, OmniEvent provides unified evaluation methods and thus a fair comparsion of different models. 
 
 ### Important Features
 - **Comprehensive Implementations**
@@ -14,9 +14,9 @@ OmniEvent is a powerful event extraction toolkit that provides comprehensive and
 - **Modular Implementation**
   - All methods are decomposed into four parts
     - **Input Engineering**: Prepare inputs and support various input manipulation, such as prompt.
-    - **backbone**: Encode text into hidden states.
-    - **aggregation**: Aggragate hidden states (e.g., select [CLS], pooling, GCN) for the final event representation. 
-    - **head**: Map the event representation to the final outputs, such as classification head, CRF. 
+    - **Backbone**: Encode text into hidden states.
+    - **Aggregation**: Aggragate hidden states (e.g., select [CLS], pooling, GCN) for the final event representation. 
+    - **Head**: Map the event representation to the final outputs, such as classification head, CRF, MRC head, etc. 
 
   - One can combine different modules to design a new model
 
@@ -76,7 +76,7 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
 OmniEvent can help users easily train and evaluate their customized models on a specific dataset. 
 
 We show a step-by-step example of using OmniEvent to train and evlauate an ***Event Detection*** model on ***ACE-EN*** dataset in the ***Seq2Seq*** paradigm.
-More examples are shown [here](./examples)
+More examples are shown in [examples](./examples)
 ### Step 1: Process the dataset into the unified format
 We provide standard data processing scripts for commonly-adopted datasets. Checkout the details in [scripts/data_processing](./scripts/data_processing).
 ```shell
@@ -180,10 +180,10 @@ Datasets
         <th>Dataset</th>  
     </tr >
     <tr >
-        <td rowspan="6">English</td>
+        <td rowspan="4">English</td>
         <td>General</td>
         <td>ED</td>
-        <td>MAVEN</td>
+        <td><a href="https://github.com/THU-KEG/MAVEN-dataset"> MAVEN</a></td>
     </tr>
     <tr>
         <td>General</td>
@@ -198,23 +198,13 @@ Datasets
     <tr>
         <td>General</td>
         <td>ED&EAE</td>
-        <td>ACE-ONEIE</td>
-    </tr>
-    <tr>
-        <td>General</td>
-        <td>ED&EAE</td>
-        <td>KBP</td>
-    </tr>
-    <tr>
-        <td>General</td>
-        <td>ED&EAE</td>
-        <td>ERE</td>
+        <td>RichERE (KBP+ERE)</td>
     </tr>
     <tr>
         <td rowspan="4">Chinese</td>
-        <td>General</td>
-        <td>ED&EAE</td>
-        <td>ACE-ZH</td>
+        <td>Legal</td>
+        <td>ED</td>
+        <td><a href="https://github.com/thunlp/LEVEN"> LEVEN </a></td>
     </tr>
     <tr>
         <td>General</td>
@@ -222,14 +212,14 @@ Datasets
         <td>DuEE</td>
     </tr>
     <tr>
-        <td >Legal</td>
-        <td>ED</td>
-        <td>LEVEN</td>
+        <td>General</td>
+        <td>ED&EAE</td>
+        <td>ACE-ZH</td>
     </tr>
     <tr>
         <td >Financial</td>
         <td>ED&EAE</td>
-        <td>FewFC</td>
+        <td><a href="https://github.com/TimeBurningFish/FewFC"> FewFC</a></td>
 
 
 </table>
