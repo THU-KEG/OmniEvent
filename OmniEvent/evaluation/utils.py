@@ -147,7 +147,6 @@ def get_pred_mrc(logits: np.array,
             The event detection predictions, only used in Event Argument Extraction task.
 
     Returns:
-        # TODO: modify here
         preds (`List[List[Tuple[str, str]]]`):
             The textual predictions of the Event Type or Argument Role.
             A list of tuple lists, in which each tuple is (argument, role) or (trigger, event_type)

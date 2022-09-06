@@ -4,7 +4,7 @@ do_predict: True
 do_ED_infer: True 
 
 # top-level config #
-paradigm: sequence_labeling
+paradigm: seq2seq
 task_name: ED
 dataset_name: ACE2005-dygie
 language: English
@@ -18,27 +18,32 @@ validation_file: ../../data/processed/ace2005-dygie/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
 
 # config for data processor #
-return_token_type_ids: True 
-truncate_seq2seq_output: False
+truncate_in_batch: True 
+return_token_type_ids: False 
+truncate_seq2seq_output: True 
 
 # model config #
-model_type: bert
-model_name_or_path: bert-base-uncased
-hidden_size: 768
+model_type: t5
+model_name_or_path: t5-large
+hidden_size: 1024
 aggregation: none
-head_type: crf
 
 # training config #
-num_train_epochs: 35
+num_train_epochs: 10
 max_seq_length: 160
-max_out_length: 160
+max_out_length: 128
 dataloader_num_workers: 2
 
-per_device_train_batch_size: 32
-per_device_eval_batch_size: 64
-gradient_accumulation_steps: 1
+generation_max_length: 128
+generation_num_beams: 4
+predict_with_generate: True 
+ignore_pad_token_for_loss: True 
+
+per_device_train_batch_size: 8
+per_device_eval_batch_size: 20
+gradient_accumulation_steps: 2
 # eval_accumulation_steps: 4
-learning_rate: 12.0e-5
+learning_rate: 1.0e-4
 weight_decay: 1.0e-5
 warmup_ratio: 0.1 
 max_grad_norm: 1
@@ -56,5 +61,5 @@ save_strategy: epoch
 save_steps: 500
 
 # split inference #
-split_infer: False 
+split_infer: True
 split_infer_size: 500

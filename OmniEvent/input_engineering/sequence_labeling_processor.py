@@ -280,7 +280,7 @@ class EAESLProcessor(EAEDataProcessor):
             outputs, is_overflow = self._truncate(outputs, self.config.max_seq_length)
             self.is_overflow.append(is_overflow)
 
-            word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, example.text)[: self.config.max_seq_length]
+            word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, text)[: self.config.max_seq_length]
             final_labels = self.get_final_labels(labels, word_ids_of_each_token, label_all_tokens=False)
 
             features = EAEInputFeatures(
