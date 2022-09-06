@@ -137,7 +137,7 @@ def convert_to_openee(input_path: str,
         for i, entity in enumerate(item["ner"]):
             start = entity[0] - item["s_start"]
             end = entity[1] - item["s_start"] + 1
-            mention = openee_item["text"][start:end]
+            mention = " ".join(item["sentence"][start:end])
             openee_entity = {
                 "id": f"entity-{i}",
                 "type": entity[2],
@@ -145,7 +145,7 @@ def convert_to_openee(input_path: str,
                     {
                         "mention_id": "mention_0",
                         "mention": mention,
-                        "position": [start, end]
+                        "position": token_pos_to_char_pos(item["sentence"], start, mention)
                     }
                 ]
             }
