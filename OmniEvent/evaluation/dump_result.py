@@ -11,7 +11,7 @@ from ..input_engineering.input_utils import check_pred_len, get_left_and_right_p
 
 def get_pred_per_mention(pos_start: int,
                          pos_end: int,
-                         preds: List[str],
+                         preds: List[Union[str, Tuple[str, str]]],
                          id2label: Dict[int, str] = None,
                          label: str = None,
                          label2id: Dict[str, int] = None,
@@ -27,7 +27,7 @@ def get_pred_per_mention(pos_start: int,
             The start position of the mention in the sequence of tokens.
         pos_end (`int`):
             The end position of the mention in the sequence of tokens.
-        preds (`List[str]`):
+        preds (`List[Union[str, Tuple[str, str]]]`):
             The predictions of the sequence of tokens.
         id2label (`Dict[int, str]`):
             A dictionary that contains the mapping from id to textual label.
@@ -64,14 +64,20 @@ def get_pred_per_mention(pos_start: int,
         predictions = []
         word = text[pos_start: pos_end]
         for i, pred in enumerate(preds):
-            if pred[0].lower() == word.lower():
+            if pred[0] == word:
                 if pred[1] in label2id:
                     pred_label = pred[1]
                     predictions.append(pred_label)
         if label in predictions:
-            return label
+            pred_label = label
         else:
-            return predictions[0] if predictions else "NA"
+            pred_label = predictions[0] if predictions else "NA"
+
+        # remove the prediction that has been used for a specific mention.
+        if (word, pred_label) in preds:
+            preds.remove((word, pred_label))
+
+        return pred_label
 
     elif paradigm == "mrc":
         predictions = []

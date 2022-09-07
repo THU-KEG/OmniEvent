@@ -326,7 +326,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
         for idx, line in enumerate(lines):
             item = json.loads(line.strip())
             text = item["text"]
-            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
+            preds_per_idx = preds[idx]
 
             candidates, labels_per_item = get_ed_candidates(item=item)
             for i, label in enumerate(labels_per_item):
@@ -435,7 +435,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
                         # preds per index
-                        preds_per_idx = sorted(copy.deepcopy(preds[eae_instance_idx]), key=lambda p: p[1])
+                        preds_per_idx = preds[eae_instance_idx]
 
                         # get candidates
                         candidates, labels_per_idx = get_eae_candidates(item, trigger)
