@@ -31,7 +31,7 @@ def get_pred_per_mention(pos_start: int,
     Returns:
         A string which represents the predicted label.
     """
-    if pos_start == pos_end or\
+    if pos_start == pos_end or \
             pos_end > len(preds) or \
             id2label[int(preds[pos_start])] == "O" or \
             id2label[int(preds[pos_start])].split("-")[0] != "B":
