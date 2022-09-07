@@ -26,20 +26,20 @@ def convert_to_sentence():
                 json_obj = json.loads(line)
 
                 sentences = json_obj["sentences"]
-                ner = json_obj["ner"]
+                ners = json_obj["ner"]
                 relations = json_obj["relations"]
                 events = json_obj["events"]
                 sentence_start = json_obj["_sentence_start"]
                 doc_key = json_obj["doc_key"]
 
-                assert len(sentence_start) == len(ner) == len(relations) == len(events) == len(sentence_start)
+                assert len(sentence_start) == len(ners) == len(relations) == len(events) == len(sentence_start)
 
-                for sentence, ner, relation, event, s_start in zip(sentences, ner, relations, events, sentence_start):
+                for sentence, ner, relation, event, s_start in zip(sentences, ners, relations, events, sentence_start):
                     # sentence_annotated = dict()
                     sentence_annotated = collections.OrderedDict()
                     sentence_annotated["sentence"] = sentence
                     sentence_annotated["s_start"] = s_start
-                    # sentence_annotated["ner"] = ner
+                    sentence_annotated["ner"] = ner
                     # sentence_annotated["relation"] = relation
                     sentence_annotated["event"] = event
 
@@ -100,7 +100,8 @@ def convert_to_openee(input_path: str,
         openee_item = {
             "id": "NA",
             "text": " ".join(item["sentence"]),
-            "events": []
+            "events": [],
+            "entities": []
         }
         for event in item["event"]:
             openee_event = {
@@ -133,6 +134,22 @@ def convert_to_openee(input_path: str,
                 })
             openee_event["triggers"].append(openee_trigger)
             openee_item["events"].append(openee_event)
+        for i, entity in enumerate(item["ner"]):
+            start = entity[0] - item["s_start"]
+            end = entity[1] - item["s_start"] + 1
+            mention = " ".join(item["sentence"][start:end])
+            openee_entity = {
+                "id": f"entity-{i}",
+                "type": entity[2],
+                "mentions": [
+                    {
+                        "mention_id": "mention_0",
+                        "mention": mention,
+                        "position": token_pos_to_char_pos(item["sentence"], start, mention)
+                    }
+                ]
+            }
+            openee_item["entities"].append(openee_entity)
         openee_data.append(openee_item)
     with open(save_path, "w") as f:
         for item in openee_data:
