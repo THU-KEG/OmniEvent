@@ -36,7 +36,7 @@ aggregation: cls
 head_scale: 1
 
 # training config #
-num_train_epochs: 5
+num_train_epochs: 10
 max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2

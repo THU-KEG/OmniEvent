@@ -14,7 +14,6 @@ from ..input_engineering.input_utils import (
     get_eae_candidates,
     get_event_preds,
     get_plain_label,
-    str_full_to_half,
 )
 logger = logging.getLogger(__name__)
 
@@ -250,15 +249,14 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                     all_labels.extend(labels_per_idx)
 
                     # loop for converting
-                    for candi in candidates:
+                    for cid, candi in enumerate(candidates):
+                        label = labels_per_idx[cid]
                         if pred_type == true_type:
                             # get word positions
                             left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
-                            pred_role = "NA"
-                            for pred in preds_per_idx:
-                                if pred[1] == (left_pos, right_pos-1):
-                                    pred_role = pred[0].split("_")[-1]
+                            pred_role = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx,
+                                                             label=label, paradigm='mrc')
                         else:
                             pred_role = "NA"
                         # record results
@@ -279,20 +277,16 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
                         # loop for converting
                         for candi in candidates:
+                            label = "NA"
                             # get word positions
                             left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
-
                             # get predictions
-                            pred_role = "NA"
-                            for pred in preds_per_idx:
-                                if pred[1] == (left_pos, right_pos-1):
-                                    pred_role = pred[0].split("_")[-1]
+                            pred_role = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx,
+                                                             label=label, paradigm='mrc')
                             # record results
                             results.append(pred_role)
 
                         eae_instance_idx += 1
-
-        # assert len(preds) == eae_instance_idx
         
     pos_labels = list(data_args.role2id.keys())
     pos_labels.remove("NA")
@@ -331,6 +325,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
         lines = f.readlines()
         for idx, line in enumerate(lines):
             item = json.loads(line.strip())
+            text = item["text"]
             preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
 
             candidates, labels_per_item = get_ed_candidates(item=item)
@@ -339,20 +334,13 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
             label_names.extend(labels_per_item)
 
             # loop for converting 
-            for candidate in candidates:
-                pred_type = "NA"
-                word = candidate["trigger_word"]
-                word = str_full_to_half(word)  # TODO: move this conversion to data processing.
-                # find role and remove
-                remove_idx = None 
-                for i, pred in enumerate(preds_per_idx):
-                    if pred[0] == word:
-                        if pred[1] in data_args.type2id:
-                            pred_type = pred[1]
-                        remove_idx = i
-                        break 
-                if remove_idx is not None:
-                    preds_per_idx.remove(preds_per_idx[remove_idx])
+            for cid, candidate in enumerate(candidates):
+                label = labels_per_item[cid]
+                # get word positions
+                left_pos, right_pos = candidate["position"]
+                # get predictions
+                pred_type = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx, text=text,
+                                                 label=label, label2id=data_args.type2id, paradigm='s2s')
                 # record results
                 results.append(pred_type)
 
@@ -402,6 +390,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
         lines = f.readlines()
         for line in lines:
             item = json.loads(line.strip())
+            text = item["text"]
 
             for event in item["events"]:
                 for trigger in event["triggers"]:
@@ -414,7 +403,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                             continue
 
                     # preds per index
-                    preds_per_idx = sorted(copy.deepcopy(preds[eae_instance_idx]), key=lambda p: p[1])
+                    preds_per_idx = preds[eae_instance_idx]
                     # get candidates 
                     candidates, labels_per_idx = get_eae_candidates(item, trigger)
                     for i, label in enumerate(labels_per_idx):
@@ -422,23 +411,15 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                     all_labels.extend(labels_per_idx)
 
                     # loop for converting
-                    for candidate in candidates:
+                    for cid, candidate in enumerate(candidates):
+                        label = labels_per_idx[cid]
                         if pred_type == true_type:
-                            # get candidate word
-                            char_pos = candidate["position"]
-                            word = item["text"][char_pos[0]:char_pos[1]]
-                            word = str_full_to_half(word)  # TODO: move this conversion to data processing.
-                            pred_role = "NA"
-                            # find role and remove
-                            remove_idx = None 
-                            for i, pred in enumerate(preds_per_idx):
-                                if pred[0] == word:
-                                    if pred[1] in data_args.role2id:
-                                        pred_role = pred[1]
-                                    remove_idx = i
-                                    break 
-                            if remove_idx is not None:
-                                preds_per_idx.remove(preds_per_idx[remove_idx])
+                            # get word positions
+                            left_pos, right_pos = candidate["position"]
+                            # get predictions
+                            pred_role = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx,
+                                                             text=text, label=label, label2id=data_args.role2id,
+                                                             paradigm='s2s')
                         else:
                             pred_role = "NA"
                         # record results
@@ -463,23 +444,14 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                         all_labels.extend(labels_per_idx)
 
                         # loop for converting
-                        for candidate in candidates:
-                            # get candidate word
-                            char_pos = candidate["position"]
-                            word = item["text"][char_pos[0]:char_pos[1]]
-                            word = str_full_to_half(word)  # TODO: move this conversion to data processing.
-
-                            pred_role = "NA"
-                            # find role and remove
-                            remove_idx = None
-                            for i, pred in enumerate(preds_per_idx):
-                                if pred[0] == word:
-                                    if pred[1] in data_args.role2id:
-                                        pred_role = pred[1]
-                                    remove_idx = i
-                                    break
-                            if remove_idx is not None:
-                                preds_per_idx.remove(preds_per_idx[remove_idx])
+                        for cid, candidate in enumerate(candidates):
+                            label = labels_per_idx[cid]
+                            # get word positions
+                            left_pos, right_pos = candidate["position"]
+                            # get predictions
+                            pred_role = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx,
+                                                             text=text, label=label, label2id=data_args.role2id,
+                                                             paradigm='s2s')
                             # record results
                             results.append(pred_role)
 
