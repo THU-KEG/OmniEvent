@@ -1,12 +1,10 @@
-import copy 
 import json
 import logging
 import numpy as np
 
-from typing import List
+from typing import List, Dict, Union, Tuple
 from sklearn.metrics import f1_score
 from .metric import select_start_position, compute_unified_micro_f1
-from .dump_result import get_pred_per_mention
 from ..input_engineering.input_utils import (
     get_left_and_right_pos,
     check_pred_len,
@@ -16,6 +14,95 @@ from ..input_engineering.input_utils import (
     get_plain_label,
 )
 logger = logging.getLogger(__name__)
+
+
+def get_pred_per_mention(pos_start: int,
+                         pos_end: int,
+                         preds: List[Union[str, Tuple[str, str]]],
+                         id2label: Dict[int, str] = None,
+                         label: str = None,
+                         label2id: Dict[str, int] = None,
+                         text: str = None,
+                         paradigm: str = "sl") -> str:
+    """Get the predicted event type or argument role for each mention via the predictions of different paradigms.
+
+    The predictions of Sequence Labeling, Seq2Seq, MRC paradigms are not aligned to each word. We need to convert the
+    paradigm-dependent predictions to word-level for the unified evaluation. This function is designed to get the
+    prediction for each single mention, given the paradigm-dependent predictions.
+
+    Args:
+        pos_start (`int`):
+            The start position of the mention in the sequence of tokens.
+        pos_end (`int`):
+            The end position of the mention in the sequence of tokens.
+        preds (`List[Union[str, Tuple[str, str]]]`):
+            The predictions of the sequence of tokens.
+        id2label (`Dict[int, str]`):
+            A dictionary that contains the mapping from id to textual label.
+        label (`str`):
+            The ground truth label of the input mention.
+        label2id (`Dict[str, int]`):
+            A dictionary that contains the mapping from textual label to id.
+        text (`str`):
+            The text of the input context.
+        paradigm (`str`):
+            A string that indicates the paradigm.
+
+    Returns:
+        A string which represents the predicted label.
+    """
+    if paradigm == "sl":
+        # sequence labeling paradigm
+        if pos_start == pos_end or\
+                pos_end > len(preds) or \
+                id2label[int(preds[pos_start])] == "O" or \
+                id2label[int(preds[pos_start])].split("-")[0] != "B":
+            return "NA"
+
+        predictions = set()
+        for pos in range(pos_start, pos_end):
+            _pred = id2label[int(preds[pos])][2:]
+            predictions.add(_pred)
+
+        if len(predictions) > 1:
+            return "NA"
+        else:
+            return list(predictions)[0]
+
+    elif paradigm == "s2s":
+        # seq2seq paradigm
+        predictions = []
+        word = text[pos_start: pos_end]
+        for i, pred in enumerate(preds):
+            if pred[0] == word:
+                if pred[1] in label2id:
+                    pred_label = pred[1]
+                    predictions.append(pred_label)
+        if label in predictions:
+            pred_label = label
+        else:
+            pred_label = predictions[0] if predictions else "NA"
+
+        # remove the prediction that has been used for a specific mention.
+        if (word, pred_label) in preds:
+            preds.remove((word, pred_label))
+
+        return pred_label
+
+    elif paradigm == "mrc":
+        # mrc paradigm
+        predictions = []
+        for pred in preds:
+            if pred[1] == (pos_start, pos_end - 1):
+                pred_role = pred[0].split("_")[-1]
+                predictions.append(pred_role)
+
+        if label in predictions:
+            return label
+        else:
+            return predictions[0] if predictions else "NA"
+    else:
+        raise NotImplementedError
 
 
 def get_ace2005_trigger_detection_sl(preds: np.array,
