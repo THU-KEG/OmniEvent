@@ -153,7 +153,7 @@ class ModelArguments:
         default=768,
         metadata={"help": "Hidden size"}
     )
-    head_type: int = field(
+    head_type: str = field(
         default="linear",
         metadata={"help": "Head type"}
     )
