@@ -235,3 +235,12 @@ For those datasets whose test set annotations are not given, such as MAVEN and L
    head/head
    head/classification
    head/crf
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Evaluation
+
+   evaluation/metric
+   evaluation/convert
+   evaluation/dump
+   evaluation/utils
