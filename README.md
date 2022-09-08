@@ -1,4 +1,23 @@
 <div align='center'><img src="imgs/Omnievent.png" style="width:256px;"></div>
+**An Open-Source Event Extraction Toolkit.**
+
+<p align="center">  
+    <a href="placeholder">
+        <img alt="Demo" src="https://img.shields.io/badge/Demo-site-green">
+    </a>
+    <a href="placeholder">
+        <img alt="PyPI" src="https://img.shields.io/badge/Pypi-v.0.1.0-blue">
+    </a>
+    <a href="https://omnievent.readthedocs.io/en/latest/">
+        <img alt="Documentation" src="https://img.shields.io/badge/Doc-site-red">
+    </a>
+    <a href="https://github.com/THU-KEG/OmniEvent/blob/main/LICENSE">
+        <img alt="License" src="https://img.shields.io/badge/License-MIT-blue">
+    </a>
+</p>
+
+
+------
 
 
 
