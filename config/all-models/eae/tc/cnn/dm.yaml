@@ -40,7 +40,7 @@ aggregation: dynamic_pooling
 head_scale: 3
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 20
 max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2

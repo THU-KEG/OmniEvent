@@ -1,48 +1,12 @@
 import jsonlines
 import json
 import numpy as np
-import copy
 from tqdm import tqdm
 from collections import defaultdict
 from typing import List, Dict, Union, Tuple
+from .convert_format import get_pred_per_mention
 from .metric import select_start_position
 from ..input_engineering.input_utils import check_pred_len, get_left_and_right_pos
-
-
-def get_pred_per_mention(pos_start: int,
-                         pos_end: int,
-                         preds: List[str],
-                         id2label: Dict[int, str]) -> str:
-    """Get the predicted event type or argument role for each mention in Sequence Labeling (SL) paradigm.
-
-    The predictions of Sequence Labeling (SL) paradigm are sequences of tokens. This function is get the prediction for
-    each single mention, given the sequence predictions.
-
-    Args:
-        pos_start (`int`):
-            The start position of the mention in the sequence of tokens.
-        pos_end (`int`):
-            The end position of the mention in the sequence of tokens.
-        preds (`List[str]`):
-            The predictions of the sequence of tokens.
-        id2label (`Dict[int, str]`):
-            A dictionary that contains the mapping from id to textual label.
-
-    Returns:
-        A string which represents the predicted label.
-    """
-    if pos_start == pos_end or\
-            pos_end > len(preds) or \
-            id2label[int(preds[pos_start])] == "O" or \
-            id2label[int(preds[pos_start])].split("-")[0] != "B":
-        return "NA"
-    predictions = set()
-    for pos in range(pos_start, pos_end):
-        _pred = id2label[int(preds[pos])][2:]
-        predictions.add(_pred)
-    if len(predictions) > 1:
-        return "NA"
-    return list(predictions)[0]
 
 
 def get_sentence_arguments(input_sentence: List[Dict[str, str]]) -> List[Dict[str, str]]:
@@ -193,21 +157,15 @@ def get_maven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
         lines = f.readlines()
         for idx, line in enumerate(lines):
             item = json.loads(line.strip())
-            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
+            text = item["text"]
+            preds_per_idx = preds[idx]
 
             for candidate in item["candidates"]:
-                word = candidate["trigger_word"]
-                pred_type = "NA"
-
-                remove_idx = None
-                for i, pred in enumerate(preds_per_idx):
-                    if pred[0] == word:
-                        if pred[1] in data_args.type2id:
-                            pred_type = pred[1]
-                        remove_idx = i
-                        break
-                if remove_idx is not None:
-                    preds_per_idx.remove(preds_per_idx[remove_idx])
+                label = "NA"
+                left_pos, right_pos = candidate["position"]
+                # get predictions
+                pred_type = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx, text=text,
+                                                 label=label, label2id=type2id, paradigm='s2s')
 
                 # record results
                 results[item["id"]].append({"id": candidate["id"].split("-")[-1], "type_id": int(type2id[pred_type])})
@@ -291,32 +249,9 @@ def get_leven_submission_seq2seq(preds: List[List[Tuple[str, str]]],
 
     Returns:
         The parameters of the input are passed to the `get_maven_submission_seq2seq()` method for further predictions.
+        The formats of LEVEN and MAVEN are the same.
     """
-    type2id = data_args.type2id
-    results = defaultdict(list)
-    with open(data_args.test_file, "r") as f:
-        lines = f.readlines()
-        for idx, line in enumerate(lines):
-            item = json.loads(line.strip())
-            preds_per_idx = sorted(copy.deepcopy(preds[idx]), key=lambda p: p[1])
-
-            for candidate in item["candidates"]:
-                word = candidate["trigger_word"]
-                pred_type = "NA"
-
-                for i, pred in enumerate(preds_per_idx):
-                    if pred[0] == word:
-                        if pred[1] in data_args.type2id:
-                            pred_type = pred[1]
-                        break
-
-                # record results
-                results[item["id"]].append({"id": candidate["id"].split("-")[-1], "type_id": int(type2id[pred_type])})
-    # dump results
-    with open(save_path, "w") as f:
-        for id, preds_per_doc in results.items():
-            results_per_doc = dict(id=id, predictions=preds_per_doc)
-            f.write(json.dumps(results_per_doc) + "\n")
+    return get_maven_submission_seq2seq(preds, save_path, data_args)
 
 
 def get_duee_submission():
