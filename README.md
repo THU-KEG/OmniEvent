@@ -3,6 +3,7 @@
 
 **An Open-Source Event Extraction Toolkit.**
 
+
 ------
 
 <p align="center">  
@@ -23,10 +24,26 @@
 </div>
 
 
-## Overview
+# Table of Contents
+
+* [Overview](#overview)
+   * [Important Features](#important-features)
+* [Installation](#installation)
+* [Easy Start](#easy-start)
+* [Train your Own Model with OmniEvent](#train-your-own-model-with-omnievent)
+   * [Process the dataset into the unified format](#step-1-process-the-dataset-into-the-unified-format)
+   * [Set up the customized configurations](#step-2-set-up-the-customized-configurations)
+   * [Initialize the model and tokenizer](#step-3-initialize-the-model-and-tokenizer)
+   * [Initialize dataset and evaluation metric](#step-4-initialize-dataset-and-evaluation-metric)
+   * [Define Trainer and train](#step-5-define-trainer-and-train)
+   * [Unified Evaluation](#step-6-unified-evaluation)
+* [Supported Datasets & Models](#supported-datasets--models)
+
+
+# Overview
 OmniEvent is a powerful event extraction toolkit that provides comprehensive and compact implementations of various event extraction methods. OmniEvent benchmarks existing main-stream event extraction paradigms (token classification, sequence labeling, seq2seq, and machine reading comprehension) on commonly-used English and Chinese datasets. Meanwhile, OmniEvent provides unified evaluation methods and thus a fair comparsion of different models. 
 
-### Important Features
+## Important Features
 - **Comprehensive Implementations**
   - All sub-tasks, ***Event Detection***, ***Event Argument Extraction*** and ***Event Extraction***, are considered.
   - Various paradigms, ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***, are deployed.
@@ -54,12 +71,12 @@ OmniEvent is a powerful event extraction toolkit that provides comprehensive and
 
 
 
-## Installation
+# Installation
 
 
 
 
-## Easy Start
+# Easy Start
 OmniEvent provides ready-to-use models for the users. Examples are shown below. 
 
 *Make sure you have installed OmniEvent as instructed above. Note that it may take a few minutes to download checkpoint for the first time.*
@@ -93,12 +110,12 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
 ]
 ```
 
-## Customized Use of OmniEvent
+# Train your Own Model with OmniEvent
 OmniEvent can help users easily train and evaluate their customized models on a specific dataset. 
 
 We show a step-by-step example of using OmniEvent to train and evlauate an ***Event Detection*** model on ***ACE-EN*** dataset in the ***Seq2Seq*** paradigm.
 More examples are shown in [examples](./examples)
-### Step 1: Process the dataset into the unified format
+## Step 1: Process the dataset into the unified format
 We provide standard data processing scripts for commonly-adopted datasets. Checkout the details in [scripts/data_processing](./scripts/data_processing).
 ```shell
 dataset=ace2005-en  # the dataset name
@@ -106,7 +123,7 @@ cd scripts/data_processing/$dataset
 bash run.sh
 ```
 
-### Step 2: Set up the customized configurations
+## Step 2: Set up the customized configurations
 We keep track of the configurations of dataset, model and training parameters via a single *.yaml file. See [./configs](./configs) for details.
 
 ```python
@@ -120,7 +137,7 @@ We keep track of the configurations of dataset, model and training parameters vi
 >>> data_args.markers = ["<event>", "</event>", type_start, type_end]
 ```
 
-### Step 3: Initialize the model and tokenizer
+## Step 3: Initialize the model and tokenizer
 OmniEvent supports various backbones. The users can specify the model and tokenizer in the config file and initialize them as follows.
 
 ```python
@@ -136,7 +153,7 @@ OmniEvent supports various backbones. The users can specify the model and tokeni
 >>> model.cuda()
 ```
 
-### Step 4: Initialize dataset and evaluation metric
+## Step 4: Initialize dataset and evaluation metric
 OmniEvent prepares the DataProcessor and the corresponding evaluation metrics for different task and paradigms.
 
 ***Note that** the metrics here are paradigm-dependent and are **not** used for the final unified evaluation.*
@@ -149,7 +166,7 @@ OmniEvent prepares the DataProcessor and the corresponding evaluation metrics fo
 >>> eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
 >>> metric_fn = compute_seq_F1
 ```
-### Step 5: Define Trainer and train
+## Step 5: Define Trainer and train
 OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer) from 🤗 [Transformers](https://github.com/huggingface/transformers) for training and evaluation.
 
 ```python
@@ -167,7 +184,7 @@ OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main
 >>> trainer.train()
 ```
 
-### Step 6: Unified Evaluation
+## Step 6: Unified Evaluation
 Since the metrics in Step 4 depend on the paradigm, it is not fair to directly compare the performance of different paradigms. 
 
 OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to word-level and then evaluated.
@@ -189,7 +206,7 @@ ACE2005-EN test performance after converting: 67.41016109045849
 ```
 For those datasets whose test set annotations are not given, such as MAVEN and LEVEN, OmniEvent provide APIs to generate submission files. See [dump_result.py](./OmniEvent/evaluation/dump_result.py) for details.
 
-## Datasets & Models Support
+# Supported Datasets & Models
 
 
 Datasets
