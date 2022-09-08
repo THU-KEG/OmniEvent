@@ -41,7 +41,7 @@
 
 
 # Overview
-OmniEvent is a powerful event extraction toolkit that provides comprehensive and compact implementations of various event extraction methods. OmniEvent benchmarks existing main-stream event extraction paradigms (token classification, sequence labeling, seq2seq, and machine reading comprehension) on commonly-used English and Chinese datasets. Meanwhile, OmniEvent provides unified evaluation methods and thus a fair comparsion of different models. 
+OmniEvent is a powerful open-source toolkit for **event extraction**, including **event detection** and **event argument extraction**. We comprehensively cover various methodological paradigms and provide fair and unified evaluations on widely-used **English** and **Chinese** datasets. Modular implementations make OmniEvent highly extensible.
 
 ## Important Features
 - **Comprehensive Implementations**
