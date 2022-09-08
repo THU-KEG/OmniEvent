@@ -1,6 +1,9 @@
-<div align='center'><img src="imgs/Omnievent.png" style="width:256px;"></div>
+<div align='center'>
+<img src="imgs/Omnievent.png" style="width:256px;">
 
 **An Open-Source Event Extraction Toolkit.**
+
+------
 
 <p align="center">  
     <a href="placeholder">
@@ -17,9 +20,7 @@
     </a>
 </p>
 
-
-------
-
+</div>
 
 
 ## Overview
