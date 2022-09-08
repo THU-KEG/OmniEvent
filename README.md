@@ -1,4 +1,5 @@
 <div align='center'><img src="imgs/Omnievent.png" style="width:256px;"></div>
+
 **An Open-Source Event Extraction Toolkit.**
 
 <p align="center">  
