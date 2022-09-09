@@ -84,7 +84,23 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
 ```python
 >>> from OmniEvent.infer import infer
 
->>> text = "U.S. and British troops were moving on the strategic southern port city of Basra Saturday after a massive aerial assault pounded Baghdad at dawn"
+>>> # Even Extraction (EE) Task
+>>> text = "2022年北京市举办了冬奥会"
+>>> infer(text=text, task="EE")
+>>> print(results[0]["events"])
+[
+    {
+        "type": "组织行为开幕", "trigger": "举办", "offset": [8, 10],
+        "arguments": [
+            {   "mention": "2022年", "offset": [9, 16], "role": "时间"},
+            {   "mention": "北京市", "offset": [81, 89], "role": "地点"},
+            {   "mention": "冬奥会", "offset": [0, 4], "role": "活动名称"},
+        ]
+    }
+]
+
+>>> text = "U.S. and British troops were moving on the strategic southern port city of Basra \ 
+Saturday after a massive aerial assault pounded Baghdad at dawn"
 
 >>> # Event Detection (ED) Task
 >>> results = infer(text=text, task="ED")
@@ -98,16 +114,22 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
 >>> infer(text=text, triggers=[("assault", 113, 120), ("pounded", 121, 128)], task="EAE")
 >>> print(results[0]["events"])
 [
-    { "type": "attack", "trigger": "assault", "offset": [113, 120], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}]
-    { "type": "injure", "trigger": "pounded", "offset": [121, 128], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}]}
-]
-
->>> # Even Extraction (EE) Task
->>> infer(text=text, task="EE")
->>> print(results[0]["events"])
-[
-    { "type": "attack", "trigger": "assault", "offset": [113, 120], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}]
-    { "type": "injure", "trigger": "pounded", "offset": [121, 128], "arguments": [{"mention": "U.S.", "offset": [0, 4], "role": "attacker"}, {"mention": "Saturday", "offset": [81, 89], "role": "time"}, {"mention": "British", "offset": [9, 16], "role": "attacker"}]}
+    {
+        "type": "attack", "trigger": "assault", "offset": [113, 120],
+        "arguments": [
+            {   "mention": "U.S.", "offset": [0, 4], "role": "attacker"},
+            {   "mention": "British", "offset": [9, 16], "role": "attacker"},
+            {   "mention": "Saturday", "offset": [81, 89], "role": "time"}
+        ]
+    },
+    {
+        "type": "injure", "trigger": "pounded", "offset": [121, 128],
+        "arguments": [
+            {   "mention": "U.S.", "offset": [0, 4], "role": "attacker"},
+            {   "mention": "Saturday", "offset": [81, 89], "role": "time"},
+            {   "mention": "British", "offset": [9, 16], "role": "attacker"}
+        ]
+    }
 ]
 ```
 
@@ -146,10 +168,10 @@ OmniEvent supports various backbones. The users can specify the model and tokeni
 >>> from OmniEvent.model.model import get_model
 
 >>> backbone, tokenizer, config = get_backbone(model_type=model_args.model_type, 
-                           model_name_or_path=model_args.model_name_or_path, 
-                           tokenizer_name=model_args.model_name_or_path, 
-                           markers=data_args.markers,
-                           new_tokens=data_args.markers)
+                           		       model_name_or_path=model_args.model_name_or_path, 
+                           		       tokenizer_name=model_args.model_name_or_path, 
+                           		       markers=data_args.markers,
+                           		       new_tokens=data_args.markers)
 >>> model = get_model(model_args, backbone)
 >>> model.cuda()
 ```
