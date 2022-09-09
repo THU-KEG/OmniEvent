@@ -1,7 +1,8 @@
 # Evaluation Module
 
 ## Background
-Event Extraction (EE) is a challenging task and has captured broad attention from the community. However, there are two main issues regarding the evaluation process: 
+Event Extraction (EE) is a challenging task and has captured broad attention from the community. However, there are two 
+main issues regarding the evaluation process: 
 
 - **Uncomparable Metrics Across Paradigms**
 
@@ -14,35 +15,35 @@ Event Extraction (EE) is a challenging task and has captured broad attention fro
 ## Unified Evaluation
 OmniEvent provides a unified evaluation process to tackle the issues above.
 
-- Convert the predictions of different paradigms to a unified candidate set
+### Convert the predictions of different paradigms to a unified candidate set
 	
-    The predictions of different paradigms are converted to predictions on a unified candidate set. In another word, we align the predictions to the candidates of the Token Classification paradigm (words for ED, entities for EAE if the entities are annotated) and compute all the evaluation metrics in the Token Classification style. Implementations of the conversion function can be found [here](https://github.com/THU-KEG/OmniEvent/blob/main/OmniEvent/evaluation/convert_format.py).
+The predictions of different paradigms are converted to predictions on a unified candidate set. In another word, we align the predictions to the candidates of the Token Classification paradigm (words for ED, entities for EAE if the entities are annotated) and compute all the evaluation metrics in the Token Classification style. Implementations of the conversion function can be found in [convert_format.py](./convert_format.py).
 
-    - Convert Sequence Labeling to Token Classification
-      <div align='center'>
-      <img src="../../imgs/convert-sl.jpeg" style=""></div>
-    - Convert Seq2Seq to Token Classification
-      <div align='center'>
-      <img src="../../imgs/convert-s2s.jpeg" style=""></div>
-    - Convert MRC to Token Classification
-      <div align='center'>
-      <img src="../../imgs/convert-mrc.jpeg" style=""></div>
+- **Convert Sequence Labeling to Token Classification**
+  <div align='center'>
+  <img src="../../imgs/convert-sl.jpeg" style="width:600px"></div>
+- **Convert Seq2Seq to Token Classification**
+  <div align='center'>
+  <img src="../../imgs/convert-s2s.jpeg" style="width:600px"></div>
+- **Convert MRC to Token Classification**
+  <div align='center'>
+  <img src="../../imgs/convert-mrc.jpeg" style="width:600px"></div>
     
-- Provide four standard EAE evaluation modes
+### Provide four standard EAE evaluation modes
 
-  OmniEvent provides four evaluation modes for EAE according to the way of choosing EAE instances, which are used in different previous works.
+OmniEvent provides four evaluation modes for EAE according to the way of choosing EAE instances, which are used in different previous works.
 
-    - Gold Mode 
-      - Use the gold triggers for EAE.
-    - Default Mode 
-      - Use the predicted triggers for EAE.
-      - Skip the gold positive (non-NA) triggers that are predicted as negative (NA).
-      - Include the gold negative triggers that are predicted as positive
-    - Loose Mode
-      - Use the predicted triggers for EAE.
-      - Skip the gold positive triggers that are predicted as negative.
-      - Skip all gold negative triggers.
-    - Strict Mode
-      - Use the predicted triggers for EAE.
-      - Include all gold positive triggers.
-      - Include all gold negative triggers that are predicted as positive.
+- <a id="gold">Gold Mode </a> 
+  - Use the gold triggers for EAE.
+- <a id="default">Default Mode </a> 
+  - Use the predicted triggers for EAE.
+  - Skip the gold positive (non-NA) triggers that are predicted as negative (NA).
+  - Include the gold negative triggers that are predicted as positive
+- <a id="loose">Loose Mode </a> 
+  - Use the predicted triggers for EAE.
+  - Skip the gold positive triggers that are predicted as negative.
+  - Skip all gold negative triggers.
+- <a id="strict">Strict Mode </a>
+  - Use the predicted triggers for EAE.
+  - Include all gold positive triggers.
+  - Include all gold negative triggers that are predicted as positive.

@@ -50,21 +50,21 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
 - **Comprehensive Capability**
   - Support to do ***Event Extraction*** at once, and also to independently do its two subtasks: ***Event Detection***, ***Event Argument Extraction***.
   - Cover various paradigms: ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***.
-  - Implement ***Transformers-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** models.
-  - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
+  - Implement ***Transformer-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** ([DMCNN](https://aclanthology.org/P15-1017.pdf), [CRF](http://www.cs.cmu.edu/afs/cs/Web/People/aladdin/papers/pdfs/y2001/crf.pdf), etc.) models.
+  - Both ***Chinese*** and ***English*** are supported for all event extraction sub-tasks, paradigms and models. 
 
 - **Modular Implementation**
   - All models are decomposed into four modules:
     - **Input Engineering**: Prepare inputs and support various input engineering methods like prompting.
     - **Backbone**: Encode text into hidden states.
-    - **Aggregation**: Aggragate hidden states (e.g., select [CLS], pooling, GCN) as the final event representation. 
-    - **Output Head**: Map the event representation to the final outputs, such as classification head, CRF, MRC head, etc. 
+    - **Aggregation**: Fuse hidden states (e.g., select [CLS], pooling, GCN) to the final event representation. 
+    - **Output Head**: Map the event representation to the final outputs, such as Linear, CRF, MRC head, etc. 
   - You can combine and reimplement different modules to design and implement your own new model.
 
 - **Unified Benchmark & Evaluation** 
   - Various datasets are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
-  - Predictions of different paradigms are all converted into a unified format for fair evaluations.
-  - Three [evaluation modes]() (**loose**, **default**, **strict**) well cover different previous evaluation settings.
+  - Predictions of different paradigms are all converted into a [unified candidate set]() for fair evaluations.
+  - Four [evaluation modes]() (**gold**, **loose**, **default**, **strict**) well cover different previous evaluation settings.
 
 - **Big Model Training & Inference**
   - Efficient training and inference of big event extraction models are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
@@ -189,8 +189,8 @@ OmniEvent prepares the `DataProcessor` and the corresponding evaluation metrics 
 >>> from OmniEvent.input_engineering.seq2seq_processor import EDSeq2SeqProcessor
 >>> from OmniEvent.evaluation.metric import compute_seq_F1
 
->>> train_dataset = data_class(data_args, tokenizer, data_args.train_file)
->>> eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
+>>> train_dataset = EDSeq2SeqProcessor(data_args, tokenizer, data_args.train_file)
+>>> eval_dataset = EDSeq2SeqProcessor(data_args, tokenizer, data_args.validation_file)
 >>> metric_fn = compute_seq_F1
 ```
 
@@ -215,9 +215,9 @@ OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main
 ## Step 6: Unified Evaluation
 Since the metrics in Step 4 depend on the paradigm, it is not fair to directly compare the performance of models in different paradigms. 
 
-OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to predictions on the same candidate sets and then evaluated.
+OmniEvent evaluates models of different paradigms in a unified manner, where the predictions of different models are converted to predictions on the same candidate sets and then evaluated.
 
-```python
+```python  
 >>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
 >>> from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
 
@@ -264,7 +264,7 @@ Continually updated. Welcome to add more!
     <tr>
         <td>General</td>
         <td>ED EAE</td>
-        <td>ACE-DYGIE</td>
+        <td><a href="https://aclanthology.org/D19-1585.pdf">ACE-DYGIE</a> </td>
     </tr>
     <tr>
         <td>General</td>
@@ -280,7 +280,7 @@ Continually updated. Welcome to add more!
     <tr>
         <td>General</td>
         <td>ED EAE</td>
-        <td>DuEE</td>
+        <td><a href="https://www.luge.ai/#/luge/dataDetail?id=6">DuEE </a></td>
     </tr>
     <tr>
         <td>General</td>
@@ -298,32 +298,18 @@ Continually updated. Welcome to add more!
 
 ## Models
 
-<div align='center'>
-<table>
-    <tr>
-        <th>Paradigm</th>
-        <th>Backbone</th>
-        <th>Aggregation / Head</th>  
-    </tr >
-    <tr >
-        <td>Token Classification </td>
-        <td>CNN <br> LSTM <br> BERT <br> RoBERTa </td>
-        <td>CLS <br> Dynamic Pooling <br> Marker <br> Max Pooling</td>
-    </tr>
-    <tr >
-        <td>Sequence Labeling </td>
-        <td>CNN <br> LSTM <br> BERT <br> RoBERTa </td>
-        <td> CRF Head <br> Classification Head </td>
-    </tr>
-    <tr >
-        <td>Seq2Seq </td>
-        <td>T5 <br> mT5 </td>
-        <td> / </td>
-    </tr>
-    <tr >
-        <td>MRC </td>
-        <td>LSTM <br> BERT <br> RoBERTa </td>
-        <td> Classification Head </td>
-    </tr>
-</table>
-</div>
+- Paradigm
+  - Token Classification (TC)
+  - Sequence Labeling (SL)
+  - Sequence to Sequence (Seq2Seq)
+  - Machine Reading Comprehension (MRC)
+- Backbone
+  - CNN / LSTM
+  - Transformers (BERT, T5, etc.)
+- Aggregation
+  - Select [CLS]
+  - Dynamic/Max Pooling
+  - Marker
+  - GCN
+- Head
+  - Linear / CRF / MRC heads
