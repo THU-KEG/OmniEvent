@@ -83,7 +83,8 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
 ```python
 >>> from OmniEvent.infer import infer
 
->>> text = "U.S. and British troops were moving on the strategic southern port city of Basra Saturday after a massive aerial assault pounded Baghdad at dawn"
+>>> text = "U.S. and British troops were moving on the strategic southern port city of Basra \
+Saturday after a massive aerial assault pounded Baghdad at dawn"
 
 >>> # Event Detection (ED) Task
 >>> results = infer(text=text, task="ED")
@@ -114,7 +115,6 @@ OmniEvent provides ready-to-use models for the users. Examples are shown below.
         ]
     }
 ]
-
 
 >>> # Even Extraction (EE) Task
 >>> infer(text=text, task="EE")
