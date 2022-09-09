@@ -26,18 +26,21 @@
 
 # Table of Contents
 
-* [Overview](#overview)
-   * [Important Features](#important-features)
-* [Installation](#installation)
-* [Easy Start](#easy-start)
-* [Train your Own Model with OmniEvent](#train-your-own-model-with-omnievent)
-   * [Process the dataset into the unified format](#step-1-process-the-dataset-into-the-unified-format)
-   * [Set up the customized configurations](#step-2-set-up-the-customized-configurations)
-   * [Initialize the model and tokenizer](#step-3-initialize-the-model-and-tokenizer)
-   * [Initialize dataset and evaluation metric](#step-4-initialize-dataset-and-evaluation-metric)
-   * [Define Trainer and train](#step-5-define-trainer-and-train)
-   * [Unified Evaluation](#step-6-unified-evaluation)
-* [Supported Datasets & Models](#supported-datasets--models)
+- [Table of Contents](#table-of-contents)
+- [Overview](#overview)
+  - [Highlights](#highlights)
+- [Installation](#installation)
+- [Easy Start](#easy-start)
+- [Train your Own Model with OmniEvent](#train-your-own-model-with-omnievent)
+  - [Step 1: Process the dataset into the unified format](#step-1-process-the-dataset-into-the-unified-format)
+  - [Step 2: Set up the customized configurations](#step-2-set-up-the-customized-configurations)
+  - [Step 3: Initialize the model and tokenizer](#step-3-initialize-the-model-and-tokenizer)
+  - [Step 4: Initialize the dataset and evaluation metric](#step-4-initialize-the-dataset-and-evaluation-metric)
+  - [Step 5: Define Trainer and train](#step-5-define-trainer-and-train)
+  - [Step 6: Unified Evaluation](#step-6-unified-evaluation)
+- [Supported Datasets & Models](#supported-datasets--models)
+  - [Datasets](#datasets)
+  - [Models](#models)
 
 
 # Overview
@@ -212,7 +215,7 @@ OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main
 ## Step 6: Unified Evaluation
 Since the metrics in Step 4 depend on the paradigm, it is not fair to directly compare the performance of models in different paradigms. 
 
-OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to word-level results and then evaluated.
+OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to predictions on the same candidate sets and then evaluated.
 
 ```python
 >>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
@@ -255,17 +258,17 @@ Continually updated. Welcome to add more!
     </tr>
     <tr>
         <td>General</td>
-        <td>EE ED EAE</td>
+        <td>ED EAE</td>
         <td>ACE-EN</td>
     </tr>
     <tr>
         <td>General</td>
-        <td>EE ED EAE</td>
+        <td>ED EAE</td>
         <td>ACE-DYGIE</td>
     </tr>
     <tr>
         <td>General</td>
-        <td>EE ED EAE</td>
+        <td>ED EAE</td>
         <td>RichERE (KBP+ERE)</td>
     </tr>
     <tr>
@@ -276,17 +279,17 @@ Continually updated. Welcome to add more!
     </tr>
     <tr>
         <td>General</td>
-        <td>EE ED EAE</td>
+        <td>ED EAE</td>
         <td>DuEE</td>
     </tr>
     <tr>
         <td>General</td>
-        <td>EE ED EAE</td>
+        <td>ED EAE</td>
         <td>ACE-ZH</td>
     </tr>
     <tr>
         <td >Financial</td>
-        <td>EE ED EAE</td>
+        <td>ED EAE</td>
         <td><a href="https://github.com/TimeBurningFish/FewFC"> FewFC</a></td>
 
 

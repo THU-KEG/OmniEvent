@@ -1,13 +1,13 @@
 # Experiment Configurations on All Datasets
 
 ## Experiment Settings
-For all Chinese datasets, we adopt BERT-base-chinese and MT5-base as the backbone.
+For all Chinese datasets, we adopt `BERT-base-chinese` and `mT5-base` as the backbone.
 
-For all English datasets, we adopt BERT-base-uncased and T5-base as the backbones.
+For all English datasets, we adopt `BERT-base-uncased` and `T5-base` as the backbones.
 
-For Token Classification paradigm, we use `marker` aggregation. 
+For Token Classification paradigm, we use the `marker` aggregation. 
 
-For Sequence Labeling paradigm, we use `linear` head.
+For Sequence Labeling paradigm, we use the `linear` head.
 
 
 ## File Structure
