@@ -63,8 +63,8 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
 
 - **Unified Benchmark & Evaluation** 
   - Various datasets are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
-  - Predictions of different paradigms are all converted into a [unified candidate set]() for fair evaluations.
-  - Four [evaluation modes]() (**gold**, **loose**, **default**, **strict**) well cover different previous evaluation settings.
+  - Predictions of different paradigms are all converted into a [unified candidate set](https://github.com/THU-KEG/OmniEvent/tree/main/OmniEvent/evaluation#convert-the-predictions-of-different-paradigms-to-a-unified-candidate-set) for fair evaluations.
+  - Four [evaluation modes](https://github.com/THU-KEG/OmniEvent/tree/main/OmniEvent/evaluation#provide-four-standard-eae-evaluation-modes) (**gold**, **loose**, **default**, **strict**) well cover different previous evaluation settings.
 
 - **Big Model Training & Inference**
   - Efficient training and inference of big event extraction models are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).

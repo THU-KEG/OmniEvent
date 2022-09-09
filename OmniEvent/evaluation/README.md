@@ -10,7 +10,7 @@ main issues regarding the evaluation process:
 
 - **Inconsisent scope of EAE Evaluation**
 
-	Previous works tend to break Event Extraction into two subtasks: **Event Detection (ED)** and **Event Argument Extraction (EAE)**. When evaluating the performance of EAE, some people use the gold triggers as the input, while others may choose the predicted triggers produced by ED models. Moreover, there is no standard convention of how to deal with the incorrectly predicted triggers, which leads to the inconsitent scope of instances are considered when evaluating EAE.
+	Previous works tend to break Event Extraction into two subtasks: **Event Detection (ED)** and **Event Argument Extraction (EAE)**. When evaluating the performance of EAE, some people use the gold triggers as the input, while others may choose the predicted triggers produced by ED models. Moreover, there is no standard convention of how to deal with the incorrectly predicted triggers, which leads to the inconsistent scope of instances that are considered when evaluating EAE.
 
 ## Unified Evaluation
 OmniEvent provides a unified evaluation process to tackle the issues above.
@@ -31,7 +31,7 @@ The predictions of different paradigms are converted to predictions on a unified
     
 ### Provide four standard EAE evaluation modes
 
-OmniEvent provides four evaluation modes for EAE according to the way of choosing EAE instances, which are used in different previous works.
+OmniEvent provides four evaluation modes for EAE according to the way of choosing EAE instances, which are used in previous works.
 
 - <a id="gold">Gold Mode </a> 
   - Use the gold triggers for EAE.
