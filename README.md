@@ -79,9 +79,9 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
 
 
 # Easy Start
-OmniEvent provides ready-to-use models for the users. Examples are shown below. 
+OmniEvent provides several off-the-shelf models for the users. Examples are shown below.
 
-*Make sure you have installed OmniEvent as instructed above. Note that it may take a few minutes to download checkpoint for the first time.*
+*Make sure you have installed OmniEvent as instructed above. Note that it may take a few minutes to download checkpoint at the first time.*
 ```python
 >>> from OmniEvent.infer import infer
 
@@ -135,12 +135,13 @@ Saturday after a massive aerial assault pounded Baghdad at dawn"
 ```
 
 # Train your Own Model with OmniEvent
-OmniEvent can help users easily train and evaluate their customized models on a specific dataset. 
+OmniEvent can help users easily train and evaluate their customized models on specific datasets.
 
-We show a step-by-step example of using OmniEvent to train and evlauate an ***Event Detection*** model on ***ACE-EN*** dataset in the ***Seq2Seq*** paradigm.
-More examples are shown in [examples](./examples)
+We show a step-by-step example of using OmniEvent to train and evaluate an ***Event Detection*** model on ***ACE-EN*** dataset in the ***Seq2Seq*** paradigm.
+More examples are shown in [examples](./examples).
+
 ## Step 1: Process the dataset into the unified format
-We provide standard data processing scripts for commonly-adopted datasets. Checkout the details in [scripts/data_processing](./scripts/data_processing).
+We provide standard data processing scripts for several commonly-used datasets. Checkout the details in [scripts/data_processing](./scripts/data_processing).
 ```shell
 dataset=ace2005-en  # the dataset name
 cd scripts/data_processing/$dataset
@@ -148,7 +149,7 @@ bash run.sh
 ```
 
 ## Step 2: Set up the customized configurations
-We keep track of the configurations of dataset, model and training parameters via a single *.yaml file. See [./configs](./configs) for details.
+We keep track of the configurations of dataset, model and training parameters via a single `*.yaml` file. See [./configs](./configs) for details.
 
 ```python
 >>> from OmniEvent.arguments import DataArguments, ModelArguments, TrainingArguments, ArgumentParser
@@ -174,11 +175,10 @@ OmniEvent supports various backbones. The users can specify the model and tokeni
                            		       markers=data_args.markers,
                            		       new_tokens=data_args.markers)
 >>> model = get_model(model_args, backbone)
->>> model.cuda()
 ```
 
-## Step 4: Initialize dataset and evaluation metric
-OmniEvent prepares the DataProcessor and the corresponding evaluation metrics for different task and paradigms.
+## Step 4: Initialize the dataset and evaluation metric
+OmniEvent prepares the `DataProcessor` and the corresponding evaluation metrics for different task and paradigms.
 
 ***Note that** the metrics here are paradigm-dependent and are **not** used for the final unified evaluation.*
 
@@ -190,6 +190,7 @@ OmniEvent prepares the DataProcessor and the corresponding evaluation metrics fo
 >>> eval_dataset = data_class(data_args, tokenizer, data_args.validation_file)
 >>> metric_fn = compute_seq_F1
 ```
+
 ## Step 5: Define Trainer and train
 OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer) from 🤗 [Transformers](https://github.com/huggingface/transformers) for training and evaluation.
 
@@ -209,9 +210,10 @@ OmniEvent adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main
 ```
 
 ## Step 6: Unified Evaluation
-Since the metrics in Step 4 depend on the paradigm, it is not fair to directly compare the performance of different paradigms. 
+Since the metrics in Step 4 depend on the paradigm, it is not fair to directly compare the performance of models in different paradigms. 
 
-OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to word-level and then evaluated.
+OmniEvent evaluates models of different paradigms in a unifed manner, where the predictions of different models are converted to word-level results and then evaluated.
+
 ```python
 >>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
 >>> from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
@@ -224,16 +226,20 @@ OmniEvent evaluates models of different paradigms in a unifed manner, where the 
 ACE2005-EN test performance before converting: 66.4215686224377
 
 >>> preds = get_pred_s2s(logits, tokenizer)
->>> # convert to word-level prediction and evaluate
+>>> # convert to the unified prediction and evaluate
 >>> pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, None)
 ACE2005-EN test performance after converting: 67.41016109045849
 ```
-For those datasets whose test set annotations are not given, such as MAVEN and LEVEN, OmniEvent provide APIs to generate submission files. See [dump_result.py](./OmniEvent/evaluation/dump_result.py) for details.
+
+For those datasets whose test set annotations are not public, such as MAVEN and LEVEN, OmniEvent provide scripts to generate submission files. See [dump_result.py](./OmniEvent/evaluation/dump_result.py) for details.
 
 # Supported Datasets & Models
+Continually updated. Welcome to add more!
 
 
-Datasets
+## Datasets
+<div align='center'>
+
 <table>
     <tr>
         <th>Language</th>
@@ -249,17 +255,17 @@ Datasets
     </tr>
     <tr>
         <td>General</td>
-        <td>ED&EAE</td>
+        <td>EE ED EAE</td>
         <td>ACE-EN</td>
     </tr>
     <tr>
         <td>General</td>
-        <td>ED&EAE</td>
+        <td>EE ED EAE</td>
         <td>ACE-DYGIE</td>
     </tr>
     <tr>
         <td>General</td>
-        <td>ED&EAE</td>
+        <td>EE ED EAE</td>
         <td>RichERE (KBP+ERE)</td>
     </tr>
     <tr>
@@ -270,23 +276,26 @@ Datasets
     </tr>
     <tr>
         <td>General</td>
-        <td>ED&EAE</td>
+        <td>EE ED EAE</td>
         <td>DuEE</td>
     </tr>
     <tr>
         <td>General</td>
-        <td>ED&EAE</td>
+        <td>EE ED EAE</td>
         <td>ACE-ZH</td>
     </tr>
     <tr>
         <td >Financial</td>
-        <td>ED&EAE</td>
+        <td>EE ED EAE</td>
         <td><a href="https://github.com/TimeBurningFish/FewFC"> FewFC</a></td>
 
 
 </table>
+</div>
 
-Models
+## Models
+
+<div align='center'>
 <table>
     <tr>
         <th>Paradigm</th>
@@ -305,7 +314,7 @@ Models
     </tr>
     <tr >
         <td>Seq2Seq </td>
-        <td>T5 <br> MT5 </td>
+        <td>T5 <br> mT5 </td>
         <td> / </td>
     </tr>
     <tr >
@@ -313,6 +322,5 @@ Models
         <td>LSTM <br> BERT <br> RoBERTa </td>
         <td> Classification Head </td>
     </tr>
-
-
 </table>
+</div>
