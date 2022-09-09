@@ -1,6 +1,8 @@
 Welcome to OmniEvent's documentation!
 =====================================
 
+.. image:: _static/Omnievent.png
+
 Overview
 --------
 
