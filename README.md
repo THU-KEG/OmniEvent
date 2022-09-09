@@ -1,7 +1,7 @@
 <div align='center'>
-<img src="imgs/Omnievent.png" style="width:256px;">
+<img src="imgs/Omnievent.png" style="width:300px;">
 
-**An Open-Source Event Extraction Toolkit.**
+**A comprehensive, unified and modular event extraction toolkit.**
 
 
 ------
@@ -43,25 +43,26 @@
 # Overview
 OmniEvent is a powerful open-source toolkit for **event extraction**, including **event detection** and **event argument extraction**. We comprehensively cover various methodological paradigms and provide fair and unified evaluations on widely-used **English** and **Chinese** datasets. Modular implementations make OmniEvent highly extensible.
 
-## Important Features
-- **Comprehensive Implementations**
-  - All sub-tasks, ***Event Detection***, ***Event Argument Extraction*** and ***Event Extraction***, are considered.
-  - Various paradigms, ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***, are deployed.
-  - ***Transformers-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** models (CNN, LSTM, CRF, etc.) are implemented.
+## Highlights
+- **Comprehensive Capability**
+  - Support to do ***Event Extraction*** at once, and also to independently do its two subtasks: ***Event Detection***, ***Event Argument Extraction***.
+  - Cover various methodological paradigms: ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***.
+  - Implement ***Transformers-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** models.
   - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
-- **Modular Implementation**
-  - All methods are decomposed into four parts
-    - **Input Engineering**: Prepare inputs and support various input manipulation, such as prompt.
-    - **Backbone**: Encode text into hidden states.
-    - **Aggregation**: Aggragate hidden states (e.g., select [CLS], pooling, GCN) for the final event representation. 
-    - **Head**: Map the event representation to the final outputs, such as classification head, CRF, MRC head, etc. 
 
-  - One can combine different modules to design a new model
+- **Modular Implementation**
+  - All models are decomposed into four modules:
+    - **Input Engineering**: Prepare inputs and support various input engineering methods like prompting.
+    - **Backbone**: Encode text into hidden states.
+    - **Aggregation**: Aggragate hidden states (e.g., select [CLS], pooling, GCN) as the final event representation. 
+    - **Output Head**: Map the event representation to the final outputs, such as classification head, CRF, MRC head, etc. 
+  - You can combine and reimplement different modules to design and implement your own new model.
 
 - **Unified Benchmark & Evaluation** 
-  - Different datasets for event detection and extraction are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
-  - Predicted results of different paradigms are all converted into word level for comparable evaluation.
-  - Design three evaluation modes (**loose**, **default**, **strict**) for a fair comparison of different methods.
+  - Various datasets are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
+  - Predicted results of different paradigms are all converted into a unified format for comparable evaluations.
+  - Three evaluation modes (**loose**, **default**, **strict**) for a fair comparison of different methods.
+
 - **Support Big Model Training & Inference**
   - Efficient training and inference of big models for event extraction are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
 - **Easy to Use & Highly Extensible**
