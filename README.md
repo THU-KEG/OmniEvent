@@ -1,5 +1,5 @@
 <div align='center'>
-<img src="imgs/Omnievent.png" style="width:300px;">
+<img src="imgs/Omnievent.png" style="width:350px;">
 
 **A comprehensive, unified and modular event extraction toolkit.**
 
@@ -41,12 +41,12 @@
 
 
 # Overview
-OmniEvent is a powerful open-source toolkit for **event extraction**, including **event detection** and **event argument extraction**. We comprehensively cover various methodological paradigms and provide fair and unified evaluations on widely-used **English** and **Chinese** datasets. Modular implementations make OmniEvent highly extensible.
+OmniEvent is a powerful open-source toolkit for **event extraction**, including **event detection** and **event argument extraction**. We comprehensively cover various paradigms and provide fair and unified evaluations on widely-used **English** and **Chinese** datasets. Modular implementations make OmniEvent highly extensible.
 
 ## Highlights
 - **Comprehensive Capability**
   - Support to do ***Event Extraction*** at once, and also to independently do its two subtasks: ***Event Detection***, ***Event Argument Extraction***.
-  - Cover various methodological paradigms: ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***.
+  - Cover various paradigms: ***Token Classification***, ***Sequence Labeling***, ***MRC(QA)*** and ***Seq2Seq***.
   - Implement ***Transformers-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** models.
   - Both Chinese and English are supported for all event extraction sub-tasks, paradigms and models. 
 
@@ -60,15 +60,16 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
 
 - **Unified Benchmark & Evaluation** 
   - Various datasets are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
-  - Predicted results of different paradigms are all converted into a unified format for comparable evaluations.
-  - Three evaluation modes (**loose**, **default**, **strict**) for a fair comparison of different methods.
+  - Predictions of different paradigms are all converted into a unified format for fair evaluations.
+  - Three [evaluation modes]() (**loose**, **default**, **strict**) well cover different previous evaluation settings.
 
-- **Support Big Model Training & Inference**
-  - Efficient training and inference of big models for event extraction are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
+- **Big Model Training & Inference**
+  - Efficient training and inference of big event extraction models are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
+
 - **Easy to Use & Highly Extensible**
-  - Datasets can be downloaded (if open-sourced) and processed with a single command.
-  - OmniEvent is fully compatible with 🤗 [Transformers](https://github.com/huggingface/transformers) and adopts [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer) for training and evaluation.
-  - Users can adopt existing models directly or adapt OmniEvent to build customized models at will.  
+  - Open datasets can be downloaded and processed with a single command.
+  - Fully compatible with 🤗 [Transformers](https://github.com/huggingface/transformers) and its [Trainer](https://huggingface.co/docs/transformers/main/en/main_classes/trainer).
+  - Users can easily reproduce existing models and build customized models with OmniEvent.
 
 
 
