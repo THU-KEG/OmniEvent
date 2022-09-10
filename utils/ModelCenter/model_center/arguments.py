@@ -80,7 +80,7 @@ def add_training_args(parser: argparse.ArgumentParser):
     group.add_argument('--golden_trigger', action="store_true")
     group.add_argument('--eae_eval_mode', type=str, default="default",
                        help='Name of the dataset')
-    group.add_argument('--markers', type=list, default=["<event>", "</event>"],
+    group.add_argument('--markers', type=list, default=["<", ">"],
                        help='Name of the dataset')
     group.add_argument('--max_seq_length', type=int, default=512,
                        help='max length of encoder input')
