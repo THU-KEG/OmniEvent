@@ -8,13 +8,13 @@
 
 <p align="center">  
     <a href="placeholder">
-        <img alt="Demo" src="https://img.shields.io/badge/Demo-site-green">
+        <img alt="Demo" src="http://103.238.162.34:9621/">
     </a>
     <a href="placeholder">
         <img alt="PyPI" src="https://img.shields.io/badge/Pypi-v.0.1.0-blue">
     </a>
     <a href="https://omnievent.readthedocs.io/en/latest/">
-        <img alt="Documentation" src="https://img.shields.io/badge/Doc-site-red">
+        <img alt="Documentation" src="https://omnievent.readthedocs.io/en/latest/">
     </a>
     <a href="https://github.com/THU-KEG/OmniEvent/blob/main/LICENSE">
         <img alt="License" src="https://img.shields.io/badge/License-MIT-blue">
@@ -92,7 +92,7 @@ OmniEvent provides several off-the-shelf models for the users. Examples are show
 
 >>> # Even Extraction (EE) Task
 >>> text = "2022年北京市举办了冬奥会"
->>> infer(text=text, task="EE")
+>>> results = infer(text=text, task="EE")
 >>> print(results[0]["events"])
 [
     {
@@ -117,7 +117,7 @@ Saturday after a massive aerial assault pounded Baghdad at dawn"
 ]
 
 >>> # Event Argument Extraction (EAE) Task
->>> infer(text=text, triggers=[("assault", 113, 120), ("pounded", 121, 128)], task="EAE")
+>>> results = infer(text=text, triggers=[("assault", 113, 120), ("pounded", 121, 128)], task="EAE")
 >>> print(results[0]["events"])
 [
     {
