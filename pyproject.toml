@@ -1,7 +1,11 @@
+[tool.setuptools]
+packages = ["OmniEvent"]
+
+
 [project]
 name = "OmniEvent"
 version = "0.1.0"
-description = "A repository for event extraction."
+description = "A tookit for event extraction."
 readme = "README.md"
 license = { file="LICENSE" }
 requires-python = ">=3.7"

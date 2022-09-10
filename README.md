@@ -80,6 +80,11 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
 
 # Installation
 
+## With pip
+This repository is tested on Python 3.9+, Pytorch 1.12.1+. OmniEvent can be installed with pip as follows:
+```python
+pip install OmniEvent
+```
 
 
 
