@@ -41,6 +41,8 @@
 - [Supported Datasets & Models](#supported-datasets--models)
   - [Datasets](#datasets)
   - [Models](#models)
+  - [Contests](#contests)
+- [Experiments](#experiments)
 
 
 # Overview
@@ -236,7 +238,7 @@ ACE2005-EN test performance after converting: 67.41016109045849
 
 For those datasets whose test set annotations are not public, such as MAVEN and LEVEN, OmniEvent provide scripts to generate submission files. See [dump_result.py](./OmniEvent/evaluation/dump_result.py) for details.
 
-# Supported Datasets & Models
+# Supported Datasets & Models & Contests
 Continually updated. Welcome to add more!
 
 
@@ -313,3 +315,227 @@ Continually updated. Welcome to add more!
   - GCN
 - Head
   - Linear / CRF / MRC heads
+'
+
+## Contests
+OmniEvent plans to support various event extraction contest. Currently, we support the following contests and the list is continually updated!
+
+- [MAVEN Event Detection Challenge](https://codalab.lisn.upsaclay.fr/competitions/395)
+- [CAIL 2022: Event Detection Track](http://cail.cipsc.org.cn/task1.html?raceID=1&cail_tag=2022)
+- [LUGE: Information Extraction Track](https://aistudio.baidu.com/aistudio/competition/detail/46/0/task-definition)
+
+# Experiments
+We implement and evaluate state-of-the-art methods on some popular benchmarks using OmniEvent. The results of all Event Detection experiments are shown in the table below. The full results can be acessed via the links below.
+
+- [Experiments of base models on <u>**All ED Benchmars**</u>](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=qp276f)
+- [Experiments of base models on <u>**All EAE Benchmarks**</u>](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=b0zjme)
+- [Experiments of <u>**All ED Models**</u> on ACE-EN+](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=odcgnh)
+- [Experiments of <u>**All EAE Models**</u> on ACE-EN+](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=jxc1ea)
+
+
+<div align='center'>
+
+<table>
+    <tr>
+        <td rowspan="2" align="center">Language</td>
+        <td rowspan="2" align="center">Domain</td>
+        <td rowspan="2" align="center">Benchmark</td>
+        <td rowspan="2" align="center">Paradigm</td>
+		<td colspan="2" align="center">Dev F1-score</td>
+        <td colspan="2" align="center">Test F1-score</td>
+    </tr>
+    <tr>
+        <td align="center">Paradigm-based</td>
+        <td align="center">Unified</td>
+        <td align="center">Paradigm-based</td>
+        <td align="center">Unified</td>
+    </tr>
+    <tr>
+        <td rowspan="12" align="center">English</td>
+        <td rowspan="3" align="center">General</td>
+        <td rowspan="3" align="center">MAVEN</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">68.80 </td>
+        <td align="center">--</td>
+        <td align="center">68.64 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">66.75 </td>
+        <td align="center">67.90 </td>
+        <td align="center">--</td>
+        <td align="center">68.64 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">61.23 </td>
+        <td align="center">61.86 </td>
+        <td align="center">--</td>
+        <td align="center">61.86 </td>
+    </tr>
+    <tr>
+        <td rowspan="3" align="center">General</td>
+        <td rowspan="3" align="center">ACE-EN</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">80.47 </td>
+        <td align="center">--</td>
+        <td align="center">74.13 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">77.72 </td>
+        <td align="center">79.44 </td>
+        <td align="center">74.86 </td>
+        <td align="center">75.63 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">75.88 </td>
+        <td align="center">76.73 </td>
+        <td align="center">73.09 </td>
+        <td align="center">72.97 </td>
+    </tr>
+    <tr>
+        <td rowspan="3" align="center">General</td>
+        <td rowspan="3" align="center">ACE-dygie</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">73.61 </td>
+        <td align="center">--</td>
+        <td align="center">68.63 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">71.58 </td>
+        <td align="center">71.75 </td>
+        <td align="center">68.63 </td>
+        <td align="center">68.63 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">71.61 </td>
+        <td align="center">72.08 </td>
+        <td align="center">65.41 </td>
+        <td align="center">65.99 </td>
+    </tr>
+    <tr>
+        <td rowspan="3" align="center">General</td>
+        <td rowspan="3" align="center">RichERE</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">68.75 </td>
+        <td align="center">--</td>
+        <td align="center">51.43 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">68.46 </td>
+        <td align="center">66.05 </td>
+        <td align="center">50.13 </td>
+        <td align="center">50.77 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">63.21 </td>
+        <td align="center">62.74 </td>
+        <td align="center">50.07 </td>
+        <td align="center">51.35 </td>
+    </tr>
+    <tr>
+        <td rowspan="12" align="center">Chinese</td>
+        <td rowspan="3" align="center">General</td>
+        <td rowspan="3" align="center">ACE-ZH</td>
+        <td align="center" >TC</td>
+        <td align="center">--</td>
+        <td align="center">79.76 </td>
+        <td align="center">--</td>
+        <td align="center">75.77 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">75.41 </td>
+        <td align="center">75.88 </td>
+        <td align="center">72.23 </td>
+        <td align="center">75.93 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">69.45 </td>
+        <td align="center">73.17 </td>
+        <td align="center">63.37 </td>
+        <td align="center">71.61 </td>
+    </tr>
+    <tr>
+        <td rowspan="3" align="center">General</td>
+        <td rowspan="3" align="center">DuEE</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">92.20 </td>
+        <td align="center">--</td>
+        <td align="center">--</td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">85.95 </td>
+        <td align="center">89.62 </td>
+        <td align="center">--</td>
+        <td align="center">--</td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">81.61 </td>
+        <td align="center">85.85 </td>
+        <td align="center">--</td>
+        <td align="center">--</td>
+    </tr>
+    <tr>
+        <td rowspan="3" align="center">Legal</td>
+        <td rowspan="3" align="center">LEVEN</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">85.18 </td>
+        <td align="center">--</td>
+        <td align="center">85.23 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">81.09 </td>
+        <td align="center">84.16 </td>
+        <td align="center">--</td>
+        <td align="center">84.66 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">78.14 </td>
+        <td align="center">81.29 </td>
+        <td align="center">--</td>
+        <td align="center">81.41 </td>
+    </tr>
+    <tr>
+        <td rowspan="3" align="center">Financial</td>
+        <td rowspan="3" align="center">FewFC</td>
+        <td align="center">TC</td>
+        <td align="center">--</td>
+        <td align="center">69.28 </td>
+        <td align="center">--</td>
+        <td align="center">67.15 </td>
+    </tr>
+    <tr>
+        <td align="center">SL</td>
+        <td align="center">71.13 </td>
+        <td align="center">63.75 </td>
+        <td align="center">68.99 </td>
+        <td align="center">62.31 </td>
+    </tr>
+    <tr>
+        <td align="center">S2S</td>
+        <td align="center">69.89 </td>
+        <td align="center">74.46 </td>
+        <td align="center">69.16 </td>
+        <td align="center">71.33 </td>
+    </tr>
+</table>
+</div>
+
