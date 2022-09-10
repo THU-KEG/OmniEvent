@@ -38,7 +38,7 @@
   - [Step 4: Initialize the dataset and evaluation metric](#step-4-initialize-the-dataset-and-evaluation-metric)
   - [Step 5: Define Trainer and train](#step-5-define-trainer-and-train)
   - [Step 6: Unified Evaluation](#step-6-unified-evaluation)
-- [Supported Datasets & Models](#supported-datasets--models)
+- [Supported Datasets & Models](#supported-datasets--models--contests)
   - [Datasets](#datasets)
   - [Models](#models)
   - [Contests](#contests)
