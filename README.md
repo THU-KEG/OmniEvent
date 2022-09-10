@@ -11,7 +11,7 @@
         <img alt="Demo" src="https://img.shields.io/badge/Demo-site-green">
     </a>
     <a href="https://pypi.org/project/OmniEvent/">
-        <img alt="PyPI" src="https://img.shields.io/badge/Pypi-v.0.1.0-blue">
+        <img alt="PyPI" src="https://img.shields.io/badge/Pypi-v.0.1.1-blue">
     </a>
     <a href="https://omnievent.readthedocs.io/en/latest/">
         <img alt="Documentation" src="https://img.shields.io/badge/Doc-site-red">
