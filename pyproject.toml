@@ -4,7 +4,7 @@ packages = ["OmniEvent"]
 
 [project]
 name = "OmniEvent"
-version = "0.1.1"
+version = "0.1.4"
 description = "A tookit for event extraction."
 readme = "README.md"
 license = { file="LICENSE" }
@@ -13,6 +13,17 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+]
+dependencies = [
+    "scikit-learn==1.0.2",
+    "six==1.16.0",
+    "transformers==4.21.2",
+    "sentencepiece==0.1.97",
+    "seqeval==1.2.2",
+    "protobuf==3.20.1",
+    "deepspeed==0.7.2",
+    "jsonlines==3.1.0",
+    "pyyaml==6.0"
 ]
 
 [project.urls]
