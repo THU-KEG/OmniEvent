@@ -55,6 +55,11 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
   - Implement ***Transformer-based*** ([BERT](https://arxiv.org/pdf/1810.04805.pdf), [T5](https://arxiv.org/pdf/1910.10683.pdf), etc.) and ***classical*** ([DMCNN](https://aclanthology.org/P15-1017.pdf), [CRF](http://www.cs.cmu.edu/afs/cs/Web/People/aladdin/papers/pdfs/y2001/crf.pdf), etc.) models.
   - Both ***Chinese*** and ***English*** are supported for all event extraction sub-tasks, paradigms and models. 
 
+- **Unified Benchmark & Evaluation** 
+  - Various datasets are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
+  - Predictions of different paradigms are all converted into a [unified candidate set](https://github.com/THU-KEG/OmniEvent/tree/main/OmniEvent/evaluation#convert-the-predictions-of-different-paradigms-to-a-unified-candidate-set) for fair evaluations.
+  - Four [evaluation modes](https://github.com/THU-KEG/OmniEvent/tree/main/OmniEvent/evaluation#provide-four-standard-eae-evaluation-modes) (**gold**, **loose**, **default**, **strict**) well cover different previous evaluation settings.
+
 - **Modular Implementation**
   - All models are decomposed into four modules:
     - **Input Engineering**: Prepare inputs and support various input engineering methods like prompting.
@@ -62,11 +67,6 @@ OmniEvent is a powerful open-source toolkit for **event extraction**, including 
     - **Aggregation**: Fuse hidden states (e.g., select [CLS], pooling, GCN) to the final event representation. 
     - **Output Head**: Map the event representation to the final outputs, such as Linear, CRF, MRC head, etc. 
   - You can combine and reimplement different modules to design and implement your own new model.
-
-- **Unified Benchmark & Evaluation** 
-  - Various datasets are processed into a [unified format](https://github.com/THU-KEG/OmniEvent/tree/main/scripts/data_processing#unified-omnievent-format).
-  - Predictions of different paradigms are all converted into a [unified candidate set](https://github.com/THU-KEG/OmniEvent/tree/main/OmniEvent/evaluation#convert-the-predictions-of-different-paradigms-to-a-unified-candidate-set) for fair evaluations.
-  - Four [evaluation modes](https://github.com/THU-KEG/OmniEvent/tree/main/OmniEvent/evaluation#provide-four-standard-eae-evaluation-modes) (**gold**, **loose**, **default**, **strict**) well cover different previous evaluation settings.
 
 - **Big Model Training & Inference**
   - Efficient training and inference of big event extraction models are supported with [BMTrain](https://github.com/OpenBMB/BMTrain).
