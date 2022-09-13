@@ -9,7 +9,6 @@ from .metric import select_start_position
 from ..input_engineering.input_utils import check_pred_len, get_left_and_right_pos
 
 
-<<<<<<< HEAD
 def get_pred_per_mention(pos_start: int,
                          pos_end: int,
                          preds: List[str],
@@ -46,8 +45,6 @@ def get_pred_per_mention(pos_start: int,
     return list(predictions)[0]
 
 
-=======
->>>>>>> 849862bafe3342e60077401272ebc44f7ce2ddd8
 def get_sentence_arguments(input_sentence: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """Get the predicted arguments from a sentence in the Sequence Labeling paradigm.
 

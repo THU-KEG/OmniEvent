@@ -49,10 +49,7 @@ def extract_argument(raw_text: str,
         value = words[1].strip().replace(" ", "")
         if role != "" and value != "":
             arguments.append((instance_id, event_type, role, value))
-<<<<<<< HEAD
     # arguments = list(set(arguments))
-=======
->>>>>>> 849862bafe3342e60077401272ebc44f7ce2ddd8
     return arguments
 
 
