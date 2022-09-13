@@ -495,7 +495,7 @@ def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_
                     candidates, labels_per_idx = get_eae_candidates(item, trigger)
                     for i, label in enumerate(labels_per_idx):
                         labels_per_idx[i] = get_plain_label(label)
-                    all_labels.extend(labels_per_idx)
+                    all_labels.extend(labels_per_idx) # TODO: exact match 
 
                     # loop for converting
                     for cid, candidate in enumerate(candidates):

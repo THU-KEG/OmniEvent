@@ -1,7 +1,10 @@
-import os 
-import json 
+import os
+import json
+
+import torch.cuda
+
 from .arguments import (
-    ArgumentParser, 
+    ArgumentParser,
     ModelArguments,
     DataArguments,
     TrainingArguments
@@ -17,13 +20,14 @@ from transformers import (
     BartTokenizerFast
 )
 from .infer_module.seq2seq import (
-    do_event_detection, 
+    do_event_detection,
     do_event_argument_extraction,
     get_ed_result,
     get_eae_result,
     prepare_for_eae_from_input,
     prepare_for_eae_from_pred
 )
+
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
@@ -52,9 +56,9 @@ def get_model(model_args, model_name_or_path):
     path = check_web_and_convert_path(model_name_or_path, "model")
     model = get_model_cls(model_args).from_pretrained(path)
     return model
-    
 
-def get_pretrained(model_name_or_path):
+
+def get_pretrained(model_name_or_path, device):
     # config 
     # parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     # model_args, data_args, training_args = parser.from_pretrained(model_name_or_path)
@@ -64,14 +68,15 @@ def get_pretrained(model_name_or_path):
         "model_type": "mt5"
     })
     model = get_model(model_args, model_name_or_path)
-    model.cuda()
+    model = model.to(device)
+    # model.cuda()
     # tokenizer 
     tokenizer = get_tokenizer(model_name_or_path)
 
     return model, tokenizer
 
 
-def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="ED"):
+def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="ED", device='auto'):
     """Infer method.
 
     Args:
@@ -105,16 +110,24 @@ def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="E
     assert schema in ['ace', 'kbp', 'ere', 'maven', 'leven', 'duee', 'fewfc']
     assert task in ['ED', 'EAE', 'EE']
     schema = f"<{schema}>"
+    # get device.
+    if device == 'auto':
+        device = torch.device("cpu")
+        if torch.cuda.is_available():
+            device = 'cuda'
+    else:
+        device = torch.device(device)
+
     if task == "ED":
         if model is None or tokenizer is None:
-            ed_model, ed_tokenizer = get_pretrained("s2s-mt5-ed")
+            ed_model, ed_tokenizer = get_pretrained("s2s-mt5-ed", device)
         else:
             ed_model, ed_tokenizer = model, tokenizer
-        events = do_event_detection(ed_model, ed_tokenizer, [text], [schema])
+        events = do_event_detection(ed_model, ed_tokenizer, [text], [schema], device)
         results = get_ed_result([text], events)
     elif task == "EAE":
         if model is None or tokenizer is None:
-            eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae")
+            eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae", device)
         else:
             eae_model, eae_tokenizer = model, tokenizer
         instances = prepare_for_eae_from_input([text], [triggers], [schema])
@@ -122,12 +135,12 @@ def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="E
         results = get_eae_result(instances, arguments)
     elif task == "EE":
         if model is None or tokenizer is None:
-            ed_model, ed_tokenizer = get_pretrained("s2s-mt5-ed")
-            eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae")
+            ed_model, ed_tokenizer = get_pretrained("s2s-mt5-ed", device)
+            eae_model, eae_tokenizer = get_pretrained("s2s-mt5-eae", device)
         else:
             ed_model, ed_tokenizer = model[0], tokenizer[0]
             eae_model, eae_tokenizer = model[1], tokenizer[1]
-        events = do_event_detection(ed_model, ed_tokenizer, [text], [schema])
+        events = do_event_detection(ed_model, ed_tokenizer, [text], [schema], device)
         instances = prepare_for_eae_from_pred([text], events, [schema])
         if len(instances[0]["triggers"]) == 0:
             results = [{
@@ -135,7 +148,7 @@ def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="E
                 "events": []
             }]
             return results
-        arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances)
+        arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances, device)
         results = get_eae_result(instances, arguments)
     print(results)
     return results
