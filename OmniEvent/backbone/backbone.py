@@ -14,13 +14,13 @@ from transformers import BartForConditionalGeneration, BartTokenizerFast
 from transformers.utils import ModelOutput
 
 from ..input_engineering.whitespace_tokenizer import WordLevelTokenizer, load_vocab, VOCAB_FILES_NAMES
-
+from ..arguments import ModelArguments
 
 def get_backbone(model_type: str,
                  model_name_or_path: str,
                  tokenizer_name: str,
                  markers: List[str],
-                 model_args: Optional = None,
+                 model_args: Optional[ModelArguments] = None,
                  new_tokens: Optional[List[str]] = []):
     """Obtains the backbone model and tokenizer.
 
