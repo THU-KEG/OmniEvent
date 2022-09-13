@@ -1,10 +1,19 @@
 [tool.setuptools]
-packages = ["OmniEvent"]
+packages = [
+    "OmniEvent",
+    "OmniEvent.aggregation",
+    "OmniEvent.backbone",
+    "OmniEvent.evaluation",
+    "OmniEvent.head",
+    "OmniEvent.infer_module",
+    "OmniEvent.input_engineering",
+    "OmniEvent.model"
+]
 
 
 [project]
 name = "OmniEvent"
-version = "0.1.4"
+version = "0.1.5"
 description = "A tookit for event extraction."
 readme = "README.md"
 license = { file="LICENSE" }
