@@ -156,6 +156,8 @@ serialization_dir
 /scripts/data_processing/ace2005-dygie/raw_data 
 /scripts/data_processing/ace2005-dygie/default-settings
 /examples/BigModel/convert
+/examples/BigModel/convert_to_bm/models
+/examples/BigModel/convert_to_bm/output
 
 # emacs
 *.*~

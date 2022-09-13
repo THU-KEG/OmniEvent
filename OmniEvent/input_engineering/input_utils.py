@@ -261,6 +261,7 @@ def get_ed_candidates(item: Dict[str, Union[str, List[dict]]]) -> Tuple[List[dic
             candidates.append(neg_trigger)
     else:
         candidates = item["candidates"]
+        label_names = ["NA"] * len(candidates)
 
     return candidates, label_names
 

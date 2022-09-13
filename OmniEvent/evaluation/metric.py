@@ -1,3 +1,5 @@
+import copy
+
 import torch
 import numpy as np
 
@@ -23,7 +25,7 @@ def compute_unified_micro_f1(label_names: List[str], results: List[str]) -> floa
 
     Returns:
         micro_f1 (`float`):
-            The computation results of  F1 score.
+            The computation results of F1 score.
     """
     pos_labels = list(set(label_names))
     pos_labels.remove("NA")
@@ -46,14 +48,16 @@ def f1_score_overall(preds: Union[List[str], List[tuple]],
 
     Returns:
         precision (`float`), recall (`float`), and f1 (`float`):
-            Three integers representing the computation results of precision, recall, and F1 score, respectively.
+            Three float variables representing the computation results of precision, recall, and F1 score, respectively.
     """
-    total_true = 0
+    true_pos = 0
+    label_stack = copy.deepcopy(labels)
     for pred in preds:
-        if pred in labels:
-            total_true += 1
-    precision = total_true / (len(preds)+1e-10)
-    recall = total_true / (len(labels)+1e-10)
+        if pred in label_stack:
+            true_pos += 1
+            label_stack.remove(pred)  # one prediction can only be matched to one ground truth.
+    precision = true_pos / (len(preds)+1e-10)
+    recall = true_pos / (len(labels)+1e-10)
     f1 = 2 * precision * recall / (precision + recall + 1e-10)
     return precision, recall, f1
 

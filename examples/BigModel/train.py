@@ -116,16 +116,19 @@ def initialize():
 
 def prepare_dataset(args, tokenizer):
     processor_cls = None 
+    dataset = {}
     if args.task == "ED":
         processor_cls = EDSeq2SeqProcessor
+        dataset["train"] = processor_cls(args, tokenizer, args.train_file)
+        dataset["dev"] = processor_cls(args, tokenizer, args.validation_file)
+        dataset["test"] = processor_cls(args, tokenizer, args.test_file)
     elif args.task == "EAE":
         processor_cls = EAESeq2SeqProcessor
+        dataset["train"] = processor_cls(args, tokenizer, args.train_file, args.train_pred_file, True)
+        dataset["dev"] = processor_cls(args, tokenizer, args.validation_file, args.validation_pred_file, True)
+        dataset["test"] = processor_cls(args, tokenizer, args.test_file, args.test_pred_file, True)
     else:
         raise ValueError("Invalid task name: %s" % args.task)
-    dataset = {}
-    dataset["train"] = processor_cls(args, tokenizer, args.train_file, args.train_pred_file, True)
-    dataset["dev"] = processor_cls(args, tokenizer, args.validation_file, args.validation_pred_file, True)
-    dataset["test"] = processor_cls(args, tokenizer, args.test_file, args.test_pred_file, True)
     return dataset
 
 
@@ -236,14 +239,14 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
     best_f1 = 0
     start_dev_epoch = 1
     dev_epoch_step = 1
-    for epoch in range(args.epochs):
-        dataloader = {
-            "train": DistributedDataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True, **{"num_workers": dataloader_num_workers}),
-            "dev": DistributedDataLoader(dataset['dev'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers}),
-            "test": DistributedDataLoader(dataset['test'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers})
-        }
+    dataloader = {
+        "train": DistributedDataLoader(dataset['train'], batch_size=args.batch_size, shuffle=True, **{"num_workers": dataloader_num_workers}),
+        "dev": DistributedDataLoader(dataset['dev'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers}),
+        "test": DistributedDataLoader(dataset['test'], batch_size=8, shuffle=False, **{"num_workers": dataloader_num_workers})
+    }
+    if args.do_train:
+        for epoch in range(args.epochs):
 
-        if args.do_train:
             model.train()
             for it, data in enumerate(dataloader['train']):
                 enc_input = data["input_ids"].cuda()
@@ -281,22 +284,23 @@ def finetune(args, tokenizer, model, optimizer, lr_scheduler, dataset):
                     )
                 )
 
-        if epoch < start_dev_epoch or epoch % dev_epoch_step != 0:
-            continue
-        micro_f1 = evaluate(args, model, tokenizer, dataloader, epoch, "dev")
-        if micro_f1["micro_f1"] > best_f1:
-            best_f1 = micro_f1["micro_f1"]
-            bmt.print_rank("Best dev score. Saving...")
-            # save 
-            bmt.save(model, os.path.join(args.save, args.save_name))
-            if args.local_rank == 0:
-                os.system(f"cp {args.model_config}/*.json {args.save}")
+            if epoch < start_dev_epoch or epoch % dev_epoch_step != 0:
+                continue
+            micro_f1 = evaluate(args, model, tokenizer, dataloader, epoch, "dev")
+            if micro_f1["micro_f1"] > best_f1:
+                best_f1 = micro_f1["micro_f1"]
+                bmt.print_rank("Best dev score. Saving...")
+                # save 
+                bmt.save(model, os.path.join(args.save, args.save_name))
+                if args.local_rank == 0:
+                    os.system(f"cp {args.model_config}/*.json {args.save}")
+        
     if args.do_test:
         model.load_state_dict(torch.load(os.path.join(args.save, args.save_name)))
-        model = get_model(args.save)
+        # model = get_model(args.save)
         bmt.synchronize()
         bmt.print_rank("Best Dev F1: %.2f, Testing..." % best_f1)
-        evaluate(args, model, tokenizer, dataloader, epoch, "test")
+        evaluate(args, model, tokenizer, dataloader, 0, "test")
 
 
 def main():

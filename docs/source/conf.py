@@ -2,9 +2,9 @@
 
 # -- Project information
 
-project = 'Lumache'
-copyright = '2021, Graziella'
-author = 'Graziella'
+project = 'OmniEvent'
+copyright = '2022, THU-KEG'
+author = 'THU-KEG'
 
 release = '0.1'
 version = '0.1.0'
