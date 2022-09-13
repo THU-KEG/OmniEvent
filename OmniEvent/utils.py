@@ -45,6 +45,7 @@ def download(path, base_path, url):
 
 def check_web_and_convert_path(path, load_type, base_path="~/.cache/OmniEvent_Model"): # TODO add hash
     base_path = os.path.expanduser(base_path)
+    
     if not os.path.exists(base_path):
         os.mkdir(base_path)
     if os.path.isdir(path):

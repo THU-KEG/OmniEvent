@@ -1,5 +1,14 @@
 [tool.setuptools]
-packages = ["OmniEvent"]
+packages = [
+    "OmniEvent",
+    "OmniEvent.aggregation",
+    "OmniEvent.backbone",
+    "OmniEvent.evaluation",
+    "OmniEvent.head",
+    "OmniEvent.infer_module",
+    "OmniEvent.input_engineering",
+    "OmniEvent.model"
+]
 
 
 [project]
