@@ -38,7 +38,7 @@ class EDProcessor():
         )
 
 
-    def tokenize(self, texts, schemas):
+    def tokenize(self, texts, schemas, device):
         batch = []
         for text, schema in zip(texts, schemas):
             batch.append(self.tokenize_per_instance(text, schema))
@@ -51,7 +51,7 @@ class EDProcessor():
         for key in ["input_ids", "attention_mask", "token_type_ids"]:
             if key not in output_batch:
                 continue
-            output_batch[key] = output_batch[key][:, :input_length].cuda()
+            output_batch[key] = output_batch[key][:, :input_length].to(device)
         return output_batch
 
 
@@ -93,7 +93,7 @@ class EAEProcessor():
             attention_mask=torch.tensor(input_context["attention_mask"], dtype=torch.float32)
         )
 
-    def tokenize(self, instances):
+    def tokenize(self, instances, device):
         batch = []
         for i, instance in enumerate(instances):
             for trigger in instance["triggers"]:
@@ -107,7 +107,7 @@ class EAEProcessor():
         for key in ["input_ids", "attention_mask", "token_type_ids"]:
             if key not in output_batch:
                 continue
-            output_batch[key] = output_batch[key][:, :input_length].cuda()
+            output_batch[key] = output_batch[key][:, :input_length].to(device)
         return output_batch
 
 
@@ -252,9 +252,9 @@ def generate(model, tokenizer, inputs):
     return tokenizer.batch_decode(generated_tokens, skip_special_tokens=False)
 
 
-def do_event_detection(model, tokenizer, texts, schemas):
+def do_event_detection(model, tokenizer, texts, schemas, device):
     data_processor = EDProcessor(tokenizer)
-    inputs = data_processor.tokenize(texts, schemas)
+    inputs = data_processor.tokenize(texts, schemas, device)
     decoded_preds = generate(model, tokenizer, inputs)
     def clean_str(x_str):
         for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
@@ -267,9 +267,9 @@ def do_event_detection(model, tokenizer, texts, schemas):
     return pred_triggers
 
 
-def do_event_argument_extraction(model, tokenizer, instances):
+def do_event_argument_extraction(model, tokenizer, instances, device):
     data_processor = EAEProcessor(tokenizer)
-    inputs = data_processor.tokenize(instances)
+    inputs = data_processor.tokenize(instances, device)
     decoded_preds = generate(model, tokenizer, inputs)
     def clean_str(x_str):
         for to_remove_token in [tokenizer.eos_token, tokenizer.pad_token]:
