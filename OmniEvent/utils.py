@@ -43,7 +43,7 @@ def download(path, base_path, url):
     os.system(f"rm {path}")
 
 
-def check_web_and_convert_path(path, load_type, base_path="OmniEvent_Model"): # TODO add hash
+def check_web_and_convert_path(path, load_type, base_path="~/OmniEvent_Model"): # TODO add hash
     if os.path.isdir(path):
         print(f"load from local file: {path} {load_type}")
         return path
