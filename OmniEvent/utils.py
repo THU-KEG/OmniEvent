@@ -47,7 +47,7 @@ def check_web_and_convert_path(path, load_type, base_path="~/.cache/OmniEvent_Mo
     base_path = os.path.expanduser(base_path)
     
     if not os.path.exists(base_path):
-        os.mkdir(base_path)
+        os.makedirs(base_path)
     if os.path.isdir(path):
         print(f"load from local file: {path} {load_type}")
         return path
