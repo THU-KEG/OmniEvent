@@ -9,42 +9,6 @@ from .metric import select_start_position
 from ..input_engineering.input_utils import check_pred_len, get_left_and_right_pos
 
 
-def get_pred_per_mention(pos_start: int,
-                         pos_end: int,
-                         preds: List[str],
-                         id2label: Dict[int, str]) -> str:
-    """Get the predicted event type or argument role for each mention in Sequence Labeling (SL) paradigm.
-
-    The predictions of Sequence Labeling (SL) paradigm are sequences of tokens. This function is get the prediction for
-    each single mention, given the sequence predictions.
-
-    Args:
-        pos_start (`int`):
-            The start position of the mention in the sequence of tokens.
-        pos_end (`int`):
-            The end position of the mention in the sequence of tokens.
-        preds (`List[str]`):
-            The predictions of the sequence of tokens.
-        id2label (`Dict[int, str]`):
-            A dictionary that contains the mapping from id to textual label.
-
-    Returns:
-        A string which represents the predicted label.
-    """
-    if pos_start == pos_end or \
-            pos_end > len(preds) or \
-            id2label[int(preds[pos_start])] == "O" or \
-            id2label[int(preds[pos_start])].split("-")[0] != "B":
-        return "NA"
-    predictions = set()
-    for pos in range(pos_start, pos_end):
-        _pred = id2label[int(preds[pos])][2:]
-        predictions.add(_pred)
-    if len(predictions) > 1:
-        return "NA"
-    return list(predictions)[0]
-
-
 def get_sentence_arguments(input_sentence: List[Dict[str, str]]) -> List[Dict[str, str]]:
     """Get the predicted arguments from a sentence in the Sequence Labeling paradigm.
 
