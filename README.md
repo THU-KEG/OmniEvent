@@ -337,7 +337,11 @@ OmniEvent plans to support various event extraction contest. Currently, we suppo
 - [LUGE: Information Extraction Track](https://aistudio.baidu.com/aistudio/competition/detail/46/0/task-definition)
 
 # Experiments
-We implement and evaluate state-of-the-art methods on some popular benchmarks using OmniEvent. The results of all Event Detection experiments are shown in the table below. The full results can be accessed via the links below.
+We implement and evaluate state-of-the-art methods on some popular benchmarks using OmniEvent. 
+
+The results of all Event Detection experiments are shown in the table below. 
+
+The **full results** can be accessed via the links below.
 
 - [Experiments of base models on <u>**All ED Benchmarks**</u>](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=qp276f)
 - [Experiments of base models on <u>**All EAE Benchmarks**</u>](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=b0zjme)
