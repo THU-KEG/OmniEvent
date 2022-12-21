@@ -164,6 +164,21 @@ def get_left_and_right_pos(text: str,
     return left_pos, right_pos
 
 
+def char_pos_to_word_pos(text: str,
+                           char_pos: List[int],
+                           language: str = "English",
+                           keep_space: bool = False) -> Tuple[int, int]:
+    if language == "English":
+        left_pos = len(text[:char_pos[0]].split())
+        right_pos = len(text[:char_pos[1]].split())
+    elif language == "Chinese":
+        left_pos = char_pos[0] if keep_space else len("".join(text[:char_pos[0]].split()))
+        right_pos = char_pos[1] if keep_space else len("".join(text[:char_pos[1]].split()))
+    else:
+        raise NotImplementedError
+    return left_pos, right_pos
+
+
 def get_word_ids(tokenizer: PreTrainedTokenizer,
                  outputs: BatchEncoding,
                  word_list: List[str]) -> List[int]:

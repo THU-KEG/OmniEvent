@@ -120,19 +120,28 @@ class ModelForTokenClassification(BaseModel):
         """Manipulates the inputs through a backbone, aggregation, and classification module,
            returns the predicted logits and loss."""
         # backbone encode 
-        outputs = self.backbone(input_ids=input_ids,
-                                attention_mask=attention_mask,
-                                token_type_ids=token_type_ids,
-                                return_dict=True)
+        if self.config.model_type in ["cnn", "lstm"]:
+            outputs = self.backbone(input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        token_type_ids=token_type_ids,
+                        position=trigger_left if argument_left is None else argument_left,
+                        return_dict=True)
+        else:
+            outputs = self.backbone(input_ids=input_ids,
+                                    attention_mask=attention_mask,
+                                    token_type_ids=token_type_ids,
+                                    return_dict=True)
         hidden_states = outputs.last_hidden_state
         # aggregation 
         hidden_state = aggregate(self.config,
                                  self.aggregation,
                                  hidden_states,
+                                 attention_mask,
                                  trigger_left,
                                  trigger_right,
                                  argument_left,
-                                 argument_right)
+                                 argument_right,
+                                 embeddings=self.backbone.embedding if self.config.model_type=="cnn" else None)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 

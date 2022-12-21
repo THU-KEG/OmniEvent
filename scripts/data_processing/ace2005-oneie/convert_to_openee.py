@@ -166,7 +166,10 @@ if __name__ == "__main__":
     dump_path = Path(args.save_dir)
     dump_path.mkdir(exist_ok=True, parents=True)
     for split in ["train", "dev", "test"]:
-        convert_to_openee(f"data/{split}.oneie.json", os.path.join(dump_path, f"{split}.unified.jsonl"))
-        generate_negative_trigger(os.path.join(dump_path, f"{split}.unified.jsonl"))
+        save_split = split
+        if split == "dev":
+            save_split = "valid"
+        convert_to_openee(f"data/{split}.oneie.json", os.path.join(dump_path, f"{save_split}.unified.jsonl"))
+        generate_negative_trigger(os.path.join(dump_path, f"{save_split}.unified.jsonl"))
     get_ids(dump_path)
 
