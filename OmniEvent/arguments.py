@@ -130,6 +130,12 @@ class DataArguments:
             "help": "Mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
         }
     )
+    insert_marker: int = field(
+        default=True,
+        metadata={
+            "help": "whether insert marker"
+        }
+    )
 
 
 @dataclass

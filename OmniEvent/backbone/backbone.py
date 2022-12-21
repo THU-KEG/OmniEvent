@@ -135,12 +135,13 @@ class WordEmbedding(nn.Module):
 
     def forward(self,
                 input_ids: torch.Tensor,
-                position_ids: Optional[torch.Tensor] = None) -> torch.Tensor:
+                position: torch.Tensor) -> torch.Tensor:
         """Generates word embeddings and position embeddings and concatenates them together."""
         input_shape = input_ids.size()
         batch_size, seq_length = input_shape[0], input_shape[1]
-        if position_ids is None:
-            position_ids = self.position_ids[:, :seq_length].expand(batch_size, seq_length)
+        position_ids = self.position_ids[:, :seq_length].expand(batch_size, seq_length)
+        if position is not None:
+            position_ids = torch.abs(position_ids - position.unsqueeze(1)).to(torch.long)
         # input embeddings & position embeddings 
         inputs_embeds = self.word_embeddings(input_ids)
         position_embeds = self.position_embeddings(position_ids)
@@ -194,12 +195,13 @@ class CNN(nn.Module):
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
                 token_type_ids: torch.Tensor,
+                position: torch.Tensor,
                 return_dict: Optional[bool] = True) -> Union[Output, Tuple[torch.Tensor]]:
         """Conducts the convolution operations on the input tokens."""
-        x = self.embedding(input_ids)  # (B, L, H)
+        x = self.embedding(input_ids, position)  # (B, L, H)
         x = x.transpose(1, 2)  # (B, H, L)
         x = F.relu(self.conv(x).transpose(1, 2))  # (B, H, L)
-        x = self.dropout(x)
+        # x = self.dropout(x)
         if return_dict:
             return Output(last_hidden_state=x)
         else:
@@ -258,6 +260,7 @@ class LSTM(nn.Module):
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
                 token_type_ids: torch.Tensor,
+                position: Optional[torch.Tensor] = None,
                 return_dict: Optional[bool] = True):
         """Forward propagation of a LSTM network."""
         # add a pseudo input of max_length
@@ -268,7 +271,7 @@ class LSTM(nn.Module):
         input_length = torch.sum(attention_mask, dim=-1).to(torch.long)
         sorted_input_ids, sorted_seq_length, desorted_indices = self.prepare_pack_padded_sequence(input_ids,
                                                                                                   input_length)
-        x = self.embedding(sorted_input_ids)  # (B, L, H)
+        x = self.embedding(sorted_input_ids, position)  # (B, L, H)
         packed_embedded = nn.utils.rnn.pack_padded_sequence(x, sorted_seq_length.cpu(), batch_first=True)
         self.rnn.flatten_parameters()
         packed_output, (hidden, cell) = self.rnn(packed_embedded)
