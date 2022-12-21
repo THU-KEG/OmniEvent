@@ -62,7 +62,11 @@ for label, id in type2id.items():
     markers[label].append(f"</event_{id}>")
 markers["argument"] = ["<argument>", "</argument>"]
 data_args.markers = markers
+data_args.type2id = type2id
 insert_markers = [m for ms in data_args.markers.values() for m in ms]
+
+# argument
+model_args.num_types = len(type2id)
 
 # logging
 logging.info(data_args)
