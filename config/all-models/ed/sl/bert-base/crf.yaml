@@ -1,4 +1,4 @@
-seed: 42
+seed: 2
 do_train: True
 do_predict: True 
 do_ED_infer: True 
@@ -6,20 +6,19 @@ do_ED_infer: True
 # top-level config #
 paradigm: sequence_labeling
 task_name: ED
-dataset_name: ACE2005-dygie
+dataset_name: ACE2005-en
 language: English
 test_exists_labels: True
 
-# file path # 
-output_dir: output/ACE2005-dygie
-type2id_path: ../../data/processed/ace2005-dygie/label2id.json
-train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-dygie/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
+# file path #
+output_dir: output/ACE2005-en
+type2id_path: ../../data/processed/ace2005-en/label2id.json
+train_file: ../../data/processed/ace2005-en/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-en/test.unified.jsonl
 
 # config for data processor #
-return_token_type_ids: True 
-truncate_seq2seq_output: False
+return_token_type_ids: True
 
 # model config #
 model_type: bert
@@ -29,17 +28,17 @@ aggregation: none
 head_type: crf
 
 # training config #
-num_train_epochs: 35
+num_train_epochs: 10
 max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2
 
-per_device_train_batch_size: 32
-per_device_eval_batch_size: 64
+per_device_train_batch_size: 128
+per_device_eval_batch_size: 128
 gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
-learning_rate: 12.0e-5
-weight_decay: 1.0e-5
+learning_rate: 5.0e-5
+weight_decay: 1.0e-8
 warmup_ratio: 0.1 
 max_grad_norm: 1
 optim: adamw_torch
@@ -51,9 +50,9 @@ greater_is_better: True
 logging_strategy: steps
 logging_steps: 100
 evaluation_strategy: epoch
-eval_steps: 500
+eval_steps: 50
 save_strategy: epoch
-save_steps: 500
+save_steps: 50
 
 # split inference #
 split_infer: False 

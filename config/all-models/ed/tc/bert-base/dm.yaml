@@ -6,16 +6,16 @@ do_ED_infer: True
 # top-level config #
 paradigm: token_classification
 task_name: ED
-dataset_name: ACE2005-dygie
+dataset_name: ACE2005-en
 language: English
 test_exists_labels: True
 
 # file path # 
-output_dir: output/ACE2005-dygie
-type2id_path: ../../data/processed/ace2005-dygie/label2id.json
-train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-dygie/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
+output_dir: output/ACE2005-en
+type2id_path: ../../data/processed/ace2005-en/label2id.json
+train_file: ../../data/processed/ace2005-en/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-en/test.unified.jsonl
 
 # config for data processor #
 return_token_type_ids: True 
@@ -34,9 +34,9 @@ max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2
 
-per_device_train_batch_size: 32
+per_device_train_batch_size: 64
 per_device_eval_batch_size: 64
-gradient_accumulation_steps: 2
+gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5
 weight_decay: 1.0e-5

@@ -21,5 +21,7 @@
 # deepspeed --include localhost:0,1,2,3,4,5,6,7 seq2seq.py \
 #         ../../config/eae/s2s/dt.yaml \
 #         --deepspeed ../../config/deepspeed_zero_2.json 
-CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
-    ../../config/all-models/eae/tc/cnn/dm.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/cnn/dm.yaml
+CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+    ../../config/all-models/eae/sl/bert-base/crf.yaml

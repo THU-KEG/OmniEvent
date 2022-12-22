@@ -23,23 +23,24 @@ truncate_seq2seq_output: False
 
 # model config #
 model_type: roberta
-model_name_or_path: roberta-base
-hidden_size: 768
+model_name_or_path: roberta-large
+checkpoint_path: /data1/penghao/cleve/checkpoint-1200
+hidden_size: 1024
 aggregation: dynamic_pooling
 head_scale: 2
 
 # training config #
-num_train_epochs: 5
-max_seq_length: 160
-max_out_length: 160
+num_train_epochs: 30
+max_seq_length: 128
+max_out_length: 128
 dataloader_num_workers: 2
 
-per_device_train_batch_size: 32
+per_device_train_batch_size: 40
 per_device_eval_batch_size: 64
-gradient_accumulation_steps: 2
+gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
-learning_rate: 3.0e-5
-weight_decay: 1.0e-5
+learning_rate: 1.0e-5
+weight_decay: 1.0e-8
 warmup_ratio: 0.1 
 max_grad_norm: 1
 optim: adamw_torch

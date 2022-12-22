@@ -203,14 +203,16 @@ class DynamicPooling(nn.Module):
                 hidden_states: torch.Tensor, 
                 attention_mask: torch.Tensor,
                 trigger_position: torch.Tensor, 
-                embeddings: torch.Tensor,
+                embeddings: Optional[torch.Tensor] = None,
                 argument_position: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Conducts the dynamic multi-pooling process on the hidden states."""
         batch_size, seq_length = hidden_states.size()[:2]
         trigger_mask = self.get_mask(trigger_position, batch_size, seq_length, hidden_states.device)
-        lexical_features = self.get_lexical_level_features(embeddings, trigger_position, hidden_states.size(1))
+        if embeddings is not None:
+            lexical_features = self.get_lexical_level_features(embeddings, trigger_position, hidden_states.size(1))
         if argument_position is not None:
-            lexical_features = self.get_lexical_level_features(embeddings, argument_position, hidden_states.size(1))
+            if embeddings is not None:
+                lexical_features = self.get_lexical_level_features(embeddings, argument_position, hidden_states.size(1))
             argument_mask = self.get_mask(argument_position, batch_size, seq_length, hidden_states.device)
             left_mask = torch.logical_and(trigger_mask, argument_mask).to(torch.float32) 
             middle_mask = torch.logical_xor(trigger_mask, argument_mask).to(torch.float32) 
@@ -227,7 +229,10 @@ class DynamicPooling(nn.Module):
             right_states = self.max_pooling(hidden_states, right_mask)
             pooled_output = torch.cat((left_states, right_states), dim=-1)
         pooled_output = self.dropout(pooled_output)
-        final_output = torch.cat([pooled_output, lexical_features], dim=-1)
+        if embeddings is not None:
+            final_output = torch.cat([pooled_output, lexical_features], dim=-1)
+        else:
+            final_output = pooled_output
         return final_output
 
 
