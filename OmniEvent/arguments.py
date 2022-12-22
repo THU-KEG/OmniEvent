@@ -130,10 +130,16 @@ class DataArguments:
             "help": "Mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
         }
     )
-    insert_marker: int = field(
+    insert_marker: bool = field(
         default=True,
         metadata={
             "help": "whether insert marker"
+        }
+    )
+    consider_event_type: bool = field(
+        default=False,
+        metadata={
+            "help": "Consider event type as type ids"
         }
     )
 
@@ -217,6 +223,12 @@ class ModelArguments:
             "help": "Position embedding dimension for tranditional word vector."
         }
     )
+    type_embedding_dim: int = field(
+        default=5,
+        metadata={
+            "help": "Type embedding dimension for tranditional word vector."
+        }
+    )
     num_position_embeddings: int = field(
         default=512,
         metadata={
@@ -233,6 +245,12 @@ class ModelArguments:
         default=None,
         metadata={
             "help": "Path to vocab file."
+        }
+    )
+    has_type_embeddings: bool = field(
+        default=False,
+        metadata={
+            "help": "type embeddings"
         }
     )
 

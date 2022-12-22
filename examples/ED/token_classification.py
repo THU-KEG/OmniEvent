@@ -67,10 +67,16 @@ set_seed(training_args.seed)
 earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience,
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
-# model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
-                                           model_args.model_name_or_path, data_args.markers, model_args,
-                                           new_tokens=data_args.markers)
+# model
+if model_args.checkpoint_path is not None:
+    logging.info("Loading checkpoint from %s" % model_args.checkpoint_path)
+    backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path,
+                                            model_args.checkpoint_path, data_args.markers, model_args,
+                                            new_tokens=data_args.markers)
+else:
+    backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
+                                            model_args.model_name_or_path, data_args.markers, model_args,
+                                            new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
 data_class = EDTCProcessor

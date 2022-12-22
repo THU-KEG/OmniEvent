@@ -327,6 +327,20 @@ class EAETCProcessor(EAEDataProcessor):
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            
+            if self.config.consider_event_type:
+                token_type_ids = [0] * len(outputs["input_ids"])
+                if trigger_right == -1:
+                    trigger_right = self.config.max_seq_length - 1
+                for idx in range(trigger_left, trigger_right+1):
+                    token_type_ids[idx] = self.config.type2id[example.pred_type]
+
+                # if argument_right == -1:
+                #     argument_right = self.config.max_seq_length - 1
+                # for idx in range(argument_left, argument_right):
+                #     token_type_ids[idx] = self.config.type2id[example.pred_type]
+
+                outputs["token_type_ids"] = token_type_ids
 
             features = EAEInputFeatures(
                 example_id=example.example_id,
@@ -340,6 +354,6 @@ class EAETCProcessor(EAEDataProcessor):
             )
             if example.labels is not None:
                 features.labels = self.config.role2id[example.labels]
-                if is_overflow:
+                if trigger_left == -1:
                     features.labels = -100
             self.input_features.append(features)

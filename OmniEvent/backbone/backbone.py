@@ -114,6 +114,10 @@ class WordEmbedding(nn.Module):
         self.register_buffer("position_ids", torch.arange(config.num_position_embeddings).expand((1, -1)))
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.resize_token_embeddings(vocab_size)
+        self.config = config
+        # event type embeddings
+        if config.has_type_embeddings:
+            self.type_embeddings = nn.Embedding(config.num_types, config.type_embedding_dim)
 
     def resize_token_embeddings(self,
                                 vocab_size: int) -> None:
@@ -135,7 +139,8 @@ class WordEmbedding(nn.Module):
 
     def forward(self,
                 input_ids: torch.Tensor,
-                position: torch.Tensor) -> torch.Tensor:
+                token_type_ids: Optional[torch.Tensor] = None,
+                position: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Generates word embeddings and position embeddings and concatenates them together."""
         input_shape = input_ids.size()
         batch_size, seq_length = input_shape[0], input_shape[1]
@@ -146,6 +151,8 @@ class WordEmbedding(nn.Module):
         inputs_embeds = self.word_embeddings(input_ids)
         position_embeds = self.position_embeddings(position_ids)
         embeds = torch.cat((inputs_embeds, position_embeds), dim=-1)
+        if token_type_ids is not None and self.config.has_type_embeddings:
+            embeds = torch.cat((embeds, self.type_embeddings(token_type_ids)), dim=-1)
         embeds = self.dropout(embeds)
         return embeds
 
@@ -180,7 +187,9 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         self.config = config
         self.embedding = WordEmbedding(config, vocab_size)
-        self.conv = nn.Conv1d(config.word_embedding_dim + config.position_embedding_dim,
+        in_channels = config.word_embedding_dim + config.position_embedding_dim + config.type_embedding_dim if config.has_type_embeddings else \
+                        config.word_embedding_dim + config.position_embedding_dim
+        self.conv = nn.Conv1d(in_channels,
                               config.hidden_size,
                               kernel_size,
                               padding=padding_size)
@@ -194,11 +203,11 @@ class CNN(nn.Module):
     def forward(self,
                 input_ids: torch.Tensor,
                 attention_mask: torch.Tensor,
-                token_type_ids: torch.Tensor,
-                position: torch.Tensor,
+                token_type_ids: Optional[torch.Tensor] = None,
+                position: Optional[torch.Tensor] = None,
                 return_dict: Optional[bool] = True) -> Union[Output, Tuple[torch.Tensor]]:
         """Conducts the convolution operations on the input tokens."""
-        x = self.embedding(input_ids, position)  # (B, L, H)
+        x = self.embedding(input_ids, token_type_ids, position)  # (B, L, H)
         x = x.transpose(1, 2)  # (B, H, L)
         x = F.relu(self.conv(x).transpose(1, 2))  # (B, H, L)
         # x = self.dropout(x)
