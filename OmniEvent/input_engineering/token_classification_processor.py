@@ -103,7 +103,8 @@ class EDTCProcessor(EDDataProcessor):
                                         padding="max_length", 
                                         truncation=True, 
                                         max_length=self.config.max_seq_length,
-                                        is_split_into_words=True)
+                                        is_split_into_words=True,
+                                        add_special_tokens=True)
                 trigger_word_left, trigger_word_right = char_pos_to_word_pos(example.text, 
                                                                         [example.trigger_left, example.trigger_right])
                 word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, tokens)[: self.config.max_seq_length]
@@ -111,12 +112,10 @@ class EDTCProcessor(EDDataProcessor):
                 for i, word_id in enumerate(word_ids_of_each_token):
                     if word_id == trigger_word_left and left == -1:
                         left = i
-                    elif word_id == trigger_word_right:
+                    if word_id == trigger_word_right-1:
                         right = i
-                    else:
-                        continue
+
                 if left == -1:
-                    left = 0
                     logger.warning("Overflow! %s" % example.text)
                 if right == -1:
                     right = self.config.max_seq_length - 1
@@ -135,6 +134,7 @@ class EDTCProcessor(EDDataProcessor):
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
             if left == -1:
+                left = 0
                 features.labels = -100
             self.input_features.append(features)
 
@@ -304,7 +304,8 @@ class EAETCProcessor(EAEDataProcessor):
                                         padding="max_length", 
                                         truncation=True, 
                                         max_length=self.config.max_seq_length,
-                                        is_split_into_words=True)
+                                        is_split_into_words=True,
+                                        add_special_tokens=True)
                 word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, tokens)[: self.config.max_seq_length]
                 trigger_word_left, trigger_word_right = char_pos_to_word_pos(example.text, 
                                                                         [example.trigger_left, example.trigger_right])
@@ -315,14 +316,19 @@ class EAETCProcessor(EAEDataProcessor):
                 for i, word_id in enumerate(word_ids_of_each_token):
                     if word_id == trigger_word_left and trigger_left == -1:
                         trigger_left = i
-                    elif word_id == trigger_word_right:
+                    if word_id == trigger_word_right-1:
                         trigger_right = i
-                    elif word_id == argument_word_left and argument_left == -1:
+                    if word_id == argument_word_left and argument_left == -1:
                         argument_left = i
-                    elif word_id == argument_word_right:
+                    if word_id == argument_word_right-1:
                         argument_right = i
-                    else:
-                        continue
+                
+                if trigger_left == -1 or argument_left == -1:
+                    logger.warning("Overflow! %s" % example.text)
+                if trigger_right == -1:
+                    trigger_right = self.config.max_seq_length - 1
+                if argument_right == -1:
+                    argument_right = self.config.max_seq_length - 1
 
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
@@ -330,15 +336,11 @@ class EAETCProcessor(EAEDataProcessor):
             
             if self.config.consider_event_type:
                 token_type_ids = [0] * len(outputs["input_ids"])
-                if trigger_right == -1:
-                    trigger_right = self.config.max_seq_length - 1
                 for idx in range(trigger_left, trigger_right+1):
                     token_type_ids[idx] = self.config.type2id[example.pred_type]
 
-                # if argument_right == -1:
-                #     argument_right = self.config.max_seq_length - 1
-                # for idx in range(argument_left, argument_right):
-                #     token_type_ids[idx] = self.config.type2id[example.pred_type]
+                for idx in range(argument_left, argument_right):
+                    token_type_ids[idx] = self.config.type2id[example.pred_type]
 
                 outputs["token_type_ids"] = token_type_ids
 
@@ -355,5 +357,9 @@ class EAETCProcessor(EAEDataProcessor):
             if example.labels is not None:
                 features.labels = self.config.role2id[example.labels]
                 if trigger_left == -1:
+                    trigger_left = 0
+                    features.labels = -100
+                if argument_left == -1:
+                    argument_left = 0
                     features.labels = -100
             self.input_features.append(features)

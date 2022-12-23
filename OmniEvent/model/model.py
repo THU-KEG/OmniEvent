@@ -119,7 +119,7 @@ class ModelForTokenClassification(BaseModel):
                 labels: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """Manipulates the inputs through a backbone, aggregation, and classification module,
            returns the predicted logits and loss."""
-        # backbone encode 
+        # backbone encode
         if self.config.model_type in ["cnn", "lstm"]:
             outputs = self.backbone(input_ids=input_ids,
                         attention_mask=attention_mask,
@@ -141,7 +141,7 @@ class ModelForTokenClassification(BaseModel):
                                  trigger_right,
                                  argument_left,
                                  argument_right,
-                                 embeddings=self.backbone.embedding if self.config.model_type=="cnn" else None)
+                                 embeddings=self.backbone.embedding.word_embeddings(input_ids) if self.config.model_type=="cnn" else None)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 

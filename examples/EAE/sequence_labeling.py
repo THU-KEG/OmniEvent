@@ -39,7 +39,7 @@ model_name_or_path = model_args.model_name_or_path.split("/")[-1]
 output_dir = Path(training_args.output_dir, training_args.task_name, model_args.paradigm,
                   f"{model_name_or_path}-{model_args.aggregation}")
 output_dir.mkdir(exist_ok=True, parents=True)
-training_args.output_dir = output_dir
+training_args.output_dir = str(output_dir)
 
 # logging config 
 logging.basicConfig(

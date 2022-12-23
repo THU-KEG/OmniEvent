@@ -3,8 +3,10 @@ import copy
 import torch
 import numpy as np
 
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 from seqeval.metrics import f1_score as span_f1_score
+from seqeval.metrics import precision_score as span_precision_score
+from seqeval.metrics import recall_score as span_recall_score
 from seqeval.scheme import IOB2
 from typing import Tuple, Dict, List, Optional, Union
 
@@ -60,6 +62,57 @@ def f1_score_overall(preds: Union[List[str], List[tuple]],
     recall = true_pos / (len(labels)+1e-10)
     f1 = 2 * precision * recall / (precision + recall + 1e-10)
     return precision, recall, f1
+
+
+def f1_score_overall_with_type(preds: Union[List[str], List[tuple]],
+                               labels: Union[List[str], List[tuple]],
+                               pred_types: Union[List[str], List[tuple]],
+                               golden_types: Union[List[str], List[tuple]]) -> Tuple[float, float, float]:
+    """Computes the overall F1 score of the predictions.
+
+    Computes the overall F1 score of the predictions based on the calculation of the overall precision and recall after
+    counting the true predictions, in which both the prediction of mention and type are correct.
+
+    Args:
+        preds (`Union[List[str], List[tuple]]`):
+            A list of strings indicating the prediction of labels from the model.
+        labels (`Union[List[str], List[tuple]]`):
+            A list of strings indicating the actual labels obtained from the annotated dataset.
+
+    Returns:
+        precision (`float`), recall (`float`), and f1 (`float`):
+            Three float variables representing the computation results of precision, recall, and F1 score, respectively.
+    """
+    def is_NA(x):
+        if isinstance(x,tuple):
+            return (0 in x) or ("NA" in x) or ("None" in x)
+        raise ValueError
+
+    TP, TN, FP, FN = 0, 0, 0, 0
+    for i in range(len(preds)):
+        pred = (pred_types[i], preds[i])
+        golden = (golden_types[i], labels[i])
+        if pred == golden and not is_NA(pred):
+            TP += 1
+        elif pred != golden:
+            if is_NA(pred) and not is_NA(golden):
+                FN += 1
+            elif is_NA(golden) and not is_NA(pred):
+                FP += 1
+            elif (not is_NA(golden)) and (not is_NA(pred)):
+                FN += 1
+                FP += 1
+            else:
+                TN += 1
+        else:
+            TN += 1
+    P = TP / (TP + FP)
+    R = TP / (TP + FN)
+    if P + R == 0:
+        return 0, 0, 0
+    else:
+        F1 = 2 * P * R / (P + R)
+        return P, R, F1
 
 
 def compute_seq_F1(logits: np.ndarray,
@@ -214,12 +267,30 @@ def compute_span_F1(logits: np.ndarray,
         assert len(pred_types) == len(true_types)
         assert len(pred_types) == len(final_labels)
         for i, (pred, true) in enumerate(zip(pred_types, true_types)):
-            if pred != true:
-                final_preds[i] = [id2label[0]] * len(final_preds[i])  # set to NA
+            if pred in [0, "NA", "None"] or true in [0, "NA", "None"]:
+                if pred in [0, "NA", "None"]:
+                    final_preds[i] = [id2label[0]] * len(final_preds[i])
+                if true in [0, "NA", "None"]:
+                    final_labels[i] = [id2label[0]] * len(final_labels[i])
+            else:
+                if pred != true:
+                    seq_pred = []
+                    for j in range(len(final_preds[i])):
+                        if final_preds[i][j] != id2label[0]:
+                            seq_pred.append(final_preds[i][j]+"-Error")
+                        else:
+                            seq_pred.append(id2label[0])
+                    final_preds[i] = seq_pred
 
+    precision = span_precision_score(final_labels, final_preds, mode='strict', scheme=IOB2) * 100.0
+    recall = span_recall_score(final_labels, final_preds, mode='strict', scheme=IOB2) * 100.0
     micro_f1 = span_f1_score(final_labels, final_preds, mode='strict', scheme=IOB2) * 100.0
-    return {"micro_f1": micro_f1}
-    
+    return {
+        "precision": precision,
+        "recall": recall,
+        "micro_f1": micro_f1
+    }
+
 
 def compute_F1(logits: np.ndarray,
                labels: np.ndarray,
@@ -247,15 +318,23 @@ def compute_F1(logits: np.ndarray,
         true_types = training_args.data_for_evaluation["true_types"]
         assert len(pred_types) == len(true_types)
         assert len(pred_types) == len(predictions)
-        for i, (pred, true) in enumerate(zip(pred_types, true_types)):
-            if pred != true:
-                predictions[i] = 0 # set to NA
-        pos_labels = list(set(training_args.role2id.values()))
+        P, R, F1 = f1_score_overall_with_type(predictions, labels, pred_types, true_types)
+        return {
+            "precision": P * 100,
+            "recall": R * 100,
+            "micro_f1": F1 * 100
+        }
     else:
         pos_labels = list(set(training_args.type2id.values()))
-    pos_labels.remove(0)
-    micro_f1 = f1_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
-    return {"micro_f1": micro_f1}
+        pos_labels.remove(0)
+        precision = precision_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
+        recall = recall_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
+        micro_f1 = f1_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
+        return {
+            "precision": precision,
+            "recall": recall,
+            "micro_f1": micro_f1
+        }
 
 
 def softmax(logits: np.ndarray,

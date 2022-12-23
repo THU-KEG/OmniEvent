@@ -22,7 +22,7 @@ train_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-
 validation_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/valid_preds.json
 test_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/test_preds.json
 # config for some specific paradigms
-prompt_file: ../../data/processed/ace2005-dygie/description_queries-eeqa.csv # used for MRC paradigm
+prompt_file: ../../config/all-models/eae/mrc/description_queries_eeqa_dygie.csv # used for MRC paradigm
 mrc_template_id: 3
 
 # config for data processor # 

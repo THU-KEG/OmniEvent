@@ -25,3 +25,5 @@
 #     ../../config/all-models/eae/tc/cnn/dm.yaml
 CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
     ../../config/all-models/eae/sl/bert-base/crf.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/bert-base/dm.yaml

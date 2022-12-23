@@ -1,9 +1,11 @@
 import os
 import yaml 
+import json
 import dataclasses
 
+from enum import Enum
 from pathlib import Path 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Optional
 from transformers import TrainingArguments, HfArgumentParser
 
@@ -143,6 +145,27 @@ class DataArguments:
         }
     )
 
+    def to_dict(self):
+        """
+        Serializes this instance while replace `Enum` by their values (for JSON serialization support). It obfuscates
+        the token values by removing their value.
+        """
+        d = asdict(self)
+        for k, v in d.items():
+            if isinstance(v, Enum):
+                d[k] = v.value
+            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Enum):
+                d[k] = [x.value for x in v]
+            if k.endswith("_token"):
+                d[k] = f"<{k.upper()}>"
+        return d
+
+    def to_json_string(self):
+        """
+        Serializes this instance to a JSON string.
+        """
+        return json.dumps(self.to_dict(), indent=2)
+
 
 @dataclass
 class ModelArguments:
@@ -253,7 +276,33 @@ class ModelArguments:
             "help": "type embeddings"
         }
     )
+    dropout_after_wordvec: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether dropout after word embedding"
+        }
+    )
 
+    def to_dict(self):
+        """
+        Serializes this instance while replace `Enum` by their values (for JSON serialization support). It obfuscates
+        the token values by removing their value.
+        """
+        d = asdict(self)
+        for k, v in d.items():
+            if isinstance(v, Enum):
+                d[k] = v.value
+            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Enum):
+                d[k] = [x.value for x in v]
+            if k.endswith("_token"):
+                d[k] = f"<{k.upper()}>"
+        return d
+
+    def to_json_string(self):
+        """
+        Serializes this instance to a JSON string.
+        """
+        return json.dumps(self.to_dict(), indent=2)
 
 
 @dataclass 

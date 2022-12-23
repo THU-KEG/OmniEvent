@@ -153,7 +153,8 @@ class WordEmbedding(nn.Module):
         embeds = torch.cat((inputs_embeds, position_embeds), dim=-1)
         if token_type_ids is not None and self.config.has_type_embeddings:
             embeds = torch.cat((embeds, self.type_embeddings(token_type_ids)), dim=-1)
-        embeds = self.dropout(embeds)
+        if self.config.dropout_after_wordvec:
+            embeds = self.dropout(embeds)
         return embeds
 
 

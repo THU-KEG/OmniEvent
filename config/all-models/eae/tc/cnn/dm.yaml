@@ -1,4 +1,4 @@
-seed: 42
+seed: 2
 do_train: True
 do_predict: True
 
@@ -17,6 +17,8 @@ role2id_path: ../../data/processed/ace2005-en/role2id.json
 train_file: ../../data/processed/ace2005-en/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-en/test.unified.jsonl
+insert_marker: False
+
 # event detection predictions
 golden_trigger: False
 # train_pred_file: output/ACE2005-en/ED/token_classification/bert-base-uncased-marker/train_preds.json
@@ -40,6 +42,7 @@ hidden_dropout_prob: 0.5
 hidden_size: 300
 aggregation: dynamic_pooling
 head_scale: 3
+early_stopping_patience: 20
 
 # training config #
 num_train_epochs: 20
@@ -70,7 +73,7 @@ save_strategy: epoch
 save_steps: 500
 
 # evaluate/test config #
-eae_eval_mode: loose
+eae_eval_mode: default
 
 # split inference #
 split_infer: False

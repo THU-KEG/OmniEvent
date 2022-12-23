@@ -73,7 +73,7 @@ def aggregate(config,
     elif config.aggregation == "max_pooling":
         return method(hidden_states)
     elif config.aggregation == "dynamic_pooling":
-        return method(hidden_states, attention_mask, trigger_left, embeddings, argument_left)
+        return method(hidden_states, attention_mask, trigger_left, embeddings, argument_left, argument_right)
     else:
         raise ValueError("Invaild %s aggregation method" % config.aggregation)
 
@@ -184,7 +184,25 @@ class DynamicPooling(nn.Module):
         llf_idx = torch.stack([position-1, position, position+1], dim=0).to(torch.long)
         llf_idx[0] = llf_idx[0] * (llf_idx[0] != -1) + (position+2) * (llf_idx[0] == -1)
         llf_idx[2] = llf_idx[2] * (llf_idx[2] != max_seq_length) + (position-2) * (llf_idx[2] == max_seq_length)
-        features = embeddings.word_embeddings(llf_idx.t()).view(-1, 3 * embeddings.word_embeddings.weight.size(1))
+        features = []
+        for i in range(3):
+            features.append(embeddings[torch.arange(embeddings.shape[0]), llf_idx[i]])
+        features = torch.cat(features, dim=-1)
+        return features
+
+    def get_argument_lexical_features(self, embeddings, start, end, max_seq_length):
+        mid_features = []
+        for i in range(start.shape[0]):
+            mid_features.append(torch.mean(embeddings[i, start[i]:end[i]+1], dim=0))
+        mid_features = torch.stack(mid_features, dim=0)
+        
+        llf_idx = torch.stack([start-1, end+1], dim=0).to(torch.long)
+        llf_idx[0] = llf_idx[0] * (llf_idx[0] != -1) + (end+2) * (llf_idx[0] == -1)
+        llf_idx[1] = llf_idx[1] * (llf_idx[1] != max_seq_length) + (start-2) * (llf_idx[1] == max_seq_length)
+        features = [mid_features]
+        for i in range(2):
+            features.append(embeddings[torch.arange(embeddings.shape[0]), llf_idx[i]])
+        features = torch.cat(features, dim=-1)
         return features
 
     def max_pooling(self,
@@ -204,19 +222,22 @@ class DynamicPooling(nn.Module):
                 attention_mask: torch.Tensor,
                 trigger_position: torch.Tensor, 
                 embeddings: Optional[torch.Tensor] = None,
-                argument_position: Optional[torch.Tensor] = None) -> torch.Tensor:
+                argument_left: Optional[torch.Tensor] = None,
+                argument_right: Optional[torch.Tensor] = None,) -> torch.Tensor:
         """Conducts the dynamic multi-pooling process on the hidden states."""
         batch_size, seq_length = hidden_states.size()[:2]
         trigger_mask = self.get_mask(trigger_position, batch_size, seq_length, hidden_states.device)
         if embeddings is not None:
             lexical_features = self.get_lexical_level_features(embeddings, trigger_position, hidden_states.size(1))
-        if argument_position is not None:
+        if argument_left is not None:
             if embeddings is not None:
-                lexical_features = self.get_lexical_level_features(embeddings, argument_position, hidden_states.size(1))
-            argument_mask = self.get_mask(argument_position, batch_size, seq_length, hidden_states.device)
-            left_mask = torch.logical_and(trigger_mask, argument_mask).to(torch.float32) 
-            middle_mask = torch.logical_xor(trigger_mask, argument_mask).to(torch.float32) 
-            right_mask = 1 - torch.logical_or(trigger_mask, argument_mask).to(torch.float32)
+                lexical_features = self.get_argument_lexical_features(embeddings, argument_left, argument_right, hidden_states.size(1))
+                # lexical_features = self.get_lexical_level_features(embeddings, argument_left, hidden_states.size(1))
+            argument_mask = self.get_mask(argument_left, batch_size, seq_length, hidden_states.device)
+            left_mask = torch.logical_and(trigger_mask, argument_mask).to(torch.float32) * attention_mask
+            middle_mask = torch.logical_xor(trigger_mask, argument_mask).to(torch.float32) * attention_mask
+            right_mask = (1 - torch.logical_or(trigger_mask, argument_mask).to(torch.float32)) * attention_mask
+            # import pdb; pdb.set_trace()
             # pooling 
             left_states = self.max_pooling(hidden_states, left_mask)
             middle_states = self.max_pooling(hidden_states, middle_mask)
@@ -228,11 +249,11 @@ class DynamicPooling(nn.Module):
             left_states = self.max_pooling(hidden_states, left_mask)
             right_states = self.max_pooling(hidden_states, right_mask)
             pooled_output = torch.cat((left_states, right_states), dim=-1)
-        pooled_output = self.dropout(pooled_output)
         if embeddings is not None:
             final_output = torch.cat([pooled_output, lexical_features], dim=-1)
         else:
             final_output = pooled_output
+        final_output = self.dropout(final_output)
         return final_output
 
 

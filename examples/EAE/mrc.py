@@ -37,7 +37,7 @@ output_dir = Path(
     os.path.join(os.path.join(os.path.join(training_args.output_dir, training_args.task_name), model_args.paradigm),
                  model_name_or_path))
 output_dir.mkdir(exist_ok=True, parents=True)
-training_args.output_dir = output_dir
+training_args.output_dir = str(output_dir)
 
 
 # logging config 

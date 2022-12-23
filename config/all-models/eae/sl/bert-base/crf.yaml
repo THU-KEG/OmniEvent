@@ -17,10 +17,10 @@ train_file: ../../data/processed/ace2005-en/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-en/test.unified.jsonl
 # event detection predictions
-golden_trigger: True
+golden_trigger: False
 # train_pred_file: output/ACE2005-en/ED/token_classification/bert-base-uncased-marker/train_preds.json
-# validation_pred_file: output/ACE2005-en/ED/token_classification/bert-base-uncased-marker/valid_preds.json
-# test_pred_file: output/ACE2005-en/ED/token_classification/bert-base-uncased-marker/test_preds.json
+validation_pred_file: ../ED/output/ACE2005-en/ED/sequence_labeling/bert-base-uncased-none/valid_preds.json
+test_pred_file: ../ED/output/ACE2005-en/ED/sequence_labeling/bert-base-uncased-none/test_preds.json
 # config for some specific paradigms
 
 # config for data processor #
@@ -32,10 +32,10 @@ model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
 aggregation: none
-# head_type: crf
+head_type: crf
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 20
 max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2
@@ -62,7 +62,7 @@ save_strategy: epoch
 save_steps: 500
 
 # evaluate/test config #
-eae_eval_mode: loose
+eae_eval_mode: default
 
 # split inference #
 split_infer: False
