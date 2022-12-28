@@ -63,9 +63,10 @@ data_args.id2role = {id: role for role, id in data_args.role2id.items()}
 type2id = json.load(open(data_args.type2id_path))
 markers = defaultdict(list)
 for label, id in type2id.items():
-    markers[label].append(f"<event_{id}>")
-    markers[label].append(f"</event_{id}>")
-markers["argument"] = ["<argument>", "</argument>"]
+    # markers[label].append(f"<event_{id}>")
+    # markers[label].append(f"</event_{id}>")
+    markers[label].append(f"<event>")
+    markers[label].append(f"</event>")
 data_args.markers = markers
 insert_markers = [m for ms in data_args.markers.values() for m in ms]
 

@@ -58,13 +58,7 @@ data_args.id2role = {id: role for role, id in data_args.role2id.items()}
 
 # markers 
 type2id = json.load(open(data_args.type2id_path))
-markers = defaultdict(list)
-for label, id in type2id.items():
-    markers[label].append(f"<event_{id}>")
-    markers[label].append(f"</event_{id}>")
-markers["argument"] = ["<argument>", "</argument>"]
-data_args.markers = markers
-insert_markers = [m for ms in data_args.markers.values() for m in ms]
+data_args.markers = ["<event>", "</event>"]
 
 # logging
 logging.info(data_args)
@@ -80,8 +74,8 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
 
 # model 
 backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
-                                           model_args.model_name_or_path, insert_markers, model_args,
-                                           new_tokens=insert_markers)
+                                           model_args.model_name_or_path, data_args.markers, model_args,
+                                           new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
 

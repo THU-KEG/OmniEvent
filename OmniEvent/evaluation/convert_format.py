@@ -23,7 +23,8 @@ def get_pred_per_mention(pos_start: int,
                          label: str = None,
                          label2id: Dict[str, int] = None,
                          text: str = None,
-                         paradigm: str = "sl") -> str:
+                         paradigm: str = "sl",
+                         task: str = "EAE") -> str:
     """Get the predicted event type or argument role for each mention via the predictions of different paradigms.
 
     The predictions of Sequence Labeling, Seq2Seq, MRC paradigms are not aligned to each word. We need to convert the
@@ -91,16 +92,32 @@ def get_pred_per_mention(pos_start: int,
 
     elif paradigm == "mrc":
         # mrc paradigm
-        predictions = []
-        for pred in preds:
-            if pred[1] == (pos_start, pos_end - 1):
-                pred_role = pred[0].split("_")[-1]
-                predictions.append(pred_role)
+        if task == "EAE":
+            predictions = []
+            for pred in preds:
+                if pred[1] == (pos_start, pos_end - 1):
+                    pred_role = pred[0].split("_")[-1]
+                    predictions.append(pred_role)
 
-        if label in predictions:
-            return label
+            if label in predictions:
+                return label
+            else:
+                return predictions[0] if predictions else "NA"
+        elif task == "ED":
+            # sequence labeling paradigm
+            if pos_start == pos_end or \
+                    pos_end > len(preds):
+                return "NA"
+            predictions = set()
+            for pos in range(pos_start, pos_end):
+                _pred = id2label[int(preds[pos])]
+                predictions.add(_pred)
+            if len(predictions) > 1:
+                return "NA"
+            else:
+                return list(predictions)[0]
         else:
-            return predictions[0] if predictions else "NA"
+            raise NotImplementedError
     else:
         raise NotImplementedError
 
@@ -270,6 +287,63 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
 
     logger.info('Number of Instances: {}'.format(eae_instance_idx))
     logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
+    return results
+
+
+def get_ace2005_trigger_detection_mrc(preds: np.array,
+                                     labels: np.array,
+                                     data_file: str,
+                                     data_args,
+                                     is_overflow) -> List[str]:
+    """Obtains the event detection prediction results of the ACE2005 dataset based on the sequence labeling paradigm.
+
+    Obtains the event detection prediction results of the ACE2005 dataset based on the sequence labeling paradigm,
+    predicting the labels and calculating the micro F1 score based on the predictions and labels.
+
+    Args:
+        preds (`np.array`):
+            A list of strings indicating the predicted types of the instances.
+        labels (`np.array`):
+            A list of strings indicating the actual labels of the instances.
+        data_file (`str`):
+            A string indicating the path of the testing data file.
+        data_args:
+            The pre-defined arguments for data processing.
+        is_overflow:
+
+
+    Returns:
+        results (`List[str]`):
+            A list of strings indicating the prediction results of event triggers.
+    """
+    # get per-word predictions
+    preds, _ = select_start_position(preds, labels, False)
+    results = []
+    label_names = []
+    language = data_args.language
+
+    with open(data_file, "r", encoding='utf-8') as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            item = json.loads(line.strip())
+
+            if not is_overflow[i]:
+                check_pred_len(pred=preds[i], item=item, language=language)
+
+            candidates, label_names_per_item = get_ed_candidates(item=item)
+            label_names.extend(label_names_per_item)
+
+            # loop for converting
+            for candidate in candidates:
+                left_pos, right_pos = get_left_and_right_pos(text=item["text"], trigger=candidate, language=language)
+                pred = get_pred_per_mention(left_pos, right_pos, preds[i], data_args.id2type, 
+                                            paradigm="mrc", task="ED")
+                results.append(pred)
+
+    if "events" in item:
+        micro_f1 = compute_unified_micro_f1(label_names=label_names, results=results)
+        logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
+
     return results
 
 

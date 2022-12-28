@@ -35,7 +35,7 @@ aggregation: none
 head_type: crf
 
 # training config #
-num_train_epochs: 20
+num_train_epochs: 30
 max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2

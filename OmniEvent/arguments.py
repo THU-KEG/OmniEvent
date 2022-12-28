@@ -282,6 +282,12 @@ class ModelArguments:
             "help": "Whether dropout after word embedding"
         }
     )
+    dropout_after_encoder: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether dropout after PLM encoder"
+        }
+    )
 
     def to_dict(self):
         """

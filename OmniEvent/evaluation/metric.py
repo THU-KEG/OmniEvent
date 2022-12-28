@@ -380,6 +380,40 @@ def compute_accuracy(logits: np.ndarray,
     return {"accuracy": accuracy}
 
 
+def compute_mrc_trigger_F1(logits: np.ndarray,
+                    labels: np.ndarray,
+                    **kwargs) -> Dict[str, int]:
+    """Computes the F1 score of the Sequence Labeling (SL) paradigm.
+
+    Computes the F1 score of the Sequence Labeling (SL) paradigm. The prediction of the model is converted into strings,
+    then the overall F1 score of the prediction could be calculated.
+
+    Args:
+        logits (`np.ndarray`):
+            An numpy array of integers containing the predictions from the model to be decoded.
+        labels (`np.ndarray`):
+            An numpy array of integers containing the actual labels obtained from the annotated dataset.
+
+    Returns:
+        `Dict[str: float]`:
+            A dictionary containing the calculation result of F1 score.
+    """
+
+    preds = np.argmax(logits, axis=-1) if len(logits.shape) == 3 else logits
+    training_args = kwargs["training_args"]
+    predictions, labels = select_start_position(preds, labels, True)
+    pos_labels = list(set(training_args.type2id.values()))
+    pos_labels.remove(0)
+    precision = precision_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
+    recall = recall_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
+    micro_f1 = f1_score(labels, predictions, labels=pos_labels, average="micro") * 100.0
+    return {
+        "precision": precision,
+        "recall": recall,
+        "micro_f1": micro_f1
+    }
+
+
 def compute_mrc_F1(logits: np.ndarray,
                    labels: np.ndarray,
                    **kwargs) -> Dict[str, float]:
@@ -400,5 +434,10 @@ def compute_mrc_F1(logits: np.ndarray,
     """
     start_logits, end_logits = np.split(logits, 2, axis=-1)
     all_predictions, all_labels = make_predictions(start_logits, end_logits, kwargs["training_args"])
-    micro_f1 = compute_mrc_F1_cls(all_predictions, all_labels)
-    return {"micro_f1": micro_f1}
+    precision, recall, micro_f1 = compute_mrc_F1_cls(all_predictions, all_labels)
+    return {
+        "precision": precision,
+        "recall": recall,
+        "micro_f1": micro_f1
+    }
+

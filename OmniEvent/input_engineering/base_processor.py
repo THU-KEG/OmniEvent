@@ -83,7 +83,7 @@ class EDInputFeatures(object):
                  token_type_ids: Optional[List[int]] = None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
-                 labels: Optional[List[str]] = None) -> None:
+                 labels: Optional[List[int]] = None) -> None:
         """Constructs an `EDInputFeatures`."""
         self.example_id = example_id
         self.input_ids = input_ids
@@ -372,6 +372,7 @@ class EAEDataProcessor(Dataset):
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()
         self.data_for_evaluation["ids"] = self.get_ids()
+        self.data_for_evaluation["examples"] = self.examples
         if self.examples[0].argument_role is not None:
             self.data_for_evaluation["roles"] = self.get_roles()
         return self.data_for_evaluation

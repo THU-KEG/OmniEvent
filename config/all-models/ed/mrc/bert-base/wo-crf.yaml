@@ -1,10 +1,11 @@
-seed: 42
+seed: 2
 do_train: True
-do_predict: True
+do_predict: True 
+do_ED_infer: False
 
 # top-level config #
 paradigm: mrc
-task_name: EAE
+task_name: ED
 dataset_name: ACE2005-dygie
 language: English
 test_exists_labels: True
@@ -12,21 +13,11 @@ test_exists_labels: True
 # file path #
 output_dir: output/ACE2005-dygie
 type2id_path: ../../data/processed/ace2005-dygie/label2id.json
-role2id_path: ../../data/processed/ace2005-dygie/role2id.json
 train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
 validation_file: ../../data/processed/ace2005-dygie/valid.unified.jsonl
 test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
-# event detection predictions
-golden_trigger: False
-# train_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/train_preds.json
-validation_pred_file: ../ED/output/ACE2005-dygie/ED/mrc/bert-base-uncased-none/valid_preds.json
-test_pred_file: ../ED/output/ACE2005-dygie/ED/mrc/bert-base-uncased-none/test_preds.json
-# config for some specific paradigms
-prompt_file: ../../config/all-models/eae/mrc/description_queries_eeqa_dygie.csv # used for MRC paradigm
-mrc_template_id: 3
 
-# config for data processor # 
-truncate_in_batch: False 
+# config for data processor #
 return_token_type_ids: False
 
 # model config #
@@ -34,11 +25,14 @@ model_type: bert
 model_name_or_path: bert-base-uncased
 hidden_size: 768
 aggregation: none
-head_type: mrc
+# head_type: crf
+
+dropout_after_encoder: False
 
 # training config #
-num_train_epochs: 10
+num_train_epochs: 20
 max_seq_length: 160
+max_out_length: 160
 dataloader_num_workers: 2
 
 per_device_train_batch_size: 64
@@ -54,19 +48,15 @@ early_stopping_patience: 100
 
 load_best_model_at_end: True
 metric_for_best_model: micro_f1 
-greater_is_better: True 
+greater_is_better: True
 
 logging_strategy: steps
 logging_steps: 100
 evaluation_strategy: epoch
-eval_steps: 500
+eval_steps: 200
 save_strategy: epoch
-save_steps: 500
-
-# evaluate/test config #
-eae_eval_mode: strict
+save_steps: 200
 
 # split inference #
-split_infer: False
-split_infer_size: 5000
-
+split_infer: False 
+split_infer_size: 500

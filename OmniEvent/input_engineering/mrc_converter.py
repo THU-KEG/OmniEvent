@@ -256,5 +256,5 @@ def compute_mrc_F1_cls(all_predictions, all_labels):
     else:
         f1_c = 0
 
-    logger.info("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
-    return f1_c
+    # logger.info("Precision: %.2f, recall: %.2f" % (prec_c, recall_c))
+    return prec_c, recall_c, f1_c

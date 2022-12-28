@@ -17,7 +17,11 @@ from ..input_engineering.seq2seq_processor import extract_argument
 from ..input_engineering.base_processor import EDDataProcessor, EAEDataProcessor
 from ..input_engineering.mrc_converter import make_predictions, find_best_thresh
 
-from .convert_format import get_ace2005_trigger_detection_sl, get_ace2005_trigger_detection_s2s
+from .convert_format import (
+    get_ace2005_trigger_detection_sl, 
+    get_ace2005_trigger_detection_s2s,
+    get_ace2005_trigger_detection_mrc
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +82,8 @@ def dump_preds(trainer: Union[Trainer, Seq2SeqTrainer],
         pred_labels = [data_args.id2type[pred] for pred in preds]
     elif model_args.paradigm == "sequence_labeling":
         pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+    elif model_args.paradigm == "mrc":
+        pred_labels = get_ace2005_trigger_detection_mrc(preds, labels, data_file, data_args, dataset.is_overflow)
     elif model_args.paradigm == "seq2seq":
         pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, None)
     else:
