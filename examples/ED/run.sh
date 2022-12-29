@@ -20,5 +20,15 @@
 #     ../../config/all-models/ed/mrc/bert-base/wo-crf.yaml
 # CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
 #     ../../config/all-models/ed/sl/bert-base/crf-cleve.yaml
-CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
-    ../../config/all-models/ed/tc/bert-base/dm-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/ed/tc/bert-base/dm-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/ed/tc/cnn/dm-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/ed/tc/cnn/dm-oneie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/ed/tc/bert-base/dm-oneie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+#     ../../config/all-models/ed/sl/bert-base/crf-dygie.yaml
+CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+    ../../config/all-models/ed/sl/bert-base/crf-oneie.yaml

@@ -164,7 +164,7 @@ class DynamicPooling(nn.Module):
         super(DynamicPooling, self).__init__()
         self.dense = nn.Linear(config.hidden_size*config.head_scale, config.hidden_size*config.head_scale)
         self.activation = nn.Tanh()
-        self.dropout = nn.Dropout()
+        self.dropout = nn.Dropout(p=0.2)
     
     def get_mask(self,
                  position: torch.Tensor,

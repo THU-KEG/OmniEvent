@@ -144,6 +144,12 @@ class DataArguments:
             "help": "Consider event type as type ids"
         }
     )
+    type_marker: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether type specific marker"
+        }
+    )
 
     def to_dict(self):
         """
