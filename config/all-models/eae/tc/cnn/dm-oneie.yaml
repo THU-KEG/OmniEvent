@@ -5,26 +5,26 @@ do_predict: True
 # top-level config #
 paradigm: token_classification
 task_name: EAE
-dataset_name: ACE2005-en
+dataset_name: ACE2005-oneie
 language: English
 test_exists_labels: True
 consider_event_type: True
 
 # file path #
-output_dir: output/ACE2005-en
-type2id_path: ../../data/processed/ace2005-en/label2id.json
-role2id_path: ../../data/processed/ace2005-en/role2id.json
-train_file: ../../data/processed/ace2005-en/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-en/test.unified.jsonl
+output_dir: output/ACE2005-oneie
+type2id_path: ../../data/processed/ace2005-oneie/label2id.json
+role2id_path: ../../data/processed/ace2005-oneie/role2id.json
+train_file: ../../data/processed/ace2005-oneie/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-oneie/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-oneie/test.unified.jsonl
 insert_marker: True
 type_marker: False
 
 # event detection predictions
 golden_trigger: False
-# train_pred_file: output/ACE2005-en/ED/token_classification/bert-base-uncased-marker/train_preds.json
-validation_pred_file: ../ED/output/ACE2005-en/ED/token_classification/cnn-dynamic_pooling/valid_preds.json
-test_pred_file: ../ED/output/ACE2005-en/ED/token_classification/cnn-dynamic_pooling/test_preds.json
+# train_pred_file: output/ACE2005-oneie/ED/token_classification/bert-base-uncased-marker/train_preds.json
+validation_pred_file: ../ED/output/ACE2005-oneie/ED/token_classification/cnn-dynamic_pooling/valid_preds.json
+test_pred_file: ../ED/output/ACE2005-oneie/ED/token_classification/cnn-dynamic_pooling/test_preds.json
 # config for some specific paradigms
 
 # config for data processor #
