@@ -31,8 +31,14 @@ def compute_unified_micro_f1(label_names: List[str], results: List[str]) -> floa
     """
     pos_labels = list(set(label_names))
     pos_labels.remove("NA")
+    precision = precision_score(label_names, results, labels=pos_labels, average="micro") * 100.0
+    recall = recall_score(label_names, results, labels=pos_labels, average="micro") * 100.0
     micro_f1 = f1_score(label_names, results, labels=pos_labels, average="micro") * 100.0
-    return micro_f1
+    return {
+        "precision": precision,
+        "recall": recall,
+        "micro_f1": micro_f1
+    }
 
 
 def f1_score_overall(preds: Union[List[str], List[tuple]],
@@ -83,6 +89,8 @@ def f1_score_overall_with_type(preds: Union[List[str], List[tuple]],
         precision (`float`), recall (`float`), and f1 (`float`):
             Three float variables representing the computation results of precision, recall, and F1 score, respectively.
     """
+    assert len(preds) == len(pred_types)
+    assert len(pred_types) == len(golden_types)
     def is_NA(x):
         if isinstance(x,tuple):
             return (0 in x) or ("NA" in x) or ("None" in x)

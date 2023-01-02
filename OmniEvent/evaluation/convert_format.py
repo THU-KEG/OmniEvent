@@ -4,7 +4,7 @@ import numpy as np
 
 from typing import List, Dict, Union, Tuple
 from sklearn.metrics import f1_score
-from .metric import select_start_position, compute_unified_micro_f1
+from .metric import select_start_position, compute_unified_micro_f1, f1_score_overall_with_type
 from ..input_engineering.input_utils import (
     get_left_and_right_pos,
     check_pred_len,
@@ -59,6 +59,12 @@ def get_pred_per_mention(pos_start: int,
                 id2label[int(preds[pos_start])] == "O" or \
                 id2label[int(preds[pos_start])].split("-")[0] != "B":
             return "NA"
+        if pos_end < len(preds):
+            if id2label[int(preds[pos_end-1])] == id2label[int(preds[pos_end])]:
+                return "NA"
+        for pos in range(pos_start+1, pos_end):
+            if id2label[int(preds[pos])][0] != "I":
+                return "NA"
 
         predictions = set()
         for pos in range(pos_start, pos_end):
@@ -93,16 +99,20 @@ def get_pred_per_mention(pos_start: int,
     elif paradigm == "mrc":
         # mrc paradigm
         if task == "EAE":
-            predictions = []
+            # select the pred with the lowest non_na_prob
+            filtered_preds = []
             for pred in preds:
+                assert pred[0].split("_")[0] == label
+                if pred[0].split("_")[0] == label:
+                    filtered_preds.append(pred)
+            if len(filtered_preds) == 0:
+                return "NA"
+            filtered_preds = sorted(filtered_preds, key=lambda item: item[2])
+            for pred in filtered_preds:
                 if pred[1] == (pos_start, pos_end - 1):
                     pred_role = pred[0].split("_")[-1]
-                    predictions.append(pred_role)
-
-            if label in predictions:
-                return label
-            else:
-                return predictions[0] if predictions else "NA"
+                    return pred_role
+            return "NA"
         elif task == "ED":
             # sequence labeling paradigm
             if pos_start == pos_end or \
@@ -172,8 +182,8 @@ def get_ace2005_trigger_detection_sl(preds: np.array,
                 results.append(pred)
 
     if "events" in item:
-        micro_f1 = compute_unified_micro_f1(label_names=label_names, results=results)
-        logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
+        metric_results = compute_unified_micro_f1(label_names=label_names, results=results)
+        logger.info("{} test performance after converting: {}".format(data_args.dataset_name, metric_results))
 
     return results
 
@@ -216,6 +226,7 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
 
     # get per-word predictions
     preds, labels = select_start_position(preds, labels, False)
+    golden_types, pred_types = [], []
     results = []
     label_names = []
     with open(data_file, "r", encoding="utf-8") as f:
@@ -243,13 +254,12 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
 
                     # loop for converting
                     for candi in candidates:
-                        if true_type == pred_type:
-                            # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
-                            # get predictions
-                            pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
-                        else:
-                            pred = "NA"
+                        golden_types.append(true_type)
+                        pred_types.append(pred_type)
+                        # get word positions
+                        left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
+                        # get predictions
+                        pred = get_pred_per_mention(left_pos, right_pos, preds[eae_instance_idx], data_args.id2role)
                         # record results
                         results.append(pred)
                     eae_instance_idx += 1
@@ -270,6 +280,8 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
 
                         # loop for converting
                         for candi in candidates:
+                            golden_types.append(true_type)
+                            pred_types.append(pred_type)
                             # get word positions
                             left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
@@ -281,12 +293,14 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
 
         assert len(preds) == eae_instance_idx
         
-    pos_labels = list(set(label_names))
-    pos_labels.remove("NA")
-    micro_f1 = f1_score(label_names, results, labels=pos_labels, average="micro") * 100.0
-
+    P, R, F1 = f1_score_overall_with_type(results, label_names, pred_types, golden_types)
+    metric_results = {
+        "precision": P * 100,
+        "recall": R * 100,
+        "micro_f1": F1 * 100
+    }
     logger.info('Number of Instances: {}'.format(eae_instance_idx))
-    logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
+    logger.info("{} test performance after converting: {}".format(data_args.dataset_name, metric_results))
     return results
 
 
@@ -341,8 +355,9 @@ def get_ace2005_trigger_detection_mrc(preds: np.array,
                 results.append(pred)
 
     if "events" in item:
-        micro_f1 = compute_unified_micro_f1(label_names=label_names, results=results)
-        logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
+        metric_results = compute_unified_micro_f1(label_names=label_names, results=results)
+        logger.info("{} test performance after converting: {}".format(data_args.dataset_name, metric_results))
+
 
     return results
 
@@ -379,27 +394,27 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
     event_preds = get_event_preds(pred_file=data_args.test_pred_file)
 
     # get per-word predictions
+    golden_types, pred_types = [], []
     results = []
     all_labels = []
     with open(data_args.test_file, "r", encoding="utf-8") as f:
         trigger_idx = 0
         eae_instance_idx = 0
         lines = f.readlines()
-        for line in lines:
+        for idx, line in enumerate(lines):
             item = json.loads(line.strip())
             text = item["text"]
-
-            # preds per index 
-            preds_per_idx = []
-            for pred in preds:
-                if pred[-1] == trigger_idx:
-                    preds_per_idx.append(pred)
 
             for event in item["events"]:
                 for trigger in event["triggers"]:
                     true_type = event["type"]
                     pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
                     trigger_idx += 1
+                    # preds per index
+                    preds_per_idx = []
+                    for pred in preds:
+                        if pred[-1] == trigger_idx - 1:
+                            preds_per_idx.append(pred)
 
                     if eval_mode in ['default', 'loose']:
                         if pred_type == "NA":
@@ -411,15 +426,14 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
                     # loop for converting
                     for cid, candi in enumerate(candidates):
-                        label = labels_per_idx[cid]
-                        if pred_type == true_type:
-                            # get word positions
-                            left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
-                            # get predictions
-                            pred_role = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx,
-                                                             label=label, paradigm='mrc')
-                        else:
-                            pred_role = "NA"
+                        golden_types.append(true_type)
+                        pred_types.append(pred_type)
+                        label = pred_type
+                        # get word positions
+                        left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
+                        # get predictions
+                        pred_role = get_pred_per_mention(pos_start=left_pos, pos_end=right_pos, preds=preds_per_idx,
+                                                            label=label, paradigm='mrc')
                         # record results
                         results.append(pred_role)
                     eae_instance_idx += 1
@@ -430,6 +444,12 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
                 pred_type = true_type if golden_trigger or event_preds is None else event_preds[trigger_idx]
                 trigger_idx += 1
 
+                # preds per index 
+                preds_per_idx = []
+                for pred in preds:
+                    if pred[-1] == trigger_idx - 1:
+                        preds_per_idx.append(pred)
+
                 if eval_mode in ['default', 'strict']:  # loose mode has no neg
                     if pred_type != "NA":
                         # get candidates
@@ -438,7 +458,9 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
                         # loop for converting
                         for candi in candidates:
-                            label = "NA"
+                            golden_types.append(true_type)
+                            pred_types.append(pred_type)
+                            label = pred_type
                             # get word positions
                             left_pos, right_pos = get_left_and_right_pos(text=text, trigger=candi, language=language)
                             # get predictions
@@ -449,12 +471,14 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
 
                         eae_instance_idx += 1
         
-    pos_labels = list(data_args.role2id.keys())
-    pos_labels.remove("NA")
-    micro_f1 = f1_score(all_labels, results, labels=pos_labels, average="micro") * 100.0
-
+    P, R, F1 = f1_score_overall_with_type(results, all_labels, pred_types, golden_types)
+    metric_results = {
+        "precision": P * 100,
+        "recall": R * 100,
+        "micro_f1": F1 * 100
+    }
     logger.info('Number of Instances: {}'.format(eae_instance_idx))
-    logger.info("{} test performance after converting: {}".format(data_args.dataset_name, micro_f1))
+    logger.info("{} test performance after converting: {}".format(data_args.dataset_name, metric_results))
     return results
 
 

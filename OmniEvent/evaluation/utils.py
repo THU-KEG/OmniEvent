@@ -159,7 +159,7 @@ def get_pred_mrc(logits: np.array,
     """
 
     start_logits, end_logits = np.split(logits, 2, axis=-1)
-    all_preds, all_labels = make_predictions(start_logits, end_logits, training_args)
+    all_preds, all_labels = make_predictions(start_logits, end_logits, training_args, use_example_id=False)
 
     all_preds = sorted(all_preds, key=lambda x: x[-2])
     best_na_thresh = find_best_thresh(all_preds, all_labels)
@@ -168,7 +168,8 @@ def get_pred_mrc(logits: np.array,
     final_preds = []
     for argument in all_preds:
         if argument[-2] < best_na_thresh:
-            final_preds.append(argument[:-2] + argument[-1:])  # no na_prob
+            # final_preds.append(argument[:-2] + argument[-1:])  # no na_prob
+            final_preds.append(argument)
 
     return final_preds
 
