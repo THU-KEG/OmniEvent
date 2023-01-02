@@ -59,8 +59,8 @@ class EDMRCProcessor(EDDataProcessor):
                         for trigger in event["triggers"]:
                             left_pos, right_pos = get_left_and_right_pos(text, trigger, language, True)
                             labels[left_pos] = f"{event['type']}"
-                            # for i in range(left_pos + 1, right_pos):
-                            #     labels[i] = f"{event['type']}"
+                            for i in range(left_pos + 1, right_pos):
+                                labels[i] = f"{event['type']}"
                     example = EDInputExample(
                                     example_id=item["id"], 
                                     text=words, 
@@ -227,6 +227,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             left_pos, right_pos = get_left_and_right_pos(text, mention, language)
                                             example = EAEInputExample(
                                                 example_id=idx,
+                                                trigger_id=trigger_idx-1,
                                                 text=words,
                                                 pred_type=pred_type,
                                                 true_type=event["type"],
@@ -241,6 +242,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     if no_answer:
                                         example = EAEInputExample(
                                             example_id=idx,
+                                            trigger_id=trigger_idx-1,
                                             text=words,
                                             pred_type=pred_type,
                                             true_type=event["type"],
@@ -256,6 +258,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                     # one instance per query
                                     example = EAEInputExample(
                                         example_id=idx,
+                                        trigger_id=trigger_idx-1,
                                         text=words,
                                         pred_type=pred_type,
                                         true_type=event["type"],
@@ -287,6 +290,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 # one instance per query
                                 example = EAEInputExample(
                                     example_id=idx,
+                                    trigger_id=trigger_idx-1,
                                     text=words,
                                     pred_type=pred_type,
                                     true_type="NA",
@@ -315,6 +319,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 # one instance per query
                                 example = EAEInputExample(
                                     example_id=idx,
+                                    trigger_id=trigger_idx-1,
                                     text=words,
                                     pred_type=pred_type,
                                     true_type="NA",

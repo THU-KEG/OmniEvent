@@ -122,7 +122,7 @@ def char_pos_to_word_pos(text: str,
     return len(text[:position].split())
 
 
-def make_predictions(all_start_logits, all_end_logits, training_args):
+def make_predictions(all_start_logits, all_end_logits, training_args, use_example_id=True):
     """Obtains the prediction from the Machine Reading Comprehension (MRC) model."""
     data_for_evaluation = training_args.data_for_evaluation
     assert len(all_start_logits) == len(data_for_evaluation["ids"])
@@ -173,7 +173,7 @@ def make_predictions(all_start_logits, all_end_logits, training_args):
         for _, pred in enumerate(prelim_predictions[:max_num_pred_per_arg]):
             na_prob = (start_logits[0] + end_logits[0]) - (pred.start_logit + pred.end_logit)
             predictions_per_query.append((event_argument_type, (pred.start_index, pred.end_index), na_prob,
-                                          data_for_evaluation["ids"][example_id]))
+                                          data_for_evaluation["ids"][example_id] if use_example_id else data_for_evaluation["trigger_ids"][example_id]))
         final_all_predictions.extend(predictions_per_query)
 
     logger.info("\nAll predictions and labels generated. %d %d\n" % (len(final_all_predictions), len(final_all_labels)))
