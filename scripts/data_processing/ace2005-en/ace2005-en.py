@@ -21,7 +21,7 @@ class StanfordCoreNLPv2(StanfordCoreNLP):
     satisfy the sentence-level event extraction.
     """
     def __init__(self, path):
-        super(StanfordCoreNLPv2, self).__init__(path, port=8088)  # add port=8888 and comment line84-85 in corenlp.py on MacOS
+        super(StanfordCoreNLPv2, self).__init__(path)  # add port=8888 and comment line84-85 in corenlp.py on MacOS
 
     def sent_tokenize(self,
                       sentence: str):
