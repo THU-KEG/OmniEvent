@@ -7,6 +7,7 @@ import argparse
 import jsonlines
 import os
 
+from nltk.tokenize import word_tokenize
 from nltk.tokenize.punkt import PunktSentenceTokenizer
 from tqdm import tqdm
 from xml.dom.minidom import parse
@@ -266,8 +267,10 @@ def add_spaces(documents_split: List[Dict[str, Union[str, List]]],
                documents_without_event: List[Dict[str, Union[str, List[str]]]]):
     """Adds a space before and after the punctuations.
 
-    Adds a space before and after punctuations, such as comma (","), full-stop ("?") and question mark ("?") of the
-    source texts. The mention and position of the event trigger annotations are also amended.
+    Adds a space before and after punctuations, such as commas (","), full-stops ("?"), and question marks ("?"), of the
+    source texts. However, the spaces should not be added besides the punctuations in a number, such as 1,000 and 1.5.
+    Therefore, the spaces are added by the tokenization and detokenization to the source texts; after the process, the
+    mention and position of the event trigger annotations are also amended.
 
     Args:
         documents_split (`List[Dict[str, Union[str, List]]]`):
@@ -278,73 +281,24 @@ def add_spaces(documents_split: List[Dict[str, Union[str, List]]],
 
     Returns:
         documents_split (`List[Dict[str, Union[str, List]]]`):
-            A list of dictionaries containing the document id, source text, and the event trigger annotations of each
-            sentence within each document.
+            A list of dictionaries containing the document id and the event trigger annotations of each sentence within
+            each document.
         documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
-            A list of dictionaries containing the sentences not contain any triggers within. The processed
-            `documents_split` and `documents_without_event` are returned as final results.
+            A list of dictionaries containing the sentences not contain any triggers within.
     """
     for document in tqdm(documents_split, desc="Adding spaces..."):
         punc_char = list()
         for i in range(len(document["text"])):
             # Retrieve the top i characters.
             text = document["text"][:i]
-            text_space = re.sub(",", " , ", text)
-            text_space = re.sub("\.", " . ", text_space)
-            text_space = re.sub(":", " : ", text_space)
-            text_space = re.sub(";", " : ", text_space)
-            text_space = re.sub("\?", " ? ", text_space)
-            text_space = re.sub("!", " ! ", text_space)
-            text_space = re.sub("'", " ' ", text_space)
-            text_space = re.sub("\"", " \" ", text_space)
-            text_space = re.sub("\(", " ( ", text_space)
-            text_space = re.sub("\)", " ) ", text_space)
-            text_space = re.sub("\[", " [ ", text_space)
-            text_space = re.sub("\]", " ] ", text_space)
-            text_space = re.sub("\{", " { ", text_space)
-            text_space = re.sub("\}", " } ", text_space)
-            text_space = re.sub("-", " - ", text_space)
-            text_space = re.sub("=", " = ", text_space)
-            text_space = re.sub("/", " / ", text_space)
-            text_space = re.sub("_", " _ ", text_space)
-            text_space = re.sub("\*", " * ", text_space)
-            text_space = re.sub("`", " ` ", text_space)
-            text_space = re.sub("‘", " ‘ ", text_space)
-            text_space = re.sub("’", " ’ ", text_space)
-            text_space = re.sub("“", " “ ", text_space)
-            text_space = re.sub("”", " ” ", text_space)
-            text_space = re.sub("…", " … ", text_space)
-            text_space = re.sub(" +", " ", text_space)
-            punc_char.append(len(text_space.lstrip()))
+            # Tokenize and detokenize the retrieved string.
+            punc_char.append(len(" ".join(word_tokenize(text))))
         punc_char.append(punc_char[-1])
 
-        document["text"] = re.sub(",", " , ", document["text"])
-        document["text"] = re.sub("\.", " . ", document["text"])
-        document["text"] = re.sub(":", " : ", document["text"])
-        document["text"] = re.sub(";", " ; ", document["text"])
-        document["text"] = re.sub("\?", " ? ", document["text"])
-        document["text"] = re.sub("!", " ! ", document["text"])
-        document["text"] = re.sub("'", " ' ", document["text"])
-        document["text"] = re.sub("\"", " \" ", document["text"])
-        document["text"] = re.sub("\(", " ( ", document["text"])
-        document["text"] = re.sub("\)", " ) ", document["text"])
-        document["text"] = re.sub("\[", " [ ", document["text"])
-        document["text"] = re.sub("\]", " ] ", document["text"])
-        document["text"] = re.sub("\{", " { ", document["text"])
-        document["text"] = re.sub("\}", " } ", document["text"])
-        document["text"] = re.sub("-", " - ", document["text"])
-        document["text"] = re.sub("=", " = ", document["text"])
-        document["text"] = re.sub("/", " / ", document["text"])
-        document["text"] = re.sub("_", " _ ", document["text"])
-        document["text"] = re.sub("\*", " * ", document["text"])
-        document["text"] = re.sub("`", " ` ", document["text"])
-        document["text"] = re.sub("‘", " ‘ ", document["text"])
-        document["text"] = re.sub("’", " ’ ", document["text"])
-        document["text"] = re.sub("“", " “ ", document["text"])
-        document["text"] = re.sub("”", " ” ", document["text"])
-        document["text"] = re.sub("…", " … ", document["text"])
-        document["text"] = re.sub(" +", " ", document["text"]).strip()
+        # Tokenize and detokenize the source text.
+        document["text"] = " ".join(word_tokenize(document["text"]))
 
+        # Fix the position of mentions due to an extra space before.
         for event in document["events"]:
             for trigger in event["triggers"]:
                 trigger["position"][0] = punc_char[trigger["position"][0]]
@@ -357,34 +311,73 @@ def add_spaces(documents_split: List[Dict[str, Union[str, List]]],
                     trigger["position"][1] -= 1
                     trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
 
+    # Tokenize and detokenize the sentences without events.
     for document in documents_without_event:
         for i in range(len(document["sentences"])):
-            document["sentences"][i] = re.sub(",", " , ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\.", " . ", document["sentences"][i])
-            document["sentences"][i] = re.sub(":", " : ", document["sentences"][i])
-            document["sentences"][i] = re.sub(";", " : ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\?", " ? ", document["sentences"][i])
-            document["sentences"][i] = re.sub("!", " ! ", document["sentences"][i])
-            document["sentences"][i] = re.sub("'", " ' ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\"", " \" ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\(", " ( ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\)", " ) ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\[", " [ ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\]", " ] ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\{", " { ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\}", " } ", document["sentences"][i])
+            document["sentences"][i] = " ".join(word_tokenize(document["sentences"][i]))
+
+    assert check_position(documents_split)
+    return split_subwords(documents_split, documents_without_event)
+
+
+def split_subwords(documents_split: List[Dict[str, Union[str, List]]],
+                   documents_without_event: List[Dict[str, Union[str, List[str]]]]):
+    """Splits the subwords into two separate words.
+
+    Splits the subwords into two separate words for better PLM encodings. The example is as follows:
+
+        - Original: Greece ’ s second-largest city
+        - Processed: Greece ’ s second - largest city
+
+    After splitting the subwords, the mention and position of the event trigger annotations are also amended.
+
+    Args:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id, source text, and the event trigger annotations of each
+            sentence within each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers within.
+
+    Returns:
+        documents_split (`List[Dict[str, Union[str, List]]]`):
+            A list of dictionaries containing the document id and the event trigger annotations of each sentence within
+            each document.
+        documents_without_event (`List[Dict[str, Union[str, List[str]]]]`):
+            A list of dictionaries containing the sentences not contain any triggers within. The processed
+            `documents_split` and `documents_without_event` are returned as final results.
+    """
+    for document in tqdm(documents_split, desc="Splitting subwords..."):
+        punc_char = list()
+        for i in range(len(document["text"])):
+            # Retrieve the top i characters.
+            text = document["text"][:i]
+            # Split the subwords within the retrieved string.
+            text = re.sub("-", " - ", text)
+            punc_char.append(len(re.sub(" +", " ", text)))
+        punc_char.append(punc_char[-1])
+
+        # Tokenize and detokenize the source text.
+        document["text"] = re.sub("-", " - ", document["text"])
+        document["text"] = re.sub(" +", " ", document["text"])
+
+        # Fix the position of mentions due to an extra space before.
+        for event in document["events"]:
+            for trigger in event["triggers"]:
+                trigger["position"][0] = punc_char[trigger["position"][0]]
+                trigger["position"][1] = punc_char[trigger["position"][1]]
+                trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].startswith(" "):
+                    trigger["position"][0] += 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+                if trigger["trigger_word"].endswith(" "):
+                    trigger["position"][1] -= 1
+                    trigger["trigger_word"] = document["text"][trigger["position"][0]:trigger["position"][1]]
+
+    # Split the subwords within the sentences without events.
+    for document in documents_without_event:
+        for i in range(len(document["sentences"])):
             document["sentences"][i] = re.sub("-", " - ", document["sentences"][i])
-            document["sentences"][i] = re.sub("=", " = ", document["sentences"][i])
-            document["sentences"][i] = re.sub("/", " / ", document["sentences"][i])
-            document["sentences"][i] = re.sub("_", " _ ", document["sentences"][i])
-            document["sentences"][i] = re.sub("\*", " * ", document["sentences"][i])
-            document["sentences"][i] = re.sub("`", " ` ", document["sentences"][i])
-            document["sentences"][i] = re.sub("‘", " ‘ ", document["sentences"][i])
-            document["sentences"][i] = re.sub("’", " ’ ", document["sentences"][i])
-            document["sentences"][i] = re.sub("“", " “ ", document["sentences"][i])
-            document["sentences"][i] = re.sub("”", " ” ", document["sentences"][i])
-            document["sentences"][i] = re.sub("…", " … ", document["sentences"][i])
-            document["sentences"][i] = re.sub(" +", " ", document["sentences"][i]).strip()
+            document["sentences"][i] = re.sub(" +", " ", document["sentences"][i])
 
     assert check_position(documents_split)
     return documents_split, documents_without_event

@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from typing import Dict, Optional, Union
 from transformers import BartForConditionalGeneration, MT5ForConditionalGeneration, T5ForConditionalGeneration
@@ -18,7 +19,8 @@ from OmniEvent.utils import check_web_and_convert_path
 
 
 def get_model(model_args,
-              backbone):
+              backbone,
+              task_type="EAE"):
     """Returns the model proposed to be utilized for training and prediction.
 
     Returns the model proposed to be utilized for training and prediction based on the pre-defined paradigm. The
@@ -41,7 +43,12 @@ def get_model(model_args,
     elif model_args.paradigm == "seq2seq":
         return backbone
     elif model_args.paradigm == "mrc":
-        return ModelForMRC(model_args, backbone)
+        if task_type == "EAE":
+            return ModelForMRC(model_args, backbone)
+        elif task_type == "ED":
+            return ModelForSequenceLabeling(model_args, backbone)
+        else:
+            raise ValueError
     else:
         raise ValueError("No such paradigm")
 
@@ -119,20 +126,29 @@ class ModelForTokenClassification(BaseModel):
                 labels: Optional[torch.Tensor] = None) -> Dict[str, torch.Tensor]:
         """Manipulates the inputs through a backbone, aggregation, and classification module,
            returns the predicted logits and loss."""
-        # backbone encode 
-        outputs = self.backbone(input_ids=input_ids,
-                                attention_mask=attention_mask,
-                                token_type_ids=token_type_ids,
-                                return_dict=True)
+        # backbone encode
+        if self.config.model_type in ["cnn", "lstm"]:
+            outputs = self.backbone(input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        token_type_ids=token_type_ids,
+                        position=trigger_left if argument_left is None else argument_left,
+                        return_dict=True)
+        else:
+            outputs = self.backbone(input_ids=input_ids,
+                                    attention_mask=attention_mask,
+                                    token_type_ids=token_type_ids,
+                                    return_dict=True)
         hidden_states = outputs.last_hidden_state
         # aggregation 
         hidden_state = aggregate(self.config,
                                  self.aggregation,
                                  hidden_states,
+                                 attention_mask,
                                  trigger_left,
                                  trigger_right,
                                  argument_left,
-                                 argument_right)
+                                 argument_right,
+                                 embeddings=self.backbone.embedding.word_embeddings(input_ids) if self.config.model_type=="cnn" else None)
         # classification
         logits = self.cls_head(hidden_state)
         # compute loss 
@@ -182,6 +198,8 @@ class ModelForSequenceLabeling(BaseModel):
                                 token_type_ids=token_type_ids,
                                 return_dict=True)
         hidden_states = outputs.last_hidden_state
+        if self.config.dropout_after_encoder:
+            hidden_states = F.dropout(hidden_states, p=0.2)
         # classification
         logits = self.cls_head(hidden_states)  # [batch_size, seq_length, num_labels]
         # compute loss 

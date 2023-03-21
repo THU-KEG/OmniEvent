@@ -24,8 +24,8 @@ from OmniEvent.trainer import Trainer
 parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
 if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
     model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
-elif len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
+elif len(sys.argv) >= 2 and sys.argv[-1].endswith(".yaml"):
+    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[-1]))
 else:
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
 
@@ -34,7 +34,7 @@ model_name_or_path = model_args.model_name_or_path.split("/")[-1]
 output_dir = Path(training_args.output_dir, training_args.task_name, model_args.paradigm,
                   f"{model_name_or_path}-{model_args.aggregation}")
 output_dir.mkdir(exist_ok=True, parents=True)
-training_args.output_dir = output_dir
+training_args.output_dir = str(output_dir)
 
 # logging config
 logging.basicConfig(
@@ -67,10 +67,16 @@ set_seed(training_args.seed)
 earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_args.early_stopping_patience,
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
-# model 
-backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
-                                           model_args.model_name_or_path, data_args.markers, model_args,
-                                           new_tokens=data_args.markers)
+# model
+if model_args.checkpoint_path is not None:
+    logging.info("Loading checkpoint from %s" % model_args.checkpoint_path)
+    backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path,
+                                            model_args.checkpoint_path, data_args.markers, model_args,
+                                            new_tokens=data_args.markers)
+else:
+    backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
+                                            model_args.model_name_or_path, data_args.markers, model_args,
+                                            new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
 model.cuda()
 data_class = EDTCProcessor

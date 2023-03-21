@@ -1,32 +1,31 @@
-seed: 42
+seed: 2
 do_train: True
 do_predict: True
 
 # top-level config #
 paradigm: token_classification
 task_name: EAE
-dataset_name: ACE2005-dygie
+dataset_name: ACE2005-en
 language: English
 test_exists_labels: True
 
 # file path #
-output_dir: output/ACE2005-dygie
-type2id_path: ../../data/processed/ace2005-dygie/label2id.json
-role2id_path: ../../data/processed/ace2005-dygie/role2id.json
-train_file: ../../data/processed/ace2005-dygie/train.unified.jsonl
-validation_file: ../../data/processed/ace2005-dygie/valid.unified.jsonl
-test_file: ../../data/processed/ace2005-dygie/test.unified.jsonl
+output_dir: output/ACE2005-en
+type2id_path: ../../data/processed/ace2005-en/label2id.json
+role2id_path: ../../data/processed/ace2005-en/role2id.json
+train_file: ../../data/processed/ace2005-en/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-en/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-en/test.unified.jsonl
 # event detection predictions
-golden_trigger: True
-train_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/train_preds.json
-validation_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/valid_preds.json
-test_pred_file: output/ACE2005-dygie/ED/token_classification/bert-base-uncased-marker/test_preds.json
+golden_trigger: False
+# train_pred_file: output/ACE2005-en/ED/token_classification/bert-base-uncased-marker/train_preds.json
+validation_pred_file: ../ED/output/ACE2005-en/ED/token_classification/bert-base-uncased-dynamic_pooling/valid_preds.json
+test_pred_file: ../ED/output/ACE2005-en/ED/token_classification/bert-base-uncased-dynamic_pooling/test_preds.json
 # config for some specific paradigms
 
 # config for data processor #
 truncate_in_batch: False
 return_token_type_ids: False
-truncate_seq2seq_output: True
 
 # model config #
 model_type: bert
@@ -41,14 +40,9 @@ max_seq_length: 160
 max_out_length: 160
 dataloader_num_workers: 2
 
-generation_max_length: 128
-generation_num_beams: 4
-predict_with_generate: True
-ignore_pad_token_for_loss: True
-
-per_device_train_batch_size: 32
+per_device_train_batch_size: 64
 per_device_eval_batch_size: 64
-gradient_accumulation_steps: 2
+gradient_accumulation_steps: 1
 # eval_accumulation_steps: 4
 learning_rate: 3.0e-5
 weight_decay: 1.0e-5
@@ -68,7 +62,7 @@ save_strategy: epoch
 save_steps: 500
 
 # evaluate/test config #
-eae_eval_mode: loose
+eae_eval_mode: default
 
 # split inference #
 split_infer: False

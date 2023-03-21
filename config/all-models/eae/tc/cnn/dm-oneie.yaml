@@ -1,0 +1,81 @@
+seed: 2
+do_train: True
+do_predict: True
+
+# top-level config #
+paradigm: token_classification
+task_name: EAE
+dataset_name: ACE2005-oneie
+language: English
+test_exists_labels: True
+consider_event_type: True
+
+# file path #
+output_dir: output/ACE2005-oneie
+type2id_path: ../../data/processed/ace2005-oneie/label2id.json
+role2id_path: ../../data/processed/ace2005-oneie/role2id.json
+train_file: ../../data/processed/ace2005-oneie/train.unified.jsonl
+validation_file: ../../data/processed/ace2005-oneie/valid.unified.jsonl
+test_file: ../../data/processed/ace2005-oneie/test.unified.jsonl
+insert_marker: True
+type_marker: False
+
+# event detection predictions
+golden_trigger: False
+# train_pred_file: output/ACE2005-oneie/ED/token_classification/bert-base-uncased-marker/train_preds.json
+validation_pred_file: ../ED/output/ACE2005-oneie/ED/token_classification/cnn-dynamic_pooling/valid_preds.json
+test_pred_file: ../ED/output/ACE2005-oneie/ED/token_classification/cnn-dynamic_pooling/test_preds.json
+# config for some specific paradigms
+
+# config for data processor #
+truncate_in_batch: False
+return_token_type_ids: True
+
+# model config #
+model_type: cnn
+model_name_or_path: cnn
+vocab_file: ../../data/wordvec/glove-100d
+word_embedding_dim: 100
+position_embedding_dim: 5
+has_type_embeddings: True
+type_embedding_dim: 5
+hidden_dropout_prob: 0.5
+hidden_size: 300
+aggregation: dynamic_pooling
+head_scale: 3
+early_stopping_patience: 20
+
+# training config #
+num_train_epochs: 20
+max_seq_length: 160
+max_out_length: 160
+dataloader_num_workers: 2
+
+
+per_device_train_batch_size: 20
+per_device_eval_batch_size: 20
+gradient_accumulation_steps: 1
+# eval_accumulation_steps: 4
+learning_rate: 1.0e-3
+weight_decay: 1.0e-8
+warmup_ratio: 0.1
+max_grad_norm: 1
+optim: adamw_torch
+
+load_best_model_at_end: True
+metric_for_best_model: micro_f1
+greater_is_better: True
+
+logging_strategy: steps
+logging_steps: 100
+evaluation_strategy: epoch
+eval_steps: 500
+save_strategy: epoch
+save_steps: 500
+
+# evaluate/test config #
+eae_eval_mode: default
+
+# split inference #
+split_infer: False
+split_infer_size: 5000

@@ -4,7 +4,7 @@ import logging
 from tqdm import tqdm
 from typing import List, Optional, Dict
 
-from .input_utils import check_is_argument, get_negative_argument_candidates
+from .input_utils import check_is_argument, get_negative_argument_candidates, get_word_ids, char_pos_to_word_pos
 from .base_processor import (
     EDDataProcessor,
     EDInputExample,
@@ -80,23 +80,45 @@ class EDTCProcessor(EDDataProcessor):
         # merge and then tokenize
         self.input_features = []
         for example in tqdm(self.examples, desc="Processing features for TC"):
-            text_left = example.text[:example.trigger_left]
-            text_mid = example.text[example.trigger_left:example.trigger_right]
-            text_right = example.text[example.trigger_right:]
+            if self.config.insert_marker:
+                text_left = example.text[:example.trigger_left]
+                text_mid = example.text[example.trigger_left:example.trigger_right]
+                text_right = example.text[example.trigger_right:]
 
-            if self.config.language == "Chinese":
-                text = text_left + self.config.markers[0] + text_mid + self.config.markers[1] + text_right
+                if self.config.language == "Chinese":
+                    text = text_left + self.config.markers[0] + text_mid + self.config.markers[1] + text_right
+                else:
+                    text = text_left + self.config.markers[0] + " " + text_mid + " " + self.config.markers[1] + text_right
+
+                outputs = self.tokenizer(text, padding="max_length", truncation=True, max_length=self.config.max_seq_length)
+                try:
+                    left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
+                    right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
+                except:
+                    logger.warning("Markers are not in the input tokens.")
+                    left, right = 0, 0
             else:
-                text = text_left + self.config.markers[0] + " " + text_mid + " " + self.config.markers[1] + text_right
+                tokens = example.text.split()
+                outputs = self.tokenizer(tokens, 
+                                        padding="max_length", 
+                                        truncation=True, 
+                                        max_length=self.config.max_seq_length,
+                                        is_split_into_words=True,
+                                        add_special_tokens=True)
+                trigger_word_left, trigger_word_right = char_pos_to_word_pos(example.text, 
+                                                                        [example.trigger_left, example.trigger_right])
+                word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, tokens)[: self.config.max_seq_length]
+                left, right = -1, -1
+                for i, word_id in enumerate(word_ids_of_each_token):
+                    if word_id == trigger_word_left and left == -1:
+                        left = i
+                    if word_id == trigger_word_right-1:
+                        right = i
 
-            outputs = self.tokenizer(text, padding="max_length", truncation=True, max_length=self.config.max_seq_length)
-            try:
-                left = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[0]))
-                right = outputs["input_ids"].index(self.tokenizer.convert_tokens_to_ids(self.config.markers[1]))
-            except:
-                logger.warning("Markers are not in the input tokens.")
-                left, right = 0, 0
-
+                if left == -1:
+                    logger.warning("Overflow! %s" % example.text)
+                if right == -1:
+                    right = self.config.max_seq_length - 1
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
@@ -111,6 +133,9 @@ class EDTCProcessor(EDDataProcessor):
             )
             if example.labels is not None:
                 features.labels = self.config.type2id[example.labels]
+            if left == -1:
+                left = 0
+                features.labels = -100
             self.input_features.append(features)
 
 
@@ -242,39 +267,82 @@ class EAETCProcessor(EAEDataProcessor):
         self.input_features = []
         whitespace = True if self.config.language == "English" else False
         for example in tqdm(self.examples, desc="Processing features for TC"):
-            text = self.insert_marker(example.text,
-                                      example.pred_type,
-                                      [example.trigger_left, example.trigger_right],
-                                      [example.argument_left, example.argument_right],
-                                      self.config.markers,
-                                      whitespace)
-            outputs = self.tokenizer(text,
-                                     padding="max_length",
-                                     truncation=True,
-                                     max_length=self.config.max_seq_length)
-            is_overflow = False
-            # argument position 
-            try:
-                argument_left = outputs["input_ids"].index(
-                    self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
-                argument_right = outputs["input_ids"].index(
-                    self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
-            except:
-                argument_left, argument_right = 0, 0
-                logger.warning("Argument markers are not in the input tokens.")
-                is_overflow = True
-            # trigger position
-            try:
-                trigger_left = outputs["input_ids"].index(
-                    self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][0]))
-                trigger_right = outputs["input_ids"].index(
-                    self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][1]))
-            except:
-                trigger_left, trigger_right = 0, 0
-                logger.warning("Trigger markers are not in the input tokens.")
+            if self.config.insert_marker:
+                text = self.insert_marker(example.text,
+                                        example.pred_type,
+                                        [example.trigger_left, example.trigger_right],
+                                        [example.argument_left, example.argument_right],
+                                        self.config.markers,
+                                        whitespace)
+                outputs = self.tokenizer(text,
+                                        padding="max_length",
+                                        truncation=True,
+                                        max_length=self.config.max_seq_length)
+                is_overflow = False
+                # argument position 
+                try:
+                    argument_left = outputs["input_ids"].index(
+                        self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][0]))
+                    argument_right = outputs["input_ids"].index(
+                        self.tokenizer.convert_tokens_to_ids(self.config.markers["argument"][1]))
+                except:
+                    argument_left, argument_right = 0, 0
+                    logger.warning("Argument markers are not in the input tokens.")
+                    is_overflow = True
+                # trigger position
+                try:
+                    trigger_left = outputs["input_ids"].index(
+                        self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][0]))
+                    trigger_right = outputs["input_ids"].index(
+                        self.tokenizer.convert_tokens_to_ids(self.config.markers[example.pred_type][1]))
+                except:
+                    trigger_left, trigger_right = 0, 0
+                    logger.warning("Trigger markers are not in the input tokens.")
+            else:
+                tokens = example.text.split()
+                outputs = self.tokenizer(tokens, 
+                                        padding="max_length", 
+                                        truncation=True, 
+                                        max_length=self.config.max_seq_length,
+                                        is_split_into_words=True,
+                                        add_special_tokens=True)
+                word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, tokens)[: self.config.max_seq_length]
+                trigger_word_left, trigger_word_right = char_pos_to_word_pos(example.text, 
+                                                                        [example.trigger_left, example.trigger_right])
+                argument_word_left, argument_word_right = char_pos_to_word_pos(example.text, 
+                                                                        [example.argument_left, example.argument_right])
+                trigger_left, trigger_right = -1, -1
+                argument_left, argument_right = -1, -1
+                for i, word_id in enumerate(word_ids_of_each_token):
+                    if word_id == trigger_word_left and trigger_left == -1:
+                        trigger_left = i
+                    if word_id == trigger_word_right-1:
+                        trigger_right = i
+                    if word_id == argument_word_left and argument_left == -1:
+                        argument_left = i
+                    if word_id == argument_word_right-1:
+                        argument_right = i
+                
+                if trigger_left == -1 or argument_left == -1:
+                    logger.warning("Overflow! %s" % example.text)
+                if trigger_right == -1:
+                    trigger_right = self.config.max_seq_length - 1
+                if argument_right == -1:
+                    argument_right = self.config.max_seq_length - 1
+
             # Roberta tokenizer doesn't return token_type_ids
             if "token_type_ids" not in outputs:
                 outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+            
+            if self.config.consider_event_type:
+                token_type_ids = [0] * len(outputs["input_ids"])
+                for idx in range(trigger_left, trigger_right+1):
+                    token_type_ids[idx] = self.config.type2id[example.pred_type]
+
+                for idx in range(argument_left, argument_right):
+                    token_type_ids[idx] = self.config.type2id[example.pred_type]
+
+                outputs["token_type_ids"] = token_type_ids
 
             features = EAEInputFeatures(
                 example_id=example.example_id,
@@ -288,6 +356,10 @@ class EAETCProcessor(EAEDataProcessor):
             )
             if example.labels is not None:
                 features.labels = self.config.role2id[example.labels]
-                if is_overflow:
+                if trigger_left == -1:
+                    trigger_left = 0
+                    features.labels = -100
+                if argument_left == -1:
+                    argument_left = 0
                     features.labels = -100
             self.input_features.append(features)

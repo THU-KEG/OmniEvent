@@ -17,7 +17,11 @@ from ..input_engineering.seq2seq_processor import extract_argument
 from ..input_engineering.base_processor import EDDataProcessor, EAEDataProcessor
 from ..input_engineering.mrc_converter import make_predictions, find_best_thresh
 
-from .convert_format import get_ace2005_trigger_detection_sl, get_ace2005_trigger_detection_s2s
+from .convert_format import (
+    get_ace2005_trigger_detection_sl, 
+    get_ace2005_trigger_detection_s2s,
+    get_ace2005_trigger_detection_mrc
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +82,8 @@ def dump_preds(trainer: Union[Trainer, Seq2SeqTrainer],
         pred_labels = [data_args.id2type[pred] for pred in preds]
     elif model_args.paradigm == "sequence_labeling":
         pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_file, data_args, dataset.is_overflow)
+    elif model_args.paradigm == "mrc":
+        pred_labels = get_ace2005_trigger_detection_mrc(preds, labels, data_file, data_args, dataset.is_overflow)
     elif model_args.paradigm == "seq2seq":
         pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, None)
     else:
@@ -153,7 +159,7 @@ def get_pred_mrc(logits: np.array,
     """
 
     start_logits, end_logits = np.split(logits, 2, axis=-1)
-    all_preds, all_labels = make_predictions(start_logits, end_logits, training_args)
+    all_preds, all_labels = make_predictions(start_logits, end_logits, training_args, use_example_id=False)
 
     all_preds = sorted(all_preds, key=lambda x: x[-2])
     best_na_thresh = find_best_thresh(all_preds, all_labels)
@@ -162,7 +168,8 @@ def get_pred_mrc(logits: np.array,
     final_preds = []
     for argument in all_preds:
         if argument[-2] < best_na_thresh:
-            final_preds.append(argument[:-2] + argument[-1:])  # no na_prob
+            # final_preds.append(argument[:-2] + argument[-1:])  # no na_prob
+            final_preds.append(argument)
 
     return final_preds
 

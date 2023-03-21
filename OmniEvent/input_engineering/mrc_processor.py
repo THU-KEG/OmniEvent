@@ -1,8 +1,12 @@
 import json
 import logging
+import numpy as np
 
 from tqdm import tqdm
 from .base_processor import (
+    EDDataProcessor,
+    EDInputExample,
+    EDInputFeatures,
     EAEDataProcessor,
     EAEInputExample,
     EAEInputFeatures
@@ -10,8 +14,128 @@ from .base_processor import (
 from .mrc_converter import read_query_templates
 from .input_utils import get_words, get_left_and_right_pos, get_word_ids
 from collections import defaultdict
+from typing import List, Dict, Optional, Union
 
 logger = logging.getLogger(__name__)
+
+
+
+class EDMRCProcessor(EDDataProcessor):
+    """Data processor for sequence labeling for event detection.
+
+    Data processor for sequence labeling for event detection. The class is inherited from the `EDDataProcessor` class,
+    in which the undefined functions, including `read_examples()` and `convert_examples_to_features()` are  implemented;
+    a new function entitled `get_final_labels()` is defined to obtain final results, and the rest of the attributes and
+    functions are multiplexed from the `EDDataProcessor` class.
+
+    Attributes:
+        is_overflow:
+    """
+
+    def __init__(self,
+                 config,
+                 tokenizer: str,
+                 input_file: str) -> None:
+        """Constructs a EDMRCProcessor."""
+        super().__init__(config, tokenizer)
+        self.read_examples(input_file)
+        self.convert_examples_to_features()
+
+    def read_examples(self,
+                      input_file: str) -> None:
+        """Obtains a collection of `EDInputExample`s for the dataset."""
+        self.examples = []
+        language = self.config.language
+
+        with open(input_file, "r", encoding="utf-8") as f:
+            for line in tqdm(f.readlines(), desc="Reading from %s" % input_file):
+                item = json.loads(line.strip())
+                text = item["text"]
+                words = get_words(text=text, language=language)
+                labels = ["NA"] * len(words)
+
+                if "events" in item:
+                    for event in item["events"]:
+                        for trigger in event["triggers"]:
+                            left_pos, right_pos = get_left_and_right_pos(text, trigger, language, True)
+                            labels[left_pos] = f"{event['type']}"
+                            for i in range(left_pos + 1, right_pos):
+                                labels[i] = f"{event['type']}"
+                    example = EDInputExample(
+                                    example_id=item["id"], 
+                                    text=words, 
+                                    labels=labels
+                                )
+                    self.examples.append(example)
+                
+                # test set 
+                elif "candidates" in item:
+                    for candidate in item["candidates"]:
+                        example = EDInputExample(
+                            example_id=candidate["id"],
+                            text=words,
+                            labels=labels,
+                        )
+                        self.examples.append(example)
+
+
+    def get_final_labels(self,
+                         labels: List[str],
+                         word_ids_of_each_token: List[int],
+                         label_all_tokens: Optional[bool] = False) -> List[Union[str, int]]:
+        """Obtains the final label of each token."""
+        final_labels = []
+        pre_word_id = None
+        for word_id in word_ids_of_each_token:
+            if word_id is None:
+                final_labels.append(-100)
+            elif word_id != pre_word_id:  # first split token of a word
+                final_labels.append(self.config.type2id[labels[word_id]])
+            else:
+                final_labels.append(self.config.type2id[labels[word_id]] if label_all_tokens else -100)
+            pre_word_id = word_id
+
+        return final_labels
+
+    def convert_examples_to_features(self) -> None:
+        """Converts the `EDInputExample`s into `EDInputFeatures`s."""
+        self.input_features = []
+        query_question = "verb".split()
+
+        for example in tqdm(self.examples, desc="Processing features for SL"):
+            query = self.tokenizer(query_question,
+                                     truncation=False,
+                                     is_split_into_words=True)
+            max_seq_length = self.config.max_seq_length-len(query["input_ids"])
+            outputs = self.tokenizer(example.text,
+                                     padding="max_length",
+                                     truncation=False,
+                                     max_length=max_seq_length,
+                                     is_split_into_words=True)
+            # Roberta tokenizer doesn't return token_type_ids
+            if "token_type_ids" not in outputs:
+                outputs["token_type_ids"] = [0] * len(outputs["input_ids"])
+
+            outputs, is_overflow = self._truncate(outputs, max_seq_length)
+            self.is_overflow.append(is_overflow)
+
+            word_ids_of_each_token = get_word_ids(self.tokenizer, outputs, example.text)[:max_seq_length]
+            final_labels = self.get_final_labels(example.labels, word_ids_of_each_token, label_all_tokens=False)
+
+            # concat query
+            for key in ["input_ids", "attention_mask"]:
+                outputs[key] = query[key] + outputs[key]
+            outputs["token_type_ids"] = [0] * len(query["token_type_ids"]) + [1] * len(outputs["token_type_ids"])
+            final_labels = [-100] * len(query["input_ids"]) + final_labels
+
+            features = EDInputFeatures(
+                example_id=example.example_id,
+                input_ids=outputs["input_ids"],
+                attention_mask=outputs["attention_mask"],
+                token_type_ids=outputs["token_type_ids"],
+                labels=final_labels,
+            )
+            self.input_features.append(features)
 
 
 class EAEMRCProcessor(EAEDataProcessor):
@@ -64,7 +188,7 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 continue
 
                             # golden label for the trigger
-                            arguments_per_trigger = dict(id=trigger_idx-1,
+                            arguments_per_trigger = dict(id=idx,
                                                          arguments=[],
                                                          pred_type=pred_type,
                                                          true_type=event["type"])
@@ -102,7 +226,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                         for mention in argument["mentions"]:
                                             left_pos, right_pos = get_left_and_right_pos(text, mention, language)
                                             example = EAEInputExample(
-                                                example_id=trigger_idx-1,
+                                                example_id=idx,
+                                                trigger_id=trigger_idx-1,
                                                 text=words,
                                                 pred_type=pred_type,
                                                 true_type=event["type"],
@@ -116,7 +241,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                             self.examples.append(example)
                                     if no_answer:
                                         example = EAEInputExample(
-                                            example_id=trigger_idx-1,
+                                            example_id=idx,
+                                            trigger_id=trigger_idx-1,
                                             text=words,
                                             pred_type=pred_type,
                                             true_type=event["type"],
@@ -131,7 +257,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 else:
                                     # one instance per query
                                     example = EAEInputExample(
-                                        example_id=trigger_idx-1,
+                                        example_id=idx,
+                                        trigger_id=trigger_idx-1,
                                         text=words,
                                         pred_type=pred_type,
                                         true_type=event["type"],
@@ -162,7 +289,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 query = get_words(text=query, language=self.config.language)
                                 # one instance per query
                                 example = EAEInputExample(
-                                    example_id=trigger_idx-1,
+                                    example_id=idx,
+                                    trigger_id=trigger_idx-1,
                                     text=words,
                                     pred_type=pred_type,
                                     true_type="NA",
@@ -190,7 +318,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                                 query = get_words(text=query, language=language)
                                 # one instance per query
                                 example = EAEInputExample(
-                                    example_id=trigger_idx-1,
+                                    example_id=idx,
+                                    trigger_id=trigger_idx-1,
                                     text=words,
                                     pred_type=pred_type,
                                     true_type="NA",
@@ -252,6 +381,8 @@ class EAEMRCProcessor(EAEDataProcessor):
                 argument_right=end_position,
             )
             self.input_features.append(features)
+            # offset
+            # example.offset = offset
 
     @staticmethod
     def remove_sub_word(tokenizer, inputs, word_list):

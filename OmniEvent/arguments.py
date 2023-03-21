@@ -1,9 +1,11 @@
 import os
 import yaml 
+import json
 import dataclasses
 
+from enum import Enum
 from pathlib import Path 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Optional
 from transformers import TrainingArguments, HfArgumentParser
 
@@ -130,6 +132,45 @@ class DataArguments:
             "help": "Mrc template, 0: role_name, 1: role_name in [trigger], 2: guidelines, 3: guidelines in [trigger]"
         }
     )
+    insert_marker: bool = field(
+        default=True,
+        metadata={
+            "help": "whether insert marker"
+        }
+    )
+    consider_event_type: bool = field(
+        default=False,
+        metadata={
+            "help": "Consider event type as type ids"
+        }
+    )
+    type_marker: bool = field(
+        default=True,
+        metadata={
+            "help": "Whether type specific marker"
+        }
+    )
+
+    def to_dict(self):
+        """
+        Serializes this instance while replace `Enum` by their values (for JSON serialization support). It obfuscates
+        the token values by removing their value.
+        """
+        d = asdict(self)
+        for k, v in d.items():
+            if isinstance(v, Enum):
+                d[k] = v.value
+            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Enum):
+                d[k] = [x.value for x in v]
+            if k.endswith("_token"):
+                d[k] = f"<{k.upper()}>"
+        return d
+
+    def to_json_string(self):
+        """
+        Serializes this instance to a JSON string.
+        """
+        return json.dumps(self.to_dict(), indent=2)
 
 
 @dataclass
@@ -211,6 +252,12 @@ class ModelArguments:
             "help": "Position embedding dimension for tranditional word vector."
         }
     )
+    type_embedding_dim: int = field(
+        default=5,
+        metadata={
+            "help": "Type embedding dimension for tranditional word vector."
+        }
+    )
     num_position_embeddings: int = field(
         default=512,
         metadata={
@@ -229,7 +276,45 @@ class ModelArguments:
             "help": "Path to vocab file."
         }
     )
+    has_type_embeddings: bool = field(
+        default=False,
+        metadata={
+            "help": "type embeddings"
+        }
+    )
+    dropout_after_wordvec: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether dropout after word embedding"
+        }
+    )
+    dropout_after_encoder: bool = field(
+        default=False,
+        metadata={
+            "help": "Whether dropout after PLM encoder"
+        }
+    )
 
+    def to_dict(self):
+        """
+        Serializes this instance while replace `Enum` by their values (for JSON serialization support). It obfuscates
+        the token values by removing their value.
+        """
+        d = asdict(self)
+        for k, v in d.items():
+            if isinstance(v, Enum):
+                d[k] = v.value
+            if isinstance(v, list) and len(v) > 0 and isinstance(v[0], Enum):
+                d[k] = [x.value for x in v]
+            if k.endswith("_token"):
+                d[k] = f"<{k.upper()}>"
+        return d
+
+    def to_json_string(self):
+        """
+        Serializes this instance to a JSON string.
+        """
+        return json.dumps(self.to_dict(), indent=2)
 
 
 @dataclass 

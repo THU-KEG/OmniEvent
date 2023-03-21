@@ -83,7 +83,7 @@ class EDInputFeatures(object):
                  token_type_ids: Optional[List[int]] = None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
-                 labels: Optional[List[str]] = None) -> None:
+                 labels: Optional[List[int]] = None) -> None:
         """Constructs an `EDInputFeatures`."""
         self.example_id = example_id
         self.input_ids = input_ids
@@ -132,7 +132,8 @@ class EAEInputExample(object):
                  text: Union[str, List[str]],
                  pred_type: str,
                  true_type: str,
-                 input_template: Optional[str] = None,
+                 trigger_id: Union[int, str] = None,
+                 input_template: Optional[str][str] = None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
                  argument_left: Optional[int] = None,
@@ -145,6 +146,7 @@ class EAEInputExample(object):
         self.text = text
         self.pred_type = pred_type
         self.true_type = true_type
+        self.trigger_id = trigger_id
         self.input_template = input_template
         self.trigger_left = trigger_left
         self.trigger_right = trigger_right
@@ -372,6 +374,8 @@ class EAEDataProcessor(Dataset):
         self.data_for_evaluation["pred_types"] = self.get_pred_types()
         self.data_for_evaluation["true_types"] = self.get_true_types()
         self.data_for_evaluation["ids"] = self.get_ids()
+        self.data_for_evaluation["trigger_ids"] = self.get_trigger_ids()
+        self.data_for_evaluation["examples"] = self.examples
         if self.examples[0].argument_role is not None:
             self.data_for_evaluation["roles"] = self.get_roles()
         return self.data_for_evaluation
@@ -417,6 +421,12 @@ class EAEDataProcessor(Dataset):
         for example in self.examples:
             ids.append(example.example_id)
         return ids
+    
+    def get_trigger_ids(self):
+        trigger_ids = []
+        for example in self.examples:
+            trigger_ids.append(example.trigger_id)
+        return trigger_ids
 
     def get_single_pred(self, trigger_idx, input_file, true_type):
         if self.is_training or "train" in input_file or self.config.golden_trigger or self.event_preds is None:

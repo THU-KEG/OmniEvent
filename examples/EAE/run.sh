@@ -1,5 +1,5 @@
 # CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/eae/s2s/ace-zh.yaml
-CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/all-datasets/eae/s2s/ace-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/all-datasets/eae/s2s/ace-dygie.yaml
 # CUDA_VISIBLE_DEVICES=4 python delta_tuning.py ../../config/eae/s2s/dt.yaml
 # CUDA_VISIBLE_DEVICES=$1 python delta_tuning.py ../../config/eae/s2s/ace.yaml
 # CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py ../../config/eae/sl/ace-en.yaml
@@ -21,3 +21,25 @@ CUDA_VISIBLE_DEVICES=$1 python seq2seq.py ../../config/all-datasets/eae/s2s/ace-
 # deepspeed --include localhost:0,1,2,3,4,5,6,7 seq2seq.py \
 #         ../../config/eae/s2s/dt.yaml \
 #         --deepspeed ../../config/deepspeed_zero_2.json 
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/cnn/dm.yaml
+# CUDA_VISIBLE_DEVICES=$1 python mrc.py \
+#     ../../config/all-models/eae/mrc/bert-base/mrc.yaml
+# CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+#     ../../config/all-models/eae/sl/bert-base/crf.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/bert-base/dm.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/bert-base/dm-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/cnn/dm-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+#     ../../config/all-models/eae/tc/cnn/dm-oneie.yaml
+CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+    ../../config/all-models/eae/tc/bert-base/dm-oneie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+#     ../../config/all-models/eae/sl/bert-base/crf.yaml
+# CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+#     ../../config/all-models/eae/sl/bert-base/crf-dygie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
+#     ../../config/all-models/eae/sl/bert-base/crf-oneie.yaml

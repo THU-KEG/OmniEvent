@@ -38,7 +38,7 @@ def token_pos_to_char_pos(token_list: List[str],
     char_start += 0 if start == 0 else 1
     char_end = len(" ".join(token_list[:end]))
     if " ".join(token_list)[char_start:char_end] != mention:
-        print("Warning!", " ".join(token_list), mention)
+        print("Warning!", " ".join(token_list)[char_start:char_end], "\tv.s.\t", mention)
     return [char_start, char_end]
 
 
@@ -63,7 +63,7 @@ def convert_to_openee(input_path: str,
     for item in data:
         openee_item = {
             "id": item["sent_id"],
-            "text": item["sentence"],
+            "text": " ".join(item["tokens"]),
             "events": [],
             "entities": []
         }
@@ -71,7 +71,21 @@ def convert_to_openee(input_path: str,
         entities_in_item = defaultdict(list)
         for entity in item["entity_mentions"]:
             entities_in_item[entity["id"]].append(entity)
-        # eventns 
+            # append to openee
+            mention = " ".join(item["tokens"][entity["start"]:entity["end"]])
+            openee_entity = {
+                "id": entity["id"],
+                "type": entity["entity_type"],
+                "mentions": [
+                    {
+                        "mention_id": "mention_0",
+                        "mention": mention,
+                        "position": token_pos_to_char_pos(item["tokens"], entity["start"], entity["end"], mention)
+                    }
+                ]
+            }
+            openee_item["entities"].append(openee_entity)
+        # events 
         for event in item["event_mentions"]:
             openee_event = {
                 "type": event["event_type"],
@@ -84,6 +98,7 @@ def convert_to_openee(input_path: str,
                 "position": token_pos_to_char_pos(item["tokens"], event["trigger"]["start"], event["trigger"]["end"], trigger_word),
                 "arguments": []
             }
+            assert trigger_word == openee_item["text"][openee_trigger["position"][0]:openee_trigger["position"][1]]
             for argument in event["arguments"]:
                 argument_entity = None 
                 for entity in entities_in_item[argument["entity_id"]]:
@@ -91,12 +106,13 @@ def convert_to_openee(input_path: str,
                         argument_entity = entity
                         break 
                 assert argument_entity is not None 
+                mention = " ".join(item["tokens"][argument_entity["start"]:argument_entity["end"]])
                 openee_trigger["arguments"].append({
                     "role": argument["role"],
                     "mentions": [
                         {
-                            "mention": argument_entity["text"],
-                            "position": token_pos_to_char_pos(item["tokens"], argument_entity["start"], argument_entity["end"], argument_entity["text"])
+                            "mention": mention,
+                            "position": token_pos_to_char_pos(item["tokens"], argument_entity["start"], argument_entity["end"], mention)
                         }
                     ]
                 })
@@ -166,7 +182,10 @@ if __name__ == "__main__":
     dump_path = Path(args.save_dir)
     dump_path.mkdir(exist_ok=True, parents=True)
     for split in ["train", "dev", "test"]:
-        convert_to_openee(f"data/{split}.oneie.json", os.path.join(dump_path, f"{split}.unified.jsonl"))
-        generate_negative_trigger(os.path.join(dump_path, f"{split}.unified.jsonl"))
+        save_split = split
+        if split == "dev":
+            save_split = "valid"
+        convert_to_openee(f"data/{split}.oneie.json", os.path.join(dump_path, f"{save_split}.unified.jsonl"))
+        generate_negative_trigger(os.path.join(dump_path, f"{save_split}.unified.jsonl"))
     get_ids(dump_path)
 

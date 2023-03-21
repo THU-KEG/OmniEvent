@@ -35,7 +35,6 @@ class EDSLProcessor(EDDataProcessor):
         """Constructs a EDSLProcessor."""
         super().__init__(config, tokenizer)
         self.read_examples(input_file)
-        self.is_overflow = []
         self.convert_examples_to_features()
 
     def read_examples(self,
@@ -135,7 +134,6 @@ class EAESLProcessor(EAEDataProcessor):
         """Constructs an EAESLProcessor/"""
         super().__init__(config, tokenizer, pred_file, is_training)
         self.positive_candidate_indices = []
-        self.is_overflow = []
         self.config.role2id["X"] = -100
         self.read_examples(input_file)
         self.convert_examples_to_features()

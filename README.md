@@ -236,7 +236,7 @@ OmniEvent evaluates models of different paradigms in a unified manner, where the
 >>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
 >>> from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
 
->>> logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
+>>> logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=EDSeq2SeqProcessor,
                                                     data_args=data_args, data_file=data_args.test_file,
                                                     training_args=training_args)
 >>> # paradigm-dependent metrics
@@ -328,7 +328,6 @@ Continually updated. Welcome to add more!
   - GCN
 - Head
   - Linear / CRF / MRC heads
-'
 
 ## Contests
 OmniEvent plans to support various event extraction contest. Currently, we support the following contests and the list is continually updated!
@@ -338,7 +337,11 @@ OmniEvent plans to support various event extraction contest. Currently, we suppo
 - [LUGE: Information Extraction Track](https://aistudio.baidu.com/aistudio/competition/detail/46/0/task-definition)
 
 # Experiments
-We implement and evaluate state-of-the-art methods on some popular benchmarks using OmniEvent. The results of all Event Detection experiments are shown in the table below. The full results can be accessed via the links below.
+We implement and evaluate state-of-the-art methods on some popular benchmarks using OmniEvent. 
+
+The results of all Event Detection experiments are shown in the table below. 
+
+The **full results** can be accessed via the links below.
 
 - [Experiments of base models on <u>**All ED Benchmarks**</u>](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=qp276f)
 - [Experiments of base models on <u>**All EAE Benchmarks**</u>](https://docs.qq.com/sheet/DRW5QQU1tZ2ViZlFo?tab=b0zjme)

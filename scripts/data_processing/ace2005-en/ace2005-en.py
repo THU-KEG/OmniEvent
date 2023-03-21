@@ -20,8 +20,8 @@ class StanfordCoreNLPv2(StanfordCoreNLP):
     StanfordCoreNLP toolkit for sentence tokenization, tokenizing the input sentence into a list of sentences to
     satisfy the sentence-level event extraction.
     """
-    def __init__(self, path):
-        super(StanfordCoreNLPv2, self).__init__(path)  # add port=8888 and comment line84-85 in corenlp.py on MacOS
+    def __init__(self, path, port=8088):
+        super(StanfordCoreNLPv2, self).__init__(path, port=port)  # add port=8888 and comment line84-85 in corenlp.py on MacOS
 
     def sent_tokenize(self,
                       sentence: str):
@@ -302,14 +302,14 @@ class Extractor():
 
     def None_event_Extract(self) -> None:
         """Extract negative event mentions from the dataset."""
-        nlp = StanfordCoreNLPv2(self.args.corenlp_path)
+        nlp = StanfordCoreNLPv2(self.args.corenlp_path, port=8095)
         for dir in self.dirs:
             path = self.args.ACE_FILES + '/' + dir + '/timex2norm'
             files = self.source_files[dir]
             for file in files:
                 event_in_this_file = [(e['start'], e['end']) for e in self.Events if
                                       e['file'] == file[:-4] and e['dir'] == dir]
-                Entities = [(e['start'], e['end']) for e in self.Entities if
+                Entities = [e for e in self.Entities if
                             e['dir'] == dir and e['file'][:-7] == file[:-3]]
                 with open(path + '/' + file, 'r') as f:
                     text = f.read()
@@ -347,19 +347,23 @@ class Extractor():
                     trigger_end = -1
                     entities = []
 
-                    _entities = [e for e in Entities if e[0] >= start and e[1] <= end]
+                    _entities = [copy.deepcopy(e) for e in Entities if e["start"] >= start and e["end"] <= end]
                     for e in _entities:
                         try:
-                            idx_start, idx_end = self.find_index(offset, e)
+                            idx_start, idx_end = self.find_index(offset, (e["start"], e["end"]))
                         except:
                             print("An entity can't be found.", e)
-                        entity_info = {'token': sent[idx_start:idx_end + 1],
+                            continue
+                        entity_info = {'tokens': sent[idx_start:idx_end + 1],
                                        'role': 'None',
                                        'offsets': [(e[0], e[1] - 1) for e in offset[idx_start:idx_end + 1]],
                                        'start': offset[idx_start][0],
                                        'end': offset[idx_end][1] - 1,
                                        'idx_start': idx_start,
-                                       'idx_end': idx_end}
+                                       'idx_end': idx_end,
+                                       "entity_id": e["entity_id"],
+                                       "mention_id": e["mention_id"],
+                                       "type": e["type"]}
                         entities.append(entity_info)
                     none_event_summary = {
                         'tokens': tokens,
@@ -440,7 +444,7 @@ class Extractor():
                     "position": token_pos_to_char_pos(tokens, [i, i + 1])
                 }
                 refined_sen_events["negative_triggers"].append(_event)
-            # process negative arguments
+            # process all entities
             refined_sen_events["entities"] = []
             id2mentions = defaultdict(list)
             for entity in events[0]["entities"]:
@@ -463,7 +467,6 @@ class Extractor():
             refined_sen_events["events"] = []
             refined_sen_events["negative_triggers"] = []
             refined_sen_events["file"] = none_event["file"]
-            refined_sen_events["entities"] = []
             for i in range(len(none_event['tokens'])):
                 if none_event['tokens'][i] == "":
                     continue
@@ -473,6 +476,20 @@ class Extractor():
                     'position': token_pos_to_char_pos(none_event["tokens"], [i, i + 1])
                 }
                 refined_sen_events["negative_triggers"].append(_none_event)
+            # entities
+            refined_sen_events["entities"] = []
+            id2mentions = defaultdict(list)
+            for entity in none_event["entities"]:
+                id2mentions[entity["entity_id"]].append(entity)
+            for id, mentions in id2mentions.items():
+                argu = dict(id=id, type=mentions[0]["type"], mentions=[])
+                for mention in mentions:
+                    argu["mentions"].append({
+                        "mention_id": mention["mention_id"],
+                        "mention": " ".join(mention["tokens"]),
+                        "position": token_pos_to_char_pos(none_event["tokens"], [mention["idx_start"], mention["idx_end"] + 1])
+                    })
+                refined_sen_events["entities"].append(argu)
             Events.append(refined_sen_events)
         # record
         self.Events = Events

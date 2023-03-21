@@ -1,0 +1,99 @@
+Business.Declare-Bankruptcy_Org,What declare bankruptcy?
+Business.Declare-Bankruptcy_Place,Where the event takes place?
+Business.End-Org_Place,Where the event takes place?
+Business.End-Org_Org,What is ended?
+Business.Merge-Org_Org,What is merged?
+Business.Start-Org_Org,What is started?
+Business.Start-Org_Place,Where the event takes place?
+Business.Start-Org_Agent,Who is the founder?
+Conflict.Attack_Place,Where the event takes place?
+Conflict.Attack_Target,Who is the target?
+Conflict.Attack_Attacker,Who is the attacking agent?
+Conflict.Attack_Instrument,What is the instrument used?
+Conflict.Attack_Victim,Who is the victim?
+Conflict.Demonstrate_Entity,Who is demonstrating agent?
+Conflict.Demonstrate_Place,Where the event takes place?
+Contact.Meet_Entity,Who is meeting?
+Contact.Meet_Place,Where the event takes place?
+Contact.Phone-Write_Entity,Who is communicating agents?
+Contact.Phone-Write_Place,Where the event takes place?
+Justice.Acquit_Defendant,Who is the defendant?
+Justice.Acquit_Adjudicator,What is the judge?
+Justice.Appeal_Adjudicator,What is the judge?
+Justice.Appeal_Plaintiff,What is the plaintiff?
+Justice.Appeal_Place,Where the event takes place?
+Justice.Arrest-Jail_Person,Who is jailed?
+Justice.Arrest-Jail_Agent,Who is the jailor?
+Justice.Arrest-Jail_Place,Where the event takes place?
+Justice.Charge-Indict_Adjudicator,What is the judge?
+Justice.Charge-Indict_Defendant,Who is the defendant?
+Justice.Charge-Indict_Prosecutor,Who is the prosecuting agent?
+Justice.Charge-Indict_Place,Where the event takes place?
+Justice.Convict_Defendant,Who is the defendant?
+Justice.Convict_Adjudicator,What is the judge?
+Justice.Convict_Place,Where the event takes place?
+Justice.Execute_Place,Where the event takes place?
+Justice.Execute_Agent,Who carry out the execution?
+Justice.Execute_Person,Who was executed?
+Justice.Extradite_Origin,What is original location of the person being extradited?
+Justice.Extradite_Destination,Where the person is extradited to?
+Justice.Extradite_Agent,Who is the extraditing agent?
+Justice.Fine_Entity,What is fined?
+Justice.Fine_Adjudicator,What is the judge?
+Justice.Fine_Place,Where the event takes place?
+Justice.Pardon_Adjudicator,What is the judge?
+Justice.Pardon_Place,Where the event takes place?
+Justice.Pardon_Defendant,Who is the defendant?
+Justice.Release-Parole_Entity,Who will do the release?
+Justice.Release-Parole_Person,Who is released?
+Justice.Release-Parole_Place,Where the event takes place?
+Justice.Sentence_Defendant,Who is the defendant?
+Justice.Sentence_Adjudicator,What is the judge?
+Justice.Sentence_Place,Where the event takes place?
+Justice.Sue_Plaintiff,What is the plaintiff?
+Justice.Sue_Defendant,Who is the defendant?
+Justice.Sue_Adjudicator,What is the judge?
+Justice.Sue_Place,Where the event takes place?
+Justice.Trial-Hearing_Defendant,Who is the defendant?
+Justice.Trial-Hearing_Place,Where the event takes place?
+Justice.Trial-Hearing_Adjudicator,What is the judge?
+Justice.Trial-Hearing_Prosecutor,Who is the prosecuting agent?
+Life.Be-Born_Place,Where the event takes place?
+Life.Be-Born_Person,Who is born?
+Life.Die_Victim,Who died?
+Life.Die_Agent,Who is the killer?
+Life.Die_Place,Where the event takes place?
+Life.Die_Instrument,What is the instrument used?
+Life.Divorce_Person,Who are divorced?
+Life.Divorce_Place,Where the event takes place?
+Life.Injure_Victim,Who is victim?
+Life.Injure_Agent,Who is the attacking agent?
+Life.Injure_Place,Where the event takes place?
+Life.Injure_Instrument,What is the instrument used?
+Life.Marry_Person,Who are married?
+Life.Marry_Place,Where the event takes place?
+Movement.Transport_Vehicle,What is the vehicle used?
+Movement.Transport_Artifact,What is being transported?
+Movement.Transport_Destination,Where the transporting is directed?
+Movement.Transport_Agent,Who is responsible for the transport event?
+Movement.Transport_Origin,Where the transporting originated?
+Personnel.Elect_Person,Who is elected?
+Personnel.Elect_Entity,Who voted?
+Personnel.Elect_Place,Where the event takes place?
+Personnel.End-Position_Entity,Who is the employer?
+Personnel.End-Position_Person,Who is the employee?
+Personnel.End-Position_Place,Where the event takes place?
+Personnel.Nominate_Person,Who is nominated?
+Personnel.Nominate_Agent,Who is the nominating agent?
+Personnel.Start-Position_Person,Who is the employee?
+Personnel.Start-Position_Entity,Who is the employer?
+Personnel.Start-Position_Place,Where the event takes place?
+Transaction.Transfer-Money_Giver,Who is the donating agent?
+Transaction.Transfer-Money_Recipient,Who is the recipient?
+Transaction.Transfer-Money_Beneficiary,Who benefits from the transfer?
+Transaction.Transfer-Money_Place,Where the event takes place?
+Transaction.Transfer-Ownership_Buyer,Who is the buying agent?
+Transaction.Transfer-Ownership_Artifact,What was bought?
+Transaction.Transfer-Ownership_Seller,Who is the selling agent?
+Transaction.Transfer-Ownership_Place,Where the event takes place?
+Transaction.Transfer-Ownership_Beneficiary,Who benefits from the transaction?
