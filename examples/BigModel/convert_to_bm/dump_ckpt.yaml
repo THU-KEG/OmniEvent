@@ -27,7 +27,7 @@ truncate_seq2seq_output: True
 # model config #
 model_type: t5
 model_name_or_path: t5-11b
-checkpoint_path: t5-11b
+backbone_checkpoint_path: t5-11b
 hidden_size: 768
 aggregation: none
 

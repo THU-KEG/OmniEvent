@@ -1,4 +1,5 @@
 import os
+import torch
 from pathlib import Path
 import sys
 sys.path.append("../../")
@@ -68,16 +69,20 @@ earlystoppingCallBack = EarlyStoppingCallback(early_stopping_patience=training_a
                                               early_stopping_threshold=training_args.early_stopping_threshold)
 
 # model
-if model_args.checkpoint_path is not None:
-    logging.info("Loading checkpoint from %s" % model_args.checkpoint_path)
-    backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.checkpoint_path,
-                                            model_args.checkpoint_path, data_args.markers, model_args,
+if model_args.backbone_checkpoint_path is not None:
+    logging.info("Loading backbone checkpoint from %s" % model_args.backbone_checkpoint_path)
+    backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.backbone_checkpoint_path,
+                                            model_args.backbone_checkpoint_path, data_args.markers, model_args,
                                             new_tokens=data_args.markers)
 else:
     backbone, tokenizer, config = get_backbone(model_args.model_type, model_args.model_name_or_path,
                                             model_args.model_name_or_path, data_args.markers, model_args,
                                             new_tokens=data_args.markers)
 model = get_model(model_args, backbone)
+if model_args.model_checkpoint_path is not None:
+    logging.info("Loading model checkpoint from %s" % model_args.model_checkpoint_path)
+    model.load_state_dict(torch.load(model_args.model_checkpoint_path), strict=False)
+
 model.cuda()
 data_class = EDTCProcessor
 metric_fn = compute_F1
@@ -97,7 +102,8 @@ trainer = Trainer(
     tokenizer=tokenizer,
     callbacks=[earlystoppingCallBack],
 )
-trainer.train()
+if training_args.do_train:
+    trainer.train()
 
 
 if training_args.do_predict:

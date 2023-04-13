@@ -1,5 +1,5 @@
 seed: 42
-do_train: True
+do_train: False
 do_predict: True 
 do_ED_infer: True
 
@@ -24,6 +24,7 @@ truncate_seq2seq_output: False
 # model config #
 model_type: roberta
 model_name_or_path: roberta-base
+model_checkpoint_path: output/ACE2005-en/ED/token_classification/roberta-base-dynamic_pooling/checkpoint-4060/pytorch_model.bin
 hidden_size: 768
 aggregation: dynamic_pooling
 head_scale: 2

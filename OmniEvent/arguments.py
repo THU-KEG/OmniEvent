@@ -186,7 +186,11 @@ class ModelArguments:
     model_name_or_path: str = field(
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
-    checkpoint_path: str = field(
+    backbone_checkpoint_path: str = field(
+        default=None,
+        metadata={"help": "Path to pretrained model or model identifier"}
+    )
+    model_checkpoint_path: str = field(
         default=None,
         metadata={"help": "Path to pretrained model or model identifier"}
     )

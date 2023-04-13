@@ -24,7 +24,7 @@ truncate_seq2seq_output: False
 # model config #
 model_type: roberta
 model_name_or_path: roberta-large
-checkpoint_path: /data1/penghao/cleve/checkpoint-1200
+backbone_checkpoint_path: /data1/penghao/cleve/checkpoint-1200
 hidden_size: 1024
 aggregation: dynamic_pooling
 head_scale: 2

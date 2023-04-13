@@ -90,9 +90,9 @@ def setup_model_and_optimizer(args):
     tokenizer = get_tokenizer(args.model_config)
     # get the model
     model = get_model(args.model_config)
-    if args.checkpoint_path is not None:
-        bmt.print_rank("Load trained checkpoint from %s" % args.checkpoint_path)
-        model.load_state_dict(torch.load(args.checkpoint_path))
+    if args.backbone_checkpoint_path is not None:
+        bmt.print_rank("Load trained checkpoint from %s" % args.backbone_checkpoint_path)
+        model.load_state_dict(torch.load(args.backbone_checkpoint_path))
     bmt.synchronize()
     # get the optimizer and lr_scheduler
     optimizer = get_optimizer(args, model)

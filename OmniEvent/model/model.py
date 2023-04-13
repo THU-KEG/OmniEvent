@@ -76,12 +76,12 @@ def get_model_cls(model_args):
 class BaseModel(nn.Module):
 
     @classmethod
-    def from_pretrained(cls, model_name_or_path: Union[str, os.PathLike], config=None, **kwargs):
-        if config is None:
+    def from_pretrained(cls, model_name_or_path: Union[str, os.PathLike], backbone=None, model_args=None, **kwargs):
+        if model_args is None:
             parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
             model_args, _, _ = parser.from_pretrained(model_name_or_path, **kwargs)
         path = check_web_and_convert_path(model_name_or_path, 'model')
-        model = get_model(model_args)
+        model = get_model(model_args, backbone)
         model.load_state_dict(torch.load(path), strict=False)
         return model
 

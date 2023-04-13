@@ -27,8 +27,8 @@ truncate_seq2seq_output: True
 # model config #
 model_type: mt5
 model_name_or_path: google/mt5-large
-checkpoint_path: google/mt5-large
-# checkpoint_path: /ldata/ph/OpenEE/examples/BigModel/output/mt5-large
+backbone_checkpoint_path: google/mt5-large
+# backbone_checkpoint_path: /ldata/ph/OpenEE/examples/BigModel/output/mt5-large
 aggregation: none 
 early_stopping_patience: 100
 

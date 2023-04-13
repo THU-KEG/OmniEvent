@@ -110,7 +110,8 @@ trainer = Trainer(
     tokenizer=tokenizer,
     callbacks=[earlystoppingCallBack],
 )
-trainer.train()
+if training_args.do_train:
+    trainer.train()
 
 
 if training_args.do_predict:
