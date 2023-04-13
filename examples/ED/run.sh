@@ -8,8 +8,8 @@
 #     ../../config/all-models/ed/tc/cnn/dm.yaml
 # CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
 #     ../../config/all-models/ed/sl/lstm/wo-crf.yaml
-# CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
-#     ../../config/all-models/ed/tc/roberta-base/dm.yaml
+CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
+    ../../config/all-models/ed/tc/roberta-base/dm.yaml
 # CUDA_VISIBLE_DEVICES=$1 python sequence_labeling.py \
 #     ../../config/all-models/ed/sl/bert-base/crf.yaml
 # CUDA_VISIBLE_DEVICES=$1 python token_classification.py \
@@ -32,5 +32,5 @@
 #     ../../config/all-models/ed/sl/bert-base/crf-oneie.yaml
 # CUDA_VISIBLE_DEVICES=$1 python mrc.py \
 #     ../../config/all-models/ed/mrc/bert-base/wo-crf-cleve.yaml
-CUDA_VISIBLE_DEVICES=$1 python mrc.py \
-    ../../config/all-models/ed/mrc/bert-base/wo-crf-oneie.yaml
+# CUDA_VISIBLE_DEVICES=$1 python mrc.py \
+#     ../../config/all-models/ed/mrc/bert-base/wo-crf-oneie.yaml

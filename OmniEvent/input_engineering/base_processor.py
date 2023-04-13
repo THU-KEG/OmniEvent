@@ -133,7 +133,7 @@ class EAEInputExample(object):
                  pred_type: str,
                  true_type: str,
                  trigger_id: Union[int, str] = None,
-                 input_template: Optional[str][str] = None,
+                 input_template: Optional[str] = None,
                  trigger_left: Optional[int] = None,
                  trigger_right: Optional[int] = None,
                  argument_left: Optional[int] = None,
