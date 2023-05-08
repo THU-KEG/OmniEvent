@@ -106,9 +106,9 @@ def convert_maven_to_unified(data_path: str,
     if "train" in data_path:
         json.dump(label2id, open(os.path.join(save_path, "label2id.json"), "w"), indent=4)
 
-    data_path = '/data/processed'.join(data_path.split('/data/original'))
     if dump:
-        with open(data_path.replace(".jsonl", ".unified.jsonl"), 'w') as f:
+        save_name = data_path.split("/")[-1].replace(".jsonl", ".unified.jsonl")
+        with open(os.path.join(save_path, save_name), 'w') as f:
             for item in formatted_data:
                 f.write(json.dumps(item)+"\n")
     return formatted_data
