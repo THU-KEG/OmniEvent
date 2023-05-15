@@ -1,1 +1,0 @@
-python dump_ckpt.py dump_ckpt.yaml
