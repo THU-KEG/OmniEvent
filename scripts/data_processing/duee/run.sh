@@ -1,3 +1,6 @@
+# Install requirements
+pip install -r requirements.txt
+
 python duee.py \
     --data_dir ../../../data/original/DuEE1.0 \
     --save_dir ../../../data/processed/DuEE1.0
