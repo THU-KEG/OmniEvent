@@ -1,4 +1,4 @@
 beautifulsoup4==4.9.0
 lxml==4.9.1
 nltk==3.6.6
-transformers==3.0.2
+transformers==4.30.0
