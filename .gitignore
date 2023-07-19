@@ -186,3 +186,5 @@ examples/BigModel/results
 # pycharm
 .idea
 __pycache__
+
+visualize/

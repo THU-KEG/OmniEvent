@@ -788,7 +788,7 @@ class Document:
 def one_fold(fold, output_dir, heads_only=True, real_entities_only=True, include_pronouns=False,
              include_entity_coreference=False, include_event_coreference=False):
     doc_path = "./raw_data"
-    split_path = "./splits"
+    split_path = "./ner-splits"
 
     doc_keys = []
     with open(path.join(split_path, fold + ".filelist")) as f:
