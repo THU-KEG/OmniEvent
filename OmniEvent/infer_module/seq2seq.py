@@ -267,7 +267,7 @@ def do_event_detection(model, tokenizer, texts, schemas, device):
     return pred_triggers
 
 
-def do_event_argument_extraction(model, tokenizer, instances, device):
+def do_event_argument_extraction(model, tokenizer, instances, device="cuda"):
     data_processor = EAEProcessor(tokenizer)
     inputs = data_processor.tokenize(instances, device)
     decoded_preds = generate(model, tokenizer, inputs)

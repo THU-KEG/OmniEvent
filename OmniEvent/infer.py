@@ -131,7 +131,7 @@ def infer(text, model=None, tokenizer=None, triggers=None, schema="ace", task="E
         else:
             eae_model, eae_tokenizer = model, tokenizer
         instances = prepare_for_eae_from_input([text], [triggers], [schema])
-        arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances)
+        arguments = do_event_argument_extraction(eae_model, eae_tokenizer, instances, device)
         results = get_eae_result(instances, arguments)
     elif task == "EE":
         if model is None or tokenizer is None:
