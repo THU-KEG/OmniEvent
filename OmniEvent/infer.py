@@ -59,9 +59,6 @@ def get_model(model_args, model_name_or_path):
 
 
 def get_pretrained(model_name_or_path, device):
-    # config 
-    # parser = ArgumentParser((ModelArguments, DataArguments, TrainingArguments))
-    # model_args, data_args, training_args = parser.from_pretrained(model_name_or_path)
     # model
     model_args = AttrDict({
         "paradigm": "seq2seq",
@@ -69,7 +66,6 @@ def get_pretrained(model_name_or_path, device):
     })
     model = get_model(model_args, model_name_or_path)
     model = model.to(device)
-    # model.cuda()
     # tokenizer 
     tokenizer = get_tokenizer(model_name_or_path)
 
