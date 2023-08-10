@@ -16,7 +16,7 @@ from OmniEvent.backbone.backbone import get_backbone
 
 from OmniEvent.evaluation.metric import compute_span_F1
 from OmniEvent.evaluation.utils import predict, dump_preds
-from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_sl
+from OmniEvent.evaluation.convert_format import get_trigger_detection_sl
 from OmniEvent.evaluation.dump_result import get_leven_submission_sl, get_maven_submission_sl
 
 from OmniEvent.input_engineering.input_utils import get_bio_labels
@@ -110,7 +110,7 @@ if training_args.do_predict:
     if data_args.test_exists_labels:
         logging.info("{} test performance: {}".format(data_args.dataset_name, metrics))
         preds = np.argmax(logits, axis=-1)
-        pred_labels = get_ace2005_trigger_detection_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
+        pred_labels = get_trigger_detection_sl(preds, labels, data_args.test_file, data_args, test_dataset.is_overflow)
     else:
         # save name 
         aggregation = model_args.aggregation

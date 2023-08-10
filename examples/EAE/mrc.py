@@ -17,7 +17,7 @@ from OmniEvent.input_engineering.mrc_processor import EAEMRCProcessor
 from OmniEvent.model.model import get_model
 from OmniEvent.evaluation.metric import compute_mrc_F1
 from OmniEvent.evaluation.dump_result import get_duee_submission_mrc
-from OmniEvent.evaluation.convert_format import get_ace2005_argument_extraction_mrc
+from OmniEvent.evaluation.convert_format import get_argument_extraction_mrc
 from OmniEvent.evaluation.utils import predict, get_pred_mrc
 
 from OmniEvent.trainer import Trainer
@@ -120,7 +120,7 @@ if training_args.do_predict:
 
         if data_args.test_exists_labels:
             logging.info("{} test performance before converting: {}".format(data_args.dataset_name, metrics))
-            get_ace2005_argument_extraction_mrc(preds, labels, data_args.test_file, data_args, None)
+            get_argument_extraction_mrc(preds, labels, data_args.test_file, data_args, None)
         else:
             # save name
             aggregation = model_args.aggregation
