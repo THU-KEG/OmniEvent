@@ -132,7 +132,7 @@ def get_pred_per_mention(pos_start: int,
         raise NotImplementedError
 
 
-def get_ace2005_trigger_detection_sl(preds: np.array,
+def get_trigger_detection_sl(preds: np.array,
                                      labels: np.array,
                                      data_file: str,
                                      data_args,
@@ -188,7 +188,7 @@ def get_ace2005_trigger_detection_sl(preds: np.array,
     return results
 
 
-def get_ace2005_argument_extraction_sl(preds: np.array,
+def get_argument_extraction_sl(preds: np.array,
                                        labels: np.array,
                                        data_file: str,
                                        data_args,
@@ -304,7 +304,7 @@ def get_ace2005_argument_extraction_sl(preds: np.array,
     return results
 
 
-def get_ace2005_trigger_detection_mrc(preds: np.array,
+def get_trigger_detection_mrc(preds: np.array,
                                      labels: np.array,
                                      data_file: str,
                                      data_args,
@@ -362,7 +362,7 @@ def get_ace2005_trigger_detection_mrc(preds: np.array,
     return results
 
 
-def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_overflow):
+def get_argument_extraction_mrc(preds, labels, data_file, data_args, is_overflow):
     """Obtains the event argument extraction results of the ACE2005 dataset based on the MRC paradigm.
 
     Obtains the event argument extraction prediction results of the ACE2005 dataset based on the MRC paradigm,
@@ -482,7 +482,7 @@ def get_ace2005_argument_extraction_mrc(preds, labels, data_file, data_args, is_
     return results
 
 
-def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_overflow):
+def get_trigger_detection_s2s(preds, labels, data_file, data_args, is_overflow):
     """Obtains the event detection prediction results of the ACE2005 dataset based on the Seq2Seq paradigm.
 
     Obtains the event detection prediction results of the ACE2005 dataset based on the Seq2Seq paradigm,
@@ -536,7 +536,7 @@ def get_ace2005_trigger_detection_s2s(preds, labels, data_file, data_args, is_ov
     return results
 
 
-def get_ace2005_argument_extraction_s2s(preds, labels, data_file, data_args, is_overflow):
+def get_argument_extraction_s2s(preds, labels, data_file, data_args, is_overflow):
     """Obtains the event argument extraction results of the ACE2005 dataset based on the Seq2Seq paradigm.
 
     Obtains the event argument extraction prediction results of the ACE2005 dataset based on the Seq2Seq paradigm,

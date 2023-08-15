@@ -236,7 +236,7 @@ OmniEvent evaluates models of different paradigms in a unified manner, where the
 
 ```python  
 >>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
->>> from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
+>>> from OmniEvent.evaluation.convert_format import get_trigger_detection_s2s
 
 >>> logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=EDSeq2SeqProcessor,
                                                     data_args=data_args, data_file=data_args.test_file,
@@ -247,7 +247,7 @@ ACE2005-EN test performance before converting: 66.4215686224377
 
 >>> preds = get_pred_s2s(logits, tokenizer)
 >>> # convert to the unified prediction and evaluate
->>> pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, None)
+>>> pred_labels = get_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, None)
 ACE2005-EN test performance after converting: 67.41016109045849
 ```
 

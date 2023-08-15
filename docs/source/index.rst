@@ -204,7 +204,7 @@ OmniEvent evaluates models of different paradigms in a unifed manner, where the 
 .. code-block:: python
 
     >>> from OmniEvent.evaluation.utils import predict, get_pred_s2s
-    >>> from OmniEvent.evaluation.convert_format import get_ace2005_trigger_detection_s2s
+    >>> from OmniEvent.evaluation.convert_format import get_trigger_detection_s2s
 
     >>> logits, labels, metrics, test_dataset = predict(trainer=trainer, tokenizer=tokenizer, data_class=data_class,
                                                         data_args=data_args, data_file=data_args.test_file,
@@ -215,7 +215,7 @@ OmniEvent evaluates models of different paradigms in a unifed manner, where the 
 
     >>> preds = get_pred_s2s(logits, tokenizer)
     >>> # convert to the unified prediction and evaluate
-    >>> pred_labels = get_ace2005_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, None)
+    >>> pred_labels = get_trigger_detection_s2s(preds, labels, data_args.test_file, data_args, None)
     ACE2005-EN test performance after converting: 67.41016109045849
 
 For those datasets whose test set annotations are not given, such as MAVEN and LEVEN, OmniEvent provide APIs to generate submission files. See `dump_result.py <https://github.com/THU-KEG/OmniEvent/OmniEvent/evaluation/dump_result.py>`_) for details.
