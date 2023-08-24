@@ -43,6 +43,10 @@
 - [Supported Datasets \& Models \& Contests](#supported-datasets--models--contests)
   - [Datasets](#datasets)
   - [Models](#models)
+- [Consistent Evaluation](#consistent-evaluation)
+  - [1. Consistent data preprocessing](#1-consistent-data-preprocessing)
+  - [2. Output Standardization](#2-output-standardization)
+  - [3. Pipeline Evaluation](#3-pipeline-evaluation)
 - [Experiments](#experiments)
 - [Citation](#citation)
 
@@ -330,6 +334,15 @@ Continually updated. Welcome to add more!
   - GCN
 - Head
   - Linear / CRF / MRC heads
+
+# Consistent Evaluation
+OmniEvent provides corresponding remedies for the three discrepancies in event extraction evaluation, as suggested in our ACL 2023 [paper]((https://aclanthology.org/2023.findings-acl.586.pdf)). 
+## 1. Consistent data preprocessing
+We provide several preprocessing scripts in `scripts/data_processing`. For ACE 2005, we provide three mainstream scripts: `ace2005-dygie`, `ace2005-oneie`, and `ace2005-en`. Users can easily use the scripts to process the original data into a unified data format. 
+## 2. Output Standardization
+We implement the output standardization in `OmniEvent/evaluation/convert_format.py`. Specifically, users can use corresponding functions to convert the output of different paradigms into the output space of the token classification method.
+## 3. Pipeline Evaluation
+As suggested in `OmniEvent/evaluation/README.md`, we provide several evaluation modes for evaluating event argument extraction. We recommend the **strict** mode for comparable evaluation. And we provide a unified extracted trigger set for pipeline evaluation of different event argument extraction methods. The triggers are extracted by an advanced ED model: CLEVE. The extracted triggers for different datasets (ACE 2005, RichERE, and TACKBP 2014-2017) are placed in [here](https://cloud.tsinghua.edu.cn/f/799c8c7c44d24c1db2b7/?dl=1).
 
 
 # Experiments
