@@ -336,7 +336,7 @@ Continually updated. Welcome to add more!
   - Linear / CRF / MRC heads
 
 # Consistent Evaluation
-OmniEvent provides corresponding remedies for the three discrepancies in event extraction evaluation, as suggested in our ACL 2023 [paper]((https://aclanthology.org/2023.findings-acl.586.pdf)). 
+OmniEvent provides corresponding remedies for the three discrepancies in event extraction evaluation, as suggested in our ACL 2023 [paper](https://aclanthology.org/2023.findings-acl.586.pdf). 
 ## 1. Consistent data preprocessing
 We provide several preprocessing scripts in `scripts/data_processing`. For ACE 2005, we provide three mainstream scripts: `ace2005-dygie`, `ace2005-oneie`, and `ace2005-en`. Users can easily use the scripts to process the original data into a unified data format. 
 ## 2. Output Standardization
