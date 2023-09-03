@@ -1,3 +1,6 @@
+# Install requirements
+pip install -r requirements.txt
+
 python ace2005-zh-novalue.py \
     --data_dir ../../../data/original/ace_2005_td_v7 \
     --ACE_SPLITS splits \

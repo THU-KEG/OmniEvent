@@ -5,6 +5,7 @@ pip install -r requirements.txt
 # >>> nltk.download("punkt")
 # Or you can download manually here: https://github.com/nltk/nltk_data/blob/gh-pages/packages/tokenizers/punkt.zip
 # to your ~/nltk_data/tokenizers/. And then unzip it.
+# You may need Python <= 3.8 to process the scripts.
 ACE_DATA_FOLDER=./../../../data/original/ace_2005_td_v7
 python process_ace.py -i ${ACE_DATA_FOLDER}/data -o data/ -s splits/ACE05-E -b bert-base-cased -l english
 
