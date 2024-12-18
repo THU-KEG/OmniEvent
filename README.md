@@ -50,6 +50,12 @@
 - [Experiments](#experiments)
 - [Citation](#citation)
 
+# News <span style="color: red;">❗</span> 
+[2024.12] In the spring of next year, we will build a new agent system based on LLMs and small models optimized for IE tasks. The system will be more powerful and general than the models in OmniEvent. The OmniEvent repository will only serve as introductory code for EE, and major updates will no longer be made in the future.
+
+[2024.10] We recently released a series of LLMs (**[ADELIE](https://huggingface.co/THU-KEG/ADELIE-SFT-1.5B)**) trained for information extraction, which includes event extraction tasks. Although its performance underperforms specialized small models, such as BERT, its general capabilities and ability to learn from schemas in context are impressive. Welcome to try! Link: https://huggingface.co/THU-KEG/ADELIE-SFT-1.5B. 
+
+
 
 # Overview
 OmniEvent is a powerful open-source toolkit for **event extraction**, including **event detection** and **event argument extraction**. We comprehensively cover various paradigms and provide fair and unified evaluations on widely-used **English** and **Chinese** datasets. Modular implementations make OmniEvent highly extensible.
