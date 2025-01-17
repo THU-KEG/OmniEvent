@@ -1,3 +1,11 @@
+# Install requirements
+pip install -r requirements.txt
+# First, you need to download nltk model
+# >>> import nltk
+# >>> nltk.download("punkt")
+# Or you can download manually here: https://github.com/nltk/nltk_data/blob/gh-pages/packages/tokenizers/punkt.zip
+# to your ~/nltk_data/tokenizers/. And then unzip it.
+
 python LDC2015E29.py \
     --data_dir ../../../data/original/LDC2015E29 \
     --save_dir ../../../data/processed/LDC2015E29
